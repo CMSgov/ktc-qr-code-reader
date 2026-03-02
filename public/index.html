@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Killtheclipboard — SHL Scanner</title>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f1117;
+      color: #e4e4e7;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    header {
+      text-align: center;
+      padding: 24px 0;
+      border-bottom: 1px solid #27272a;
+      margin-bottom: 24px;
+    }
+
+    header h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #fafafa;
+    }
+
+    header p {
+      color: #a1a1aa;
+      font-size: 0.875rem;
+      margin-top: 4px;
+    }
+
+    .scanner-area {
+      background: #18181b;
+      border: 1px solid #27272a;
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+
+    #reader {
+      width: 100%;
+    }
+
+    #reader video {
+      border-radius: 12px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    button {
+      flex: 1;
+      padding: 12px 20px;
+      border: 1px solid #3f3f46;
+      border-radius: 8px;
+      background: #27272a;
+      color: #fafafa;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    button:hover { background: #3f3f46; }
+
+    button.primary {
+      background: #2563eb;
+      border-color: #2563eb;
+    }
+
+    button.primary:hover { background: #1d4ed8; }
+
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .status {
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 0.875rem;
+      display: none;
+    }
+
+    .status.info { display: block; background: #172554; border: 1px solid #1e40af; color: #93c5fd; }
+    .status.success { display: block; background: #052e16; border: 1px solid #166534; color: #86efac; }
+    .status.error { display: block; background: #450a0a; border: 1px solid #991b1b; color: #fca5a5; }
+    .status.warning { display: block; background: #422006; border: 1px solid #92400e; color: #fed7aa; }
+
+    .passcode-form {
+      display: none;
+      padding: 16px;
+      background: #18181b;
+      border: 1px solid #27272a;
+      border-radius: 12px;
+      margin-bottom: 16px;
+    }
+
+    .passcode-form.visible { display: block; }
+
+    .passcode-form label {
+      display: block;
+      font-size: 0.875rem;
+      color: #a1a1aa;
+      margin-bottom: 8px;
+    }
+
+    .passcode-form input {
+      width: 100%;
+      padding: 10px 12px;
+      background: #27272a;
+      border: 1px solid #3f3f46;
+      border-radius: 6px;
+      color: #fafafa;
+      font-size: 1rem;
+      margin-bottom: 12px;
+    }
+
+    .passcode-form input:focus {
+      outline: none;
+      border-color: #2563eb;
+    }
+
+    .results {
+      display: none;
+    }
+
+    .results.visible { display: block; }
+
+    .result-card {
+      background: #18181b;
+      border: 1px solid #27272a;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+
+    .result-card h3 {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #a1a1aa;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 12px;
+    }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #27272a;
+    }
+
+    .stat-row:last-child { border-bottom: none; }
+
+    .stat-label { color: #a1a1aa; }
+    .stat-value { color: #fafafa; font-weight: 500; }
+
+    .fhir-preview {
+      background: #09090b;
+      border: 1px solid #27272a;
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 12px;
+      max-height: 400px;
+      overflow-y: auto;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.75rem;
+      line-height: 1.5;
+      color: #a1a1aa;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .resource-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      margin: 2px 4px 2px 0;
+    }
+
+    .resource-badge.patient { background: #1e3a5f; color: #7dd3fc; }
+    .resource-badge.condition { background: #3b1f2b; color: #fda4af; }
+    .resource-badge.observation { background: #1a2e05; color: #bef264; }
+    .resource-badge.medication { background: #2e1065; color: #c4b5fd; }
+    .resource-badge.immunization { background: #422006; color: #fdba74; }
+    .resource-badge.other { background: #27272a; color: #a1a1aa; }
+
+    .config-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      background: #18181b;
+      border: 1px solid #27272a;
+      border-radius: 8px;
+      font-size: 0.75rem;
+      color: #71717a;
+      margin-bottom: 24px;
+    }
+
+    .file-upload {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Killtheclipboard</h1>
+      <p>Scan a SMART Health Link QR code</p>
+    </header>
+
+    <div class="config-bar">
+      <span id="configInfo">Loading config...</span>
+    </div>
+
+    <div class="scanner-area">
+      <div id="reader"></div>
+    </div>
+
+    <div class="controls">
+      <button id="startBtn" class="primary" onclick="startScanner()">Start Camera</button>
+      <button id="stopBtn" onclick="stopScanner()" disabled>Stop</button>
+      <button id="uploadBtn" onclick="document.getElementById('fileInput').click()">Upload Image</button>
+      <input type="file" id="fileInput" class="file-upload" accept="image/*" onchange="handleFileUpload(event)">
+    </div>
+
+    <div id="status" class="status"></div>
+
+    <div id="passcodeForm" class="passcode-form">
+      <label>This SMART Health Link requires a passcode:</label>
+      <input type="text" id="passcodeInput" placeholder="Enter passcode" autocomplete="off">
+      <button class="primary" onclick="submitWithPasscode()">Submit</button>
+    </div>
+
+    <div id="results" class="results">
+      <div class="result-card">
+        <h3>Scan Results</h3>
+        <div id="resultSummary"></div>
+      </div>
+
+      <div class="result-card" id="resourceCard" style="display:none">
+        <h3>FHIR Resources</h3>
+        <div id="resourceBadges"></div>
+      </div>
+
+      <div class="result-card" id="previewCard" style="display:none">
+        <h3>Data Preview</h3>
+        <div class="fhir-preview" id="fhirPreview"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let scanner = null;
+    let lastQrText = null;
+
+    // Load config on page load
+    fetch('/api/config')
+      .then(r => r.json())
+      .then(cfg => {
+        document.getElementById('configInfo').textContent =
+          `Output: ${cfg.outputMode} | Dir: ${cfg.outputDirectory}`;
+      })
+      .catch(() => {
+        document.getElementById('configInfo').textContent = 'Config: defaults';
+      });
+
+    async function startScanner() {
+      clearResults();
+      const startBtn = document.getElementById('startBtn');
+      const stopBtn = document.getElementById('stopBtn');
+
+      scanner = new Html5Qrcode('reader');
+
+      try {
+        await scanner.start(
+          { facingMode: 'environment' },
+          { fps: 10, qrbox: { width: 250, height: 250 } },
+          onScanSuccess,
+          () => {} // ignore scan failures (no QR in frame)
+        );
+
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        setStatus('info', 'Camera active. Point at a SMART Health Link QR code.');
+      } catch (err) {
+        setStatus('error', `Camera error: ${err.message || err}`);
+      }
+    }
+
+    async function stopScanner() {
+      if (scanner) {
+        try { await scanner.stop(); } catch {}
+        scanner = null;
+      }
+      document.getElementById('startBtn').disabled = false;
+      document.getElementById('stopBtn').disabled = true;
+      setStatus('info', 'Camera stopped.');
+    }
+
+    function handleFileUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      clearResults();
+      setStatus('info', `Scanning ${file.name}...`);
+
+      const tempScanner = new Html5Qrcode('reader');
+      tempScanner.scanFile(file, true)
+        .then(text => {
+          setStatus('info', 'QR code found. Processing...');
+          onScanSuccess(text);
+        })
+        .catch(() => {
+          setStatus('warning', 'No QR code found in that image.');
+        });
+
+      // Reset file input so same file can be selected again
+      event.target.value = '';
+    }
+
+    async function onScanSuccess(decodedText) {
+      // Stop scanner after successful read
+      if (scanner) {
+        try { await scanner.stop(); } catch {}
+        scanner = null;
+        document.getElementById('startBtn').disabled = false;
+        document.getElementById('stopBtn').disabled = true;
+      }
+
+      lastQrText = decodedText;
+      setStatus('info', 'QR code detected. Processing SMART Health Link...');
+      await processScan(decodedText);
+    }
+
+    async function processScan(qrText, passcode) {
+      try {
+        const body = { qrText };
+        if (passcode) body.passcode = passcode;
+
+        const resp = await fetch('/api/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+
+        const data = await resp.json();
+
+        if (!resp.ok) {
+          setStatus('error', data.error || 'Server error');
+          return;
+        }
+
+        if (data.status === 'not_shl') {
+          setStatus('warning', data.message);
+          return;
+        }
+
+        if (data.status === 'need_passcode') {
+          setStatus('warning', `${data.label || 'This link'} requires a passcode.`);
+          document.getElementById('passcodeForm').classList.add('visible');
+          return;
+        }
+
+        if (data.status === 'success') {
+          document.getElementById('passcodeForm').classList.remove('visible');
+          showResults(data);
+        }
+      } catch (err) {
+        setStatus('error', `Error: ${err.message}`);
+      }
+    }
+
+    function submitWithPasscode() {
+      const passcode = document.getElementById('passcodeInput').value.trim();
+      if (!passcode) return;
+      if (!lastQrText) {
+        setStatus('error', 'No QR code to retry. Please scan again.');
+        return;
+      }
+      setStatus('info', 'Retrying with passcode...');
+      processScan(lastQrText, passcode);
+    }
+
+    function showResults(data) {
+      setStatus('success',
+        `${data.label ? data.label + ' — ' : ''}Extracted ${data.summary.fhirBundles} FHIR bundle(s), ${data.summary.pdfs} PDF(s)` +
+        (data.savedTo ? ` | Saved to ${data.savedTo}` : '')
+      );
+
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.classList.add('visible');
+
+      // Summary stats
+      const summaryHtml = `
+        <div class="stat-row"><span class="stat-label">FHIR Bundles</span><span class="stat-value">${data.summary.fhirBundles}</span></div>
+        <div class="stat-row"><span class="stat-label">PDFs</span><span class="stat-value">${data.summary.pdfs}</span></div>
+        <div class="stat-row"><span class="stat-label">Other Entries</span><span class="stat-value">${data.summary.rawEntries}</span></div>
+        ${data.savedTo ? `<div class="stat-row"><span class="stat-label">Saved To</span><span class="stat-value">${data.savedTo}</span></div>` : ''}
+        ${data.label ? `<div class="stat-row"><span class="stat-label">Label</span><span class="stat-value">${data.label}</span></div>` : ''}
+      `;
+      document.getElementById('resultSummary').innerHTML = summaryHtml;
+
+      // Resource badges
+      if (data.fhirBundles && data.fhirBundles.length > 0) {
+        const resourceCard = document.getElementById('resourceCard');
+        resourceCard.style.display = 'block';
+
+        const resources = [];
+        for (const bundle of data.fhirBundles) {
+          if (bundle.entry) {
+            for (const entry of bundle.entry) {
+              if (entry.resource?.resourceType) {
+                resources.push(entry.resource.resourceType);
+              }
+            }
+          }
+        }
+
+        const counts = {};
+        resources.forEach(r => { counts[r] = (counts[r] || 0) + 1; });
+
+        const badgeClass = (type) => {
+          const t = type.toLowerCase();
+          if (t === 'patient') return 'patient';
+          if (t.includes('condition')) return 'condition';
+          if (t.includes('observation')) return 'observation';
+          if (t.includes('medication')) return 'medication';
+          if (t.includes('immunization')) return 'immunization';
+          return 'other';
+        };
+
+        document.getElementById('resourceBadges').innerHTML =
+          Object.entries(counts)
+            .map(([type, count]) => `<span class="resource-badge ${badgeClass(type)}">${type} (${count})</span>`)
+            .join('');
+
+        // Data preview
+        const previewCard = document.getElementById('previewCard');
+        previewCard.style.display = 'block';
+
+        // Show a summarized preview (patient info + resource types)
+        let preview = '';
+        for (const bundle of data.fhirBundles) {
+          if (bundle.entry) {
+            for (const entry of bundle.entry) {
+              const r = entry.resource;
+              if (!r) continue;
+              if (r.resourceType === 'Patient') {
+                const name = r.name?.[0];
+                const nameStr = name ? [name.given?.join(' '), name.family].filter(Boolean).join(' ') : 'Unknown';
+                preview += `Patient: ${nameStr}\n`;
+                if (r.birthDate) preview += `DOB: ${r.birthDate}\n`;
+                if (r.gender) preview += `Gender: ${r.gender}\n`;
+                preview += '\n';
+              }
+            }
+          }
+          preview += JSON.stringify(bundle, null, 2).slice(0, 3000);
+          if (JSON.stringify(bundle).length > 3000) preview += '\n... (truncated)';
+        }
+
+        document.getElementById('fhirPreview').textContent = preview;
+      }
+    }
+
+    function setStatus(type, message) {
+      const el = document.getElementById('status');
+      el.className = `status ${type}`;
+      el.textContent = message;
+    }
+
+    function clearResults() {
+      document.getElementById('results').classList.remove('visible');
+      document.getElementById('resourceCard').style.display = 'none';
+      document.getElementById('previewCard').style.display = 'none';
+      document.getElementById('passcodeForm').classList.remove('visible');
+      document.getElementById('passcodeInput').value = '';
+      document.getElementById('status').className = 'status';
+    }
+  </script>
+</body>
+</html>
