@@ -1,17 +1,28 @@
 {
   "recipient": "Killtheclipboard",
+  "organization": {
+    "name": "Your Health System Name",
+    "id": "your-org-id"
+  },
   "output": {
     "mode": "file",
     "directory": "./shl-output",
     "api": {
       "url": null,
-      "headers": {}
+      "fhirServerBase": null,
+      "headers": {
+        "Authorization": "Bearer YOUR_TOKEN_HERE"
+      }
     }
   },
   "processing": {
     "pdfScanScale": 2.0,
     "pdfMaxPages": 10,
     "maxDecompressedSize": 5000000
+  },
+  "server": {
+    "port": 3000,
+    "host": "0.0.0.0"
   },
   "verbose": false
 }

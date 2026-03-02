@@ -4,6 +4,10 @@ import { homedir } from 'node:os';
 
 const DEFAULTS = {
   recipient: 'Killtheclipboard',
+  organization: {
+    name: null,
+    id: null,
+  },
   output: {
     mode: 'file',
     directory: './shl-output',
@@ -16,6 +20,10 @@ const DEFAULTS = {
     pdfScanScale: 2.0,
     pdfMaxPages: 10,
     maxDecompressedSize: 5_000_000,
+  },
+  server: {
+    port: 3000,
+    host: '0.0.0.0',
   },
   verbose: false,
 };

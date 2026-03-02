@@ -1,6 +1,7 @@
 import express from 'express';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { networkInterfaces } from 'node:os';
 import { loadConfig } from './src/config.js';
 import { parseShlUri } from './src/shl/uri-parser.js';
 import { fetchManifest } from './src/shl/manifest.js';
@@ -10,12 +11,13 @@ import { postToApi } from './src/output/api-poster.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
-const PORT = process.env.PORT || 3000;
+const config = loadConfig();
+
+const PORT = process.env.PORT || config.server?.port || 3000;
+const HOST = process.env.HOST || config.server?.host || '0.0.0.0';
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(join(__dirname, 'public')));
-
-const config = loadConfig();
 
 // API: process a scanned QR code string
 app.post('/api/scan', async (req, res) => {
@@ -62,7 +64,7 @@ app.post('/api/scan', async (req, res) => {
     // Save to files if configured
     let savedTo = null;
     if (config.output.mode === 'file' || config.output.mode === 'both') {
-      const summary = await writeToFiles(results, config.output.directory, { verbose: false });
+      await writeToFiles(results, config.output.directory, { verbose: false });
       savedTo = config.output.directory;
     }
 
@@ -83,7 +85,6 @@ app.post('/api/scan', async (req, res) => {
         pdfs: results.pdfs.length,
         rawEntries: results.raw.length,
       },
-      // Send FHIR data to frontend for display
       fhirBundles: results.fhirBundles,
       pdfs: results.pdfs.map((p) => ({
         filename: p.filename,
@@ -104,12 +105,36 @@ app.get('/api/config', (req, res) => {
     outputMode: config.output.mode,
     outputDirectory: config.output.directory,
     hasApiUrl: !!config.output.api.url,
+    hasFhirServer: !!config.output.api.fhirServerBase,
     recipient: config.recipient,
+    orgName: config.organization?.name || null,
+    orgId: config.organization?.id || null,
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`Killtheclipboard running at http://localhost:${PORT}`);
-  console.log(`Output mode: ${config.output.mode}`);
-  console.log(`Output directory: ${config.output.directory}`);
+// Get the local network IP for phone access
+function getLocalIp() {
+  const nets = networkInterfaces();
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name]) {
+      if (net.family === 'IPv4' && !net.internal) {
+        return net.address;
+      }
+    }
+  }
+  return 'localhost';
+}
+
+app.listen(PORT, HOST, () => {
+  const localIp = getLocalIp();
+  const org = config.organization?.name || 'Kill the Clipboard';
+
+  console.log(`\n  ${org}`);
+  console.log(`  ${'='.repeat(org.length)}\n`);
+  console.log(`  Local:    http://localhost:${PORT}`);
+  console.log(`  Network:  http://${localIp}:${PORT}   <-- use this on your phone\n`);
+  console.log(`  Output:   ${config.output.mode} -> ${config.output.directory}`);
+  if (config.output.api.url) console.log(`  API:      ${config.output.api.url}`);
+  if (config.output.api.fhirServerBase) console.log(`  FHIR:     ${config.output.api.fhirServerBase}`);
+  console.log('');
 });
