@@ -356,6 +356,83 @@
       word-break: break-word;
     }
 
+    /* === DRIVE SUCCESS BANNER === */
+    .drive-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      background: var(--color-success-light);
+      border: 1px solid #2e8540;
+      border-left: 4px solid #2e8540;
+      border-radius: 4px;
+      margin-bottom: 16px;
+    }
+
+    .drive-banner .drive-msg {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #1a4301;
+    }
+
+    .drive-banner .drive-msg small {
+      display: block;
+      font-weight: 400;
+      font-size: 0.8rem;
+      margin-top: 2px;
+      opacity: 0.8;
+    }
+
+    .drive-banner .drive-btn {
+      display: inline-block;
+      padding: 8px 20px;
+      background: #2e8540;
+      color: #fff;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border-radius: 4px;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .drive-banner .drive-btn:hover {
+      background: #1a4301;
+    }
+
+    .drive-error-banner {
+      padding: 12px 16px;
+      background: var(--color-error-light);
+      border: 1px solid var(--color-error);
+      border-left: 4px solid var(--color-error);
+      border-radius: 4px;
+      margin-bottom: 16px;
+      font-size: 0.85rem;
+      color: #8b0000;
+    }
+
+    /* === PDF PREVIEW === */
+    .pdf-preview-container {
+      margin-top: 8px;
+    }
+
+    .pdf-preview-item {
+      margin-bottom: 12px;
+    }
+
+    .pdf-preview-item .pdf-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--gray-mid);
+      margin-bottom: 6px;
+    }
+
+    .pdf-preview-item embed {
+      width: 100%;
+      height: 500px;
+      border: 1px solid var(--gray-lighter);
+      border-radius: 4px;
+    }
+
     /* === CONFIG BAR === */
     .config-bar {
       display: flex;
@@ -437,6 +514,7 @@
         <span class="config-label">Destination:</span>
         <span id="configInfo">Loading...</span>
       </div>
+      <a id="driveConnectBtn" href="/auth/google" style="display:none; background:#0071bc; color:#fff; padding:6px 14px; border-radius:4px; font-size:0.8rem; font-weight:600; text-decoration:none;">Connect Google Drive</a>
     </div>
 
     <div class="scanner-section">
@@ -463,9 +541,16 @@
     </div>
 
     <div id="results" class="results">
+      <div id="driveBanner"></div>
+
       <div class="result-card">
         <h3>Scan Results</h3>
         <div class="result-card-body" id="resultSummary"></div>
+      </div>
+
+      <div class="result-card" id="pdfCard" style="display:none">
+        <h3>PDF Documents</h3>
+        <div class="result-card-body" id="pdfPreviewArea"></div>
       </div>
 
       <div class="result-card" id="resourceCard" style="display:none">
@@ -497,8 +582,12 @@
     fetch('/api/config')
       .then(r => r.json())
       .then(cfg => {
-        document.getElementById('configInfo').textContent =
-          `${cfg.outputMode === 'file' ? cfg.outputDirectory : ''}${cfg.hasApiUrl ? ' API endpoint configured' : ''}` || 'Local files';
+        const parts = [];
+        if (['file', 'both', 'all'].includes(cfg.outputMode)) parts.push(cfg.outputDirectory);
+        if (cfg.hasApiUrl) parts.push('API endpoint');
+        if (cfg.hasFhirServer) parts.push('FHIR server');
+        if (cfg.hasDriveConfig) parts.push('Google Drive');
+        document.getElementById('configInfo').textContent = parts.length ? parts.join(' + ') : 'Local files (default)';
 
         // Provider org branding
         if (cfg.orgName) {
@@ -511,6 +600,23 @@
       .catch(() => {
         document.getElementById('configInfo').textContent = 'Local files (default)';
       });
+
+    // Check Google Drive connection
+    fetch('/api/drive-status')
+      .then(r => r.json())
+      .then(ds => {
+        const btn = document.getElementById('driveConnectBtn');
+        if (ds.needsAuth) {
+          btn.style.display = 'inline-block';
+        } else if (ds.configured) {
+          btn.style.display = 'inline-block';
+          btn.textContent = 'Drive Connected';
+          btn.style.background = '#2e8540';
+          btn.href = '#';
+          btn.onclick = (e) => e.preventDefault();
+        }
+      })
+      .catch(() => {});
 
     async function startScanner() {
       clearResults();
@@ -628,23 +734,80 @@
     }
 
     function showResults(data) {
-      setStatus('success',
-        `${data.label ? data.label + ' \u2014 ' : ''}Extracted ${data.summary.fhirBundles} FHIR bundle(s), ${data.summary.pdfs} PDF(s)` +
-        (data.savedTo ? ` \u2014 Saved to ${data.savedTo}` : '')
-      );
+      let statusMsg = `${data.label ? data.label + ' \u2014 ' : ''}Extracted ${data.summary.fhirBundles} FHIR bundle(s), ${data.summary.pdfs} PDF(s)`;
+      if (data.savedTo) statusMsg += ` \u2014 Saved to ${data.savedTo}`;
+      setStatus('success', statusMsg);
 
       const resultsDiv = document.getElementById('results');
       resultsDiv.classList.add('visible');
 
+      // Drive upload banner
+      const driveBanner = document.getElementById('driveBanner');
+      if (data.driveLink) {
+        driveBanner.innerHTML = `
+          <div class="drive-banner">
+            <div class="drive-msg">
+              Uploaded to Google Drive
+              <small>${data.summary.fhirBundles} FHIR bundle(s) and ${data.summary.pdfs} PDF(s) saved</small>
+            </div>
+            <a href="${data.driveLink}" target="_blank" class="drive-btn">View in Drive</a>
+          </div>`;
+      } else if (data.driveError) {
+        driveBanner.innerHTML = `
+          <div class="drive-error-banner">
+            Drive upload failed: ${data.driveError}
+          </div>`;
+      } else {
+        driveBanner.innerHTML = '';
+      }
+
       const summaryHtml = `
+        ${data.label ? `<div class="stat-row"><span class="stat-label">Label</span><span class="stat-value">${data.label}</span></div>` : ''}
         <div class="stat-row"><span class="stat-label">FHIR Bundles</span><span class="stat-value">${data.summary.fhirBundles}</span></div>
         <div class="stat-row"><span class="stat-label">PDFs</span><span class="stat-value">${data.summary.pdfs}</span></div>
         <div class="stat-row"><span class="stat-label">Other Entries</span><span class="stat-value">${data.summary.rawEntries}</span></div>
         ${data.savedTo ? `<div class="stat-row"><span class="stat-label">Saved To</span><span class="stat-value">${data.savedTo}</span></div>` : ''}
-        ${data.label ? `<div class="stat-row"><span class="stat-label">Label</span><span class="stat-value">${data.label}</span></div>` : ''}
       `;
       document.getElementById('resultSummary').innerHTML = summaryHtml;
 
+      // PDF previews
+      if (data.pdfs && data.pdfs.length > 0) {
+        const pdfCard = document.getElementById('pdfCard');
+        const pdfArea = document.getElementById('pdfPreviewArea');
+        let hasPreviews = false;
+
+        let pdfHtml = '<div class="pdf-preview-container">';
+        for (const pdf of data.pdfs) {
+          if (pdf.dataBase64) {
+            hasPreviews = true;
+            pdfHtml += `
+              <div class="pdf-preview-item">
+                <div class="pdf-label">${pdf.filename}</div>
+                <embed src="data:application/pdf;base64,${pdf.dataBase64}" type="application/pdf">
+              </div>`;
+          } else if (pdf.url) {
+            hasPreviews = true;
+            pdfHtml += `
+              <div class="pdf-preview-item">
+                <div class="pdf-label">${pdf.filename}</div>
+                <embed src="${pdf.url}" type="application/pdf">
+              </div>`;
+          } else {
+            pdfHtml += `
+              <div class="pdf-preview-item">
+                <div class="pdf-label">${pdf.filename} (no preview available)</div>
+              </div>`;
+          }
+        }
+        pdfHtml += '</div>';
+
+        if (hasPreviews || data.pdfs.length > 0) {
+          pdfCard.style.display = 'block';
+          pdfArea.innerHTML = pdfHtml;
+        }
+      }
+
+      // FHIR resources
       if (data.fhirBundles && data.fhirBundles.length > 0) {
         const resourceCard = document.getElementById('resourceCard');
         resourceCard.style.display = 'block';
@@ -713,6 +876,8 @@
 
     function clearResults() {
       document.getElementById('results').classList.remove('visible');
+      document.getElementById('driveBanner').innerHTML = '';
+      document.getElementById('pdfCard').style.display = 'none';
       document.getElementById('resourceCard').style.display = 'none';
       document.getElementById('previewCard').style.display = 'none';
       document.getElementById('passcodeForm').classList.remove('visible');

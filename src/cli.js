@@ -9,6 +9,7 @@ import { fetchManifest } from './shl/manifest.js';
 import { extractHealthData } from './shl/fhir-extractor.js';
 import { writeToFiles } from './output/file-writer.js';
 import { postToApi } from './output/api-poster.js';
+import { uploadToDrive } from './output/drive-uploader.js';
 
 const IMAGE_EXTS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.tiff', '.tif']);
 const PDF_EXTS = new Set(['.pdf']);
@@ -23,6 +24,7 @@ export async function run(argv) {
     .option('-r, --recipient <name>', 'Recipient identifier')
     .option('--api <url>', 'POST results to this API endpoint')
     .option('--fhir-server <url>', 'POST FHIR bundles to this FHIR server')
+    .option('--drive-folder <url>', 'Upload results to this Google Drive folder (URL or ID)')
     .option('--config <path>', 'Path to config file')
     .option('-v, --verbose', 'Enable verbose output')
     .option('-q, --quiet', 'Suppress all non-error output')
@@ -36,6 +38,7 @@ export async function run(argv) {
     output: opts.output,
     api: opts.api,
     fhirServer: opts.fhirServer,
+    driveFolder: opts.driveFolder,
     recipient: opts.recipient,
     passcode: opts.passcode,
     verbose: opts.verbose,
@@ -120,7 +123,7 @@ export async function run(argv) {
   // Step 5: Deliver output
   const mode = config.output.mode;
 
-  if (mode === 'file' || mode === 'both') {
+  if (['file', 'both', 'all'].includes(mode)) {
     log(`Writing to ${config.output.directory}...`);
     const summary = await writeToFiles(results, config.output.directory, { verbose });
     if (!opts.quiet) {
@@ -128,15 +131,29 @@ export async function run(argv) {
     }
   }
 
-  if (mode === 'api' || mode === 'both') {
+  if (['api', 'both', 'all'].includes(mode)) {
     if (config.output.api.url || config.output.api.fhirServerBase) {
       log('Posting to API...');
       const posted = await postToApi(results, config.output.api, { verbose });
       if (!opts.quiet) {
         console.log(`Posted ${posted.fhir} FHIR bundle(s) to API`);
       }
-    } else {
+    } else if (mode === 'api') {
       console.error('API mode configured but no API URL set. Use --api <url> or set output.api.url in config.');
+      process.exit(3);
+    }
+  }
+
+  if (['drive', 'all'].includes(mode)) {
+    if (config.output.drive.folderId) {
+      log('Uploading to Google Drive...');
+      const driveSummary = await uploadToDrive(results, config.output.drive, { verbose });
+      if (!opts.quiet) {
+        console.log(`Uploaded ${driveSummary.fhirBundles} FHIR bundle(s) and ${driveSummary.pdfs} PDF(s) to Google Drive`);
+        if (driveSummary.driveFolder) console.log(`  ${driveSummary.driveFolder}`);
+      }
+    } else {
+      console.error('Drive mode configured but no folder set. Use --drive-folder <url> or set GOOGLE_DRIVE_FOLDER.');
       process.exit(3);
     }
   }

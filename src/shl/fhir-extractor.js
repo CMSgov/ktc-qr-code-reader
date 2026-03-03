@@ -28,13 +28,15 @@ export async function extractHealthData(manifest, keyBytes, options = {}) {
         // Embedded JWE in the manifest
         const decrypted = await decryptToString(file.embedded, keyBytes, maxDecompressedSize);
         text = decrypted.text;
-        contentType = contentType || decrypted.contentType;
+        // Prefer content type from JWE header; fall back to manifest entry
+        if (decrypted.contentType) contentType = decrypted.contentType;
       } else if (file.location) {
         // Fetch from location URL then decrypt
         const jwe = await fetchFile(file.location);
         const decrypted = await decryptToString(jwe, keyBytes, maxDecompressedSize);
         text = decrypted.text;
-        contentType = contentType || decrypted.contentType;
+        // Prefer content type from JWE header; fall back to manifest entry
+        if (decrypted.contentType) contentType = decrypted.contentType;
       } else {
         if (verbose) console.error('Skipping manifest entry with no embedded content or location');
         continue;
@@ -73,7 +75,23 @@ export async function extractHealthData(manifest, keyBytes, options = {}) {
     } else if (contentType?.includes('smart-api-access')) {
       results.raw.push({ type: 'smart-api-access', data: JSON.parse(text) });
     } else {
-      results.raw.push({ type: contentType || 'unknown', data: text });
+      // Unknown content type — try to detect FHIR JSON by parsing
+      let handled = false;
+      try {
+        const parsed = JSON.parse(text);
+        if (parsed.resourceType) {
+          // Looks like a FHIR resource
+          results.fhirBundles.push(parsed);
+          const pdfs = extractPdfsFromBundle(parsed);
+          results.pdfs.push(...pdfs);
+          handled = true;
+        }
+      } catch {
+        // Not JSON
+      }
+      if (!handled) {
+        results.raw.push({ type: contentType || 'unknown', data: text });
+      }
     }
   }
 
@@ -146,4 +164,45 @@ function decodeShcJws(jws) {
 
 function sanitizeFilename(name) {
   return name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 200);
+}
+
+/**
+ * Validate that FHIR bundles contain well-formed FHIR resources.
+ * Returns { valid: boolean, errors: string[] }
+ */
+export function validateFhirBundles(fhirBundles) {
+  const errors = [];
+
+  if (!fhirBundles || fhirBundles.length === 0) {
+    return { valid: true, errors: [] }; // No bundles is fine (e.g., PDF-only)
+  }
+
+  for (let i = 0; i < fhirBundles.length; i++) {
+    const bundle = fhirBundles[i];
+
+    if (!bundle || typeof bundle !== 'object') {
+      errors.push(`Bundle ${i + 1}: not a valid object`);
+      continue;
+    }
+
+    // Must have a resourceType
+    if (!bundle.resourceType) {
+      errors.push(`Bundle ${i + 1}: missing resourceType`);
+      continue;
+    }
+
+    // If it's a Bundle, validate entries
+    if (bundle.resourceType === 'Bundle') {
+      if (bundle.entry && Array.isArray(bundle.entry)) {
+        for (let j = 0; j < bundle.entry.length; j++) {
+          const entry = bundle.entry[j];
+          if (entry.resource && !entry.resource.resourceType) {
+            errors.push(`Bundle ${i + 1}, entry ${j + 1}: resource missing resourceType`);
+          }
+        }
+      }
+    }
+  }
+
+  return { valid: errors.length === 0, errors };
 }

@@ -15,6 +15,14 @@ const DEFAULTS = {
       url: null,
       headers: {},
     },
+    drive: {
+      folderId: null,
+      clientId: null,
+      clientSecret: null,
+      refreshToken: null,
+      redirectUri: null,
+      serviceAccountKey: null,
+    },
   },
   processing: {
     pdfScanScale: 2.0,
@@ -24,6 +32,7 @@ const DEFAULTS = {
   server: {
     port: 3000,
     host: '0.0.0.0',
+    publicUrl: null,
   },
   verbose: false,
 };
@@ -83,11 +92,32 @@ export function loadConfig(cliOverrides = {}) {
   if (env.API_AUTH_HEADER) {
     config.output.api.headers.Authorization = env.API_AUTH_HEADER;
   }
+  if (env.GOOGLE_DRIVE_FOLDER) {
+    // Accept full URL or raw folder ID
+    const match = env.GOOGLE_DRIVE_FOLDER.match(/\/folders\/([a-zA-Z0-9_-]+)/);
+    config.output.drive.folderId = match ? match[1] : env.GOOGLE_DRIVE_FOLDER;
+    if (config.output.mode === 'file') config.output.mode = 'drive';
+  }
+  if (env.GOOGLE_CLIENT_ID) {
+    config.output.drive.clientId = env.GOOGLE_CLIENT_ID;
+  }
+  if (env.GOOGLE_CLIENT_SECRET) {
+    config.output.drive.clientSecret = env.GOOGLE_CLIENT_SECRET;
+  }
+  if (env.GOOGLE_REFRESH_TOKEN) {
+    config.output.drive.refreshToken = env.GOOGLE_REFRESH_TOKEN;
+  }
+  if (env.GOOGLE_SERVICE_ACCOUNT_KEY) {
+    config.output.drive.serviceAccountKey = env.GOOGLE_SERVICE_ACCOUNT_KEY;
+  }
   if (env.ORG_NAME) {
     config.organization.name = env.ORG_NAME;
   }
   if (env.ORG_ID) {
     config.organization.id = env.ORG_ID;
+  }
+  if (env.PUBLIC_URL) {
+    config.server.publicUrl = env.PUBLIC_URL;
   }
   if (env.RECIPIENT) {
     config.recipient = env.RECIPIENT;
@@ -109,6 +139,13 @@ export function loadConfig(cliOverrides = {}) {
   }
   if (cliOverrides.passcode) {
     config.passcode = cliOverrides.passcode;
+  }
+  if (cliOverrides.driveFolder) {
+    const match = cliOverrides.driveFolder.match(/\/folders\/([a-zA-Z0-9_-]+)/);
+    config.output.drive.folderId = match ? match[1] : cliOverrides.driveFolder;
+    if (!['drive', 'all'].includes(config.output.mode)) {
+      config.output.mode = config.output.mode === 'file' ? 'drive' : 'all';
+    }
   }
   if (cliOverrides.verbose) {
     config.verbose = true;

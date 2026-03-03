@@ -8,6 +8,13 @@ primary_region = 'iad'
 
 [build]
 
+[env]
+  DATABASE_PATH = "/data/ktc.db"
+
+[mounts]
+  source = "ktc_data"
+  destination = "/data"
+
 [http_service]
   internal_port = 3000
   force_https = true

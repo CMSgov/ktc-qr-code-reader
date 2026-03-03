@@ -1,6 +1,6 @@
 {
   "name": "killtheclipboard",
-  "version": "1.0.0",
+  "version": "0.2.0-alpha",
   "description": "SMART Health Link QR scanner — extracts FHIR records and PDFs from SHL QR codes",
   "type": "module",
   "bin": {
@@ -20,10 +20,15 @@
   "author": "Amy Gleason",
   "license": "MIT",
   "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "better-sqlite3": "^12.6.2",
     "commander": "^14.0.3",
     "express": "^5.2.1",
+    "googleapis": "^171.4.0",
     "jose": "^4.15.9",
     "jsqr": "^1.4.0",
-    "sharp": "^0.33.5"
+    "nodemailer": "^8.0.1",
+    "sharp": "^0.33.5",
+    "uuid": "^13.0.0"
   }
 }

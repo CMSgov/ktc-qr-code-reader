@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kill the Clipboard — Eliminate the clipboard from healthcare intake</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* CMS Primary */
+      --cms-blue: #0071bc;
+      --cms-blue-dark: #205493;
+      --cms-blue-darkest: #112e51;
+      --cms-blue-light: #4992d6;
+      --cms-blue-lightest: #e6f0f8;
+
+      /* CMS Accent / Alt */
+      --cms-cyan: #02bfe7;
+      --cms-cyan-dark: #0186a2;
+
+      /* CMS Gold */
+      --cms-gold: #f3ce3b;
+      --cms-gold-dark: #c9a616;
+      --cms-gold-light: #fef9e9;
+
+      /* Status */
+      --color-success: #2e8540;
+      --color-success-light: #e7f4e4;
+      --color-error: #e31c3d;
+      --color-error-light: #fce4ec;
+      --color-warn: #f8c41f;
+      --color-warn-light: #fef9e9;
+
+      /* Neutrals */
+      --gray-darkest: #1b1b1b;
+      --gray-dark: #333334;
+      --gray-mid: #5b616b;
+      --gray-light: #aeb0b5;
+      --gray-lighter: #d6d7d9;
+      --gray-lightest: #f1f1f1;
+      --white: #ffffff;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--white);
+      color: var(--gray-dark);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* === TOP BAR === */
+    .topbar {
+      background: var(--cms-blue-darkest);
+      color: var(--white);
+      padding: 8px 24px;
+      font-size: 0.75rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .topbar span { opacity: 0.7; }
+
+    /* === HEADER === */
+    .site-header {
+      background: var(--white);
+      border-bottom: 4px solid var(--cms-gold);
+      padding: 20px 24px;
+    }
+
+    .header-inner {
+      max-width: 800px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .site-title {
+      font-family: 'Instrument Serif', Georgia, serif;
+      font-size: 1.75rem;
+      color: var(--cms-blue-darkest);
+      letter-spacing: -0.02em;
+    }
+
+    .site-title em {
+      font-style: italic;
+      color: var(--cms-blue);
+    }
+
+    .gold-rule {
+      height: 3px;
+      background: linear-gradient(90deg, var(--cms-gold) 0%, var(--cms-gold-dark) 100%);
+      border: none;
+      margin: 0;
+    }
+
+    /* === HERO === */
+    .hero {
+      background: linear-gradient(135deg, var(--cms-blue-darkest) 0%, var(--cms-blue-dark) 100%);
+      color: var(--white);
+      padding: 56px 24px 48px;
+      text-align: center;
+    }
+
+    .hero h2 {
+      font-family: 'Instrument Serif', Georgia, serif;
+      font-size: 2.25rem;
+      font-weight: 400;
+      letter-spacing: -0.03em;
+      margin-bottom: 16px;
+      line-height: 1.2;
+    }
+
+    .hero p {
+      font-size: 1.05rem;
+      opacity: 0.85;
+      max-width: 560px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    /* === CONTAINER === */
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 32px 24px;
+    }
+
+    /* === FEATURES GRID === */
+    .features-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+
+    .feature-card {
+      background: var(--white);
+      border: 1px solid var(--gray-lighter);
+      border-radius: 4px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      transition: box-shadow 0.15s, border-color 0.15s;
+    }
+
+    .feature-card:hover {
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+      border-color: var(--cms-blue-light);
+    }
+
+    .feature-card-header {
+      background: var(--cms-blue-lightest);
+      border-bottom: 1px solid var(--gray-lighter);
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .feature-card-header svg {
+      width: 22px;
+      height: 22px;
+      fill: var(--cms-blue);
+      flex-shrink: 0;
+    }
+
+    .feature-card-header h3 {
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: var(--cms-blue-darkest);
+      margin: 0;
+    }
+
+    .feature-card-body {
+      padding: 16px 18px;
+      font-size: 0.875rem;
+      line-height: 1.6;
+      color: var(--gray-mid);
+    }
+
+    /* === CTA SECTION === */
+    .cta-section {
+      text-align: center;
+      padding: 32px 0 24px;
+      border-top: 1px solid var(--gray-lighter);
+    }
+
+    .cta-section h3 {
+      font-family: 'Instrument Serif', Georgia, serif;
+      font-size: 1.5rem;
+      font-weight: 400;
+      color: var(--cms-blue-darkest);
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+
+    .cta-section p {
+      font-size: 0.9rem;
+      color: var(--gray-mid);
+      margin-bottom: 20px;
+    }
+
+    .cta-button {
+      display: inline-block;
+      padding: 14px 36px;
+      background: var(--cms-blue);
+      color: var(--white);
+      font-family: 'Inter', sans-serif;
+      font-size: 1rem;
+      font-weight: 600;
+      border: 2px solid var(--cms-blue);
+      border-radius: 4px;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .cta-button:hover {
+      background: var(--cms-blue-dark);
+      border-color: var(--cms-blue-dark);
+    }
+
+    /* === ALREADY REGISTERED === */
+    .existing-org {
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid var(--gray-lighter);
+      text-align: center;
+    }
+
+    .existing-org label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--gray-mid);
+      margin-bottom: 10px;
+    }
+
+    .slug-form {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      max-width: 360px;
+      margin: 0 auto;
+    }
+
+    .slug-form .slug-prefix {
+      font-size: 0.85rem;
+      color: var(--gray-light);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .slug-form input {
+      flex: 1;
+      padding: 10px 12px;
+      background: var(--white);
+      border: 2px solid var(--gray-lighter);
+      border-radius: 4px;
+      color: var(--gray-dark);
+      font-size: 0.9rem;
+      font-family: 'Inter', sans-serif;
+      min-width: 0;
+    }
+
+    .slug-form input:focus {
+      outline: none;
+      border-color: var(--cms-blue);
+      box-shadow: 0 0 0 2px rgba(0,113,188,0.2);
+    }
+
+    .slug-form input::placeholder {
+      color: var(--gray-light);
+    }
+
+    .go-button {
+      padding: 10px 20px;
+      background: var(--cms-blue);
+      color: var(--white);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.875rem;
+      font-weight: 600;
+      border: 2px solid var(--cms-blue);
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+
+    .go-button:hover {
+      background: var(--cms-blue-dark);
+      border-color: var(--cms-blue-dark);
+    }
+
+    /* === FOOTER === */
+    .site-footer {
+      background: var(--cms-blue-darkest);
+      color: var(--white);
+      padding: 32px 24px;
+      text-align: center;
+      font-size: 0.8rem;
+      margin-top: 40px;
+    }
+
+    .site-footer p { opacity: 0.6; margin-bottom: 4px; }
+
+    .footer-inner {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    /* === MOBILE === */
+    @media (max-width: 480px) {
+      .hero h2 { font-size: 1.75rem; }
+      .site-title { font-size: 1.4rem; }
+      .header-inner { flex-direction: column; gap: 4px; align-items: flex-start; }
+      .features-grid { grid-template-columns: 1fr; }
+      .slug-form { flex-direction: column; }
+      .slug-form .slug-prefix { display: none; }
+      .cta-button { width: 100%; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <span>SMART Health Link Scanner</span>
+  </div>
+
+  <div class="site-header">
+    <div class="header-inner">
+      <div class="site-title">Kill <em>the</em> Clipboard</div>
+    </div>
+  </div>
+
+  <hr class="gold-rule">
+
+  <div class="hero">
+    <h2>Eliminate the clipboard from healthcare intake</h2>
+    <p>Kill the Clipboard scans SMART Health Link QR codes, extracts FHIR health data and PDF documents, and routes them to configurable destinations -- so patients never have to fill out the same forms twice.</p>
+  </div>
+
+  <div class="container">
+    <!-- Feature Cards -->
+    <div class="features-grid">
+
+      <!-- 1. QR Scanning -->
+      <div class="feature-card">
+        <div class="feature-card-header">
+          <svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5zm-6 8h1.5v1.5H13V13zm1.5 1.5H16V16h-1.5v-1.5zM16 13h1.5v1.5H16V13zm-3 3h1.5v1.5H13V16zm1.5 1.5H16V19h-1.5v-1.5zM16 16h1.5v1.5H16V16zm1.5-1.5H19V16h-1.5v-1.5zm0 3H19V19h-1.5v-1.5zM3 3v2H1V1h4v2H3zm18-2v4h-2V3h-2V1h4zM3 19H1v4h4v-2H3v-2zm16 0v2h-2v2h4v-4h-2z"/></svg>
+          <h3>QR Scanning</h3>
+        </div>
+        <div class="feature-card-body">
+          Scan SMART Health Links directly from a device camera or from uploaded images. Works on phones, tablets, and desktops with no app install required.
+        </div>
+      </div>
+
+      <!-- 2. Multiple Destinations -->
+      <div class="feature-card">
+        <div class="feature-card-header">
+          <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+          <h3>Multiple Destinations</h3>
+        </div>
+        <div class="feature-card-body">
+          Route extracted health data to Google Drive, REST APIs, FHIR servers, email, or local file downloads. Configure one or many destinations per organization.
+        </div>
+      </div>
+
+      <!-- 3. Two-Level Access -->
+      <div class="feature-card">
+        <div class="feature-card-header">
+          <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+          <h3>Two-Level Access</h3>
+        </div>
+        <div class="feature-card-body">
+          Separate admin and staff passwords keep settings secure. Admins configure destinations and policies; front-desk staff scan and route records without touching settings.
+        </div>
+      </div>
+
+      <!-- 4. No Vendor Lock-in -->
+      <div class="feature-card">
+        <div class="feature-card-header">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+          <h3>No Vendor Lock-in</h3>
+        </div>
+        <div class="feature-card-body">
+          Built on open standards. Works with any FHIR-enabled health system, any SMART Health Link issuer, and any downstream destination that accepts structured data.
+        </div>
+      </div>
+
+    </div>
+
+    <!-- CTA Section -->
+    <div class="cta-section">
+      <h3>Ready to modernize your intake workflow?</h3>
+      <p>Register your organization to get started in minutes.</p>
+      <a href="/register" class="cta-button">Register Your Organization</a>
+
+      <!-- Already Registered -->
+      <div class="existing-org">
+        <label>Already registered? Go to your organization's scanner:</label>
+        <form class="slug-form" onsubmit="navigateToOrg(event)">
+          <span class="slug-prefix">/</span>
+          <input type="text" id="orgSlug" placeholder="your-org-slug" autocomplete="off" required>
+          <button type="submit" class="go-button">Go</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="site-footer">
+    <div class="footer-inner">
+      <p>Powered by SMART Health Links</p>
+    </div>
+  </div>
+
+  <script>
+    function navigateToOrg(e) {
+      e.preventDefault();
+      var slug = document.getElementById('orgSlug').value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+      if (slug) {
+        window.location.href = '/' + slug;
+      }
+    }
+  </script>
+</body>
+</html>
