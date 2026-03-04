@@ -580,15 +580,19 @@
 
   <!-- ==================== SETTINGS SECTION ==================== -->
   <div id="settingsSection" class="container" style="display: none;">
-    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+    <!-- Setup Guide Banner -->
+    <a href="/setup-guide" style="display: flex; align-items: center; gap: 12px; padding: 16px 20px; background: linear-gradient(135deg, var(--cms-blue-lightest) 0%, #dbeaf7 100%); border: 2px solid var(--cms-blue-light); border-radius: 6px; color: var(--cms-blue-darkest); text-decoration: none; margin-bottom: 24px;">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="var(--cms-blue)" style="flex-shrink:0;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg>
       <div>
-        <h1 class="page-heading" style="margin-bottom:4px;">Admin Settings</h1>
-        <p class="page-subheading">Manage your organization's scanner configuration and storage destination.</p>
+        <div style="font-weight: 700; font-size: 0.95rem;">Setup Guide</div>
+        <div style="font-size: 0.8rem; color: var(--gray-mid);">Step-by-step instructions for getting started with Kill the Clipboard</div>
       </div>
-      <a href="/setup-guide" style="display:inline-flex; align-items:center; gap:6px; padding:8px 16px; background:var(--cms-blue-lightest); border:1px solid var(--cms-blue-light); border-radius:4px; color:var(--cms-blue-darkest); font-size:0.85rem; font-weight:600; text-decoration:none;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="var(--cms-blue)"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg>
-        Setup Guide
-      </a>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--cms-blue)" style="flex-shrink:0; margin-left:auto;"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+    </a>
+
+    <div>
+      <h1 class="page-heading" style="margin-bottom:4px;">Admin Settings</h1>
+      <p class="page-subheading">Use this page to set up your organization's website for scanning patients' Kill the Clipboard QR codes and to establish your configuration preferences.</p>
     </div>
 
     <div id="settingsStatus" class="status"></div>
@@ -609,7 +613,7 @@
           <span class="stat-value" id="infoSlug">—</span>
         </div>
         <div class="stat-row">
-          <span class="stat-label">Scanner URL</span>
+          <span class="stat-label">Kill the Clipboard Scan Page Link</span>
           <span class="stat-value" id="infoScannerUrl">—</span>
         </div>
         <div class="stat-row">
@@ -626,7 +630,7 @@
         Save Format
       </div>
       <div class="card-body">
-        <p style="font-size: 0.875rem; color: var(--gray-mid); margin-bottom: 16px;">Choose which types of data to save when a scan is processed.</p>
+        <p style="font-size: 0.875rem; color: var(--gray-mid); margin-bottom: 16px;">When scanning a patient's QR code, choose which format(s) you want to receive.</p>
         <div class="radio-group">
           <label class="radio-card selected" onclick="selectSaveFormat('both')">
             <input type="radio" name="saveFormat" value="both" checked>
@@ -654,7 +658,7 @@
         App Validation
       </div>
       <div class="card-body">
-        <p style="font-size: 0.875rem; color: var(--gray-mid); margin-bottom: 16px;">When enabled, staff must first scan the patient app's identification QR code to verify it is on the <a href="https://www.cms.gov/health-tech-ecosystem/early-adopters" target="_blank" style="color: var(--cms-blue); font-weight: 600;">CMS-approved apps list</a> before the health data QR code can be scanned.</p>
+        <p style="font-size: 0.875rem; color: var(--gray-mid); margin-bottom: 16px;">To add extra security, you can require users to first validate the app is on the <a href="https://www.cms.gov/health-tech-ecosystem/early-adopters" target="_blank" style="color: var(--cms-blue); font-weight: 600;">CMS Approved Apps list</a> before scanning a patient's QR code.</p>
         <div class="radio-group">
           <label class="radio-card" onclick="selectAppValidation(true)">
             <input type="radio" name="appValidation" value="yes">
@@ -670,25 +674,6 @@
         <div style="margin-top: 12px; font-size: 0.8rem; color: var(--gray-mid);">
           <a href="/test-qr-codes" target="_blank" style="color: var(--cms-blue); font-weight: 600; text-decoration: none;">View test QR codes →</a> for demo purposes.
         </div>
-      </div>
-    </div>
-
-    <!-- ===== SESSION TIMEOUT ===== -->
-    <div class="card">
-      <div class="card-header">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--cms-blue)"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
-        Session Timeout
-      </div>
-      <div class="card-body">
-        <p style="font-size: 0.875rem; color: var(--gray-mid); margin-bottom: 16px;">How long staff and admin sessions stay active before requiring a password again.</p>
-        <select id="sessionTimeout" onchange="selectSessionTimeout(this.value)" style="width: 100%; padding: 10px 12px; border: 2px solid var(--gray-lighter); border-radius: 4px; font-size: 0.95rem; font-family: 'Inter', sans-serif; color: var(--gray-dark); background: var(--white); cursor: pointer;">
-          <option value="60">1 hour</option>
-          <option value="240">4 hours</option>
-          <option value="480">8 hours (one shift)</option>
-          <option value="720" selected>12 hours (default)</option>
-          <option value="1440">24 hours</option>
-        </select>
-        <p style="font-size: 0.78rem; color: var(--gray-light); margin-top: 8px;">Shorter timeouts are more secure. Staff will need to re-enter their password after this period.</p>
       </div>
     </div>
 
@@ -854,6 +839,25 @@
       </div>
     </div>
 
+    <!-- ===== SESSION TIMEOUT ===== -->
+    <div class="card">
+      <div class="card-header">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--cms-blue)"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+        Session Timeout
+      </div>
+      <div class="card-body">
+        <p style="font-size: 0.875rem; color: var(--gray-mid); margin-bottom: 16px;">How long staff and admin sessions stay active before requiring a password again.</p>
+        <select id="sessionTimeout" onchange="selectSessionTimeout(this.value)" style="width: 100%; padding: 10px 12px; border: 2px solid var(--gray-lighter); border-radius: 4px; font-size: 0.95rem; font-family: 'Inter', sans-serif; color: var(--gray-dark); background: var(--white); cursor: pointer;">
+          <option value="60">1 hour</option>
+          <option value="240">4 hours</option>
+          <option value="480">8 hours (one shift)</option>
+          <option value="720" selected>12 hours (default)</option>
+          <option value="1440">24 hours</option>
+        </select>
+        <p style="font-size: 0.78rem; color: var(--gray-light); margin-top: 8px;">Shorter timeouts are more secure. Staff will need to re-enter their password after this period.</p>
+      </div>
+    </div>
+
     <!-- ===== PASSWORD MANAGEMENT ===== -->
     <div class="card">
       <div class="card-header">
@@ -861,10 +865,12 @@
         Password Management
       </div>
       <div class="card-body">
+        <p style="font-size: 0.875rem; color: var(--gray-mid); margin-bottom: 16px;">Your organization has two separate passwords. The <strong style="color: var(--cms-blue-darkest);">admin password</strong> is for managing these settings and is typically held by an IT administrator or office manager. The <strong style="color: var(--cms-blue-darkest);">staff password</strong> is shared with front-desk staff who will use the scanner to process patient QR codes.</p>
         <div id="passwordStatus" class="status"></div>
 
         <div class="password-group">
           <div class="password-group-title">Change Admin Password</div>
+          <p style="font-size: 0.8rem; color: var(--gray-mid); margin-bottom: 12px;">Used to access this settings page and manage your organization's configuration.</p>
           <div class="password-fields">
             <div class="form-group">
               <label for="adminCurrentPw">Current Admin Password</label>
@@ -886,6 +892,7 @@
 
         <div class="password-group">
           <div class="password-group-title">Change Staff Password</div>
+          <p style="font-size: 0.8rem; color: var(--gray-mid); margin-bottom: 12px;">Shared with staff members who use the scanner page. Changing this will require all staff to sign in again with the new password.</p>
           <div class="password-fields">
             <div class="form-group">
               <label for="staffAdminPw">Current Admin Password</label>
