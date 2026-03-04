@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="google-site-verification" content="2TEMgZgMPDsh1OvrvESp288ie3aDLFVonpQ0N-nXJDI" />
   <title>Kill the Clipboard — Eliminate the clipboard from healthcare intake</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -335,7 +336,10 @@
 
   <div class="site-header">
     <div class="header-inner">
-      <div class="site-title">Kill <em>the</em> Clipboard</div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <img src="/logo.svg" alt="Kill the Clipboard logo" style="width:40px;height:40px;border-radius:8px;">
+        <div class="site-title">Kill <em>the</em> Clipboard</div>
+      </div>
     </div>
   </div>
 
@@ -396,6 +400,24 @@
 
     </div>
 
+    <!-- How It Uses Your Data -->
+    <div style="background: var(--cms-blue-lightest); border: 1px solid var(--gray-lighter); border-radius: 4px; padding: 24px; margin-bottom: 40px;">
+      <h3 style="font-family: 'Instrument Serif', Georgia, serif; font-size: 1.25rem; color: var(--cms-blue-darkest); margin-bottom: 12px; font-weight: 400;">How Kill the Clipboard Uses Your Data</h3>
+      <p style="font-size: 0.875rem; line-height: 1.7; color: var(--gray-mid); margin-bottom: 12px;">
+        When you connect your Google or Microsoft account, Kill the Clipboard requests only the minimum permissions needed to deliver scanned health records to your organization:
+      </p>
+      <ul style="font-size: 0.875rem; line-height: 1.7; color: var(--gray-mid); padding-left: 20px; margin-bottom: 12px;">
+        <li><strong>Google Drive:</strong> Creates files and folders in your designated Drive folder to store scanned records.</li>
+        <li><strong>Gmail (Send Only):</strong> Sends scanned health records from your connected Gmail account to your designated recipient. We never read, modify, or delete your emails.</li>
+        <li><strong>Microsoft OneDrive:</strong> Creates files and folders in your OneDrive to store scanned records.</li>
+        <li><strong>Microsoft Outlook (Send Only):</strong> Sends scanned health records from your connected Outlook account. We never read, modify, or delete your emails.</li>
+      </ul>
+      <p style="font-size: 0.875rem; line-height: 1.7; color: var(--gray-mid);">
+        Health record data is processed in memory and routed directly to your configured destination — it is not stored on our servers. Each organization's data and credentials are fully isolated.
+        Read our <a href="/privacy" style="color: var(--cms-blue); font-weight: 600;">Privacy Policy</a> for complete details.
+      </p>
+    </div>
+
     <!-- CTA Section -->
     <div class="cta-section">
       <h3>Ready to modernize your intake workflow?</h3>
@@ -417,6 +439,7 @@
   <div class="site-footer">
     <div class="footer-inner">
       <p>Powered by SMART Health Links</p>
+      <p style="margin-top:8px"><a href="/privacy" style="color:#fff;opacity:0.6;margin:0 12px">Privacy Policy</a><a href="/terms" style="color:#fff;opacity:0.6;margin:0 12px">Terms of Service</a></p>
     </div>
   </div>
 

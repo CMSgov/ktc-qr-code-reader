@@ -15,7 +15,7 @@ import { uploadToOnedrive, getOnedriveAuthUrl, exchangeOnedriveCode } from './sr
 import { uploadToBox, getBoxAuthUrl, exchangeBoxCode } from './src/output/box-uploader.js';
 import { sendViaGmail, getGmailAuthUrl, exchangeGmailCode, getGmailUserEmail } from './src/output/gmail-sender.js';
 import { sendViaOutlook, getOutlookMailAuthUrl, exchangeOutlookMailCode, getOutlookUserEmail } from './src/output/outlook-sender.js';
-import { initDb, createOrg, getOrgBySlug, updateOrgSettings, slugExists } from './src/db.js';
+import { initDb, getDb, createOrg, getOrgBySlug, getOrgById, updateOrgSettings, slugExists, listAllOrgs, deleteOrgById, countOrgs, createApprovalRequest, listApprovalRequests, updateApprovalRequest } from './src/db.js';
 import { hashPassword, verifyPassword, createToken, authMiddleware } from './src/auth.js';
 import { readFileSync } from 'node:fs';
 
@@ -30,7 +30,7 @@ const config = loadConfig();
 const PORT = process.env.PORT || config.server?.port || 3000;
 const HOST = process.env.HOST || config.server?.host || '0.0.0.0';
 
-const RESERVED_SLUGS = ['register', 'admin', 'api', 'auth', 'public', 'static', 'assets', 'health', 'index.html'];
+const RESERVED_SLUGS = ['register', 'admin', 'api', 'auth', 'public', 'static', 'assets', 'health', 'index.html', 'privacy', 'terms', 'super-admin'];
 
 app.use(express.json({ limit: '10mb' }));
 
@@ -42,6 +42,18 @@ app.get('/', (req, res) => {
 
 app.get('/register', (req, res) => {
   res.sendFile(join(__dirname, 'public', 'register.html'));
+});
+
+app.get('/privacy', (req, res) => {
+  res.sendFile(join(__dirname, 'public', 'privacy.html'));
+});
+
+app.get('/terms', (req, res) => {
+  res.sendFile(join(__dirname, 'public', 'terms.html'));
+});
+
+app.get('/super-admin', (req, res) => {
+  res.sendFile(join(__dirname, 'public', 'super-admin.html'));
 });
 
 // Static files (CSS, JS, fonts, images — but NOT index.html as the default for /)
@@ -1145,6 +1157,168 @@ app.post('/api/orgs/:slug/scan', authMiddleware('staff'), async (req, res) => {
     console.error(`[${org.slug}] Scan error: ${err.message}`);
     res.status(500).json({ error: err.message });
   }
+});
+
+// ══════════════════════════════════════════════════════════════════
+//  APPROVAL REQUESTS (Gmail/Outlook pending verification)
+// ══════════════════════════════════════════════════════════════════
+
+const ADMIN_NOTIFY_EMAIL = process.env.ADMIN_NOTIFY_EMAIL || 'smokeyclawd@gmail.com';
+
+// Send admin notification about new approval request (best-effort, fire-and-forget)
+async function notifyAdminNewRequest({ orgName, orgSlug, email, service }) {
+  try {
+    const nodemailer = await import('nodemailer');
+    const smtpHost = process.env.SMTP_HOST;
+    const smtpUser = process.env.SMTP_USER;
+    const smtpPass = process.env.SMTP_PASS;
+    const smtpFrom = process.env.SMTP_FROM;
+
+    if (!smtpHost || !smtpUser || !smtpPass) {
+      console.log(`[Approval] New request from ${orgName} (${email}) for ${service} — no SMTP configured, skipping email notification.`);
+      console.log(`[Approval] To enable notifications, set SMTP_HOST, SMTP_USER, SMTP_PASS, SMTP_FROM env vars.`);
+      return;
+    }
+
+    const transporter = nodemailer.default.createTransport({
+      host: smtpHost,
+      port: parseInt(process.env.SMTP_PORT || '587'),
+      secure: process.env.SMTP_SECURE === 'true',
+      auth: { user: smtpUser, pass: smtpPass },
+    });
+
+    await transporter.sendMail({
+      from: smtpFrom || smtpUser,
+      to: ADMIN_NOTIFY_EMAIL,
+      subject: `[Kill the Clipboard] New ${service} approval request from ${orgName}`,
+      text: [
+        `New approval request:`,
+        ``,
+        `Organization: ${orgName} (/${orgSlug})`,
+        `Email: ${email}`,
+        `Service: ${service === 'gmail' ? 'Gmail' : 'Microsoft Outlook'}`,
+        ``,
+        `Action needed:`,
+        `1. Add ${email} as a test user in ${service === 'gmail' ? 'Google Cloud Console' : 'Azure Portal'}`,
+        `2. Mark the request as approved via the admin API`,
+        ``,
+        `— Kill the Clipboard`,
+      ].join('\n'),
+    });
+    console.log(`[Approval] Notification email sent to ${ADMIN_NOTIFY_EMAIL}`);
+  } catch (err) {
+    console.error(`[Approval] Failed to send notification email:`, err.message);
+  }
+}
+
+// Org admin submits a request to be approved for Gmail/Outlook access
+app.post('/api/orgs/:slug/request-approval', authMiddleware('admin'), (req, res) => {
+  const org = getOrgBySlug(req.params.slug);
+  if (!org) return res.status(404).json({ error: 'Org not found' });
+
+  const { email, service } = req.body;
+  if (!email || !service) {
+    return res.status(400).json({ error: 'Email and service are required' });
+  }
+  if (!['gmail', 'outlook'].includes(service)) {
+    return res.status(400).json({ error: 'Service must be gmail or outlook' });
+  }
+
+  const result = createApprovalRequest({
+    orgSlug: org.slug,
+    orgName: org.name,
+    email,
+    service,
+  });
+
+  if (result.alreadyExists) {
+    return res.json({ success: true, message: 'Your request has already been submitted and is awaiting approval.' });
+  }
+
+  // Fire-and-forget: send admin notification email
+  notifyAdminNewRequest({ orgName: org.name, orgSlug: org.slug, email, service });
+
+  res.json({ success: true, message: 'Your request has been submitted. You will be notified when your account is approved.' });
+});
+
+// Check approval status for a given email + service
+app.get('/api/orgs/:slug/approval-status', authMiddleware('admin'), (req, res) => {
+  const org = getOrgBySlug(req.params.slug);
+  if (!org) return res.status(404).json({ error: 'Org not found' });
+
+  const { email, service } = req.query;
+  if (!email || !service) return res.json({ status: 'none' });
+
+  const row = getDb().prepare(
+    'SELECT status FROM approval_requests WHERE org_slug = ? AND email = ? AND service = ? ORDER BY created_at DESC LIMIT 1'
+  ).get(org.slug, email, service);
+
+  res.json({ status: row ? row.status : 'none' });
+});
+
+// ── Super-admin middleware ──
+function superAdminAuth(req, res, next) {
+  const key = req.headers['x-admin-key'];
+  if (!key || key !== (process.env.ADMIN_KEY || 'ktc-admin-2026')) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  next();
+}
+
+// Super-admin: list all pending approval requests
+app.get('/api/admin/approval-requests', superAdminAuth, (req, res) => {
+  const requests = listApprovalRequests(req.query.status || null);
+  res.json(requests);
+});
+
+// Super-admin: approve or reject a request
+app.post('/api/admin/approval-requests/:id', superAdminAuth, (req, res) => {
+  const { status } = req.body;
+  if (!['approved', 'rejected'].includes(status)) {
+    return res.status(400).json({ error: 'Status must be approved or rejected' });
+  }
+  updateApprovalRequest(req.params.id, status);
+  res.json({ success: true });
+});
+
+// Super-admin: list all organizations
+app.get('/api/admin/orgs', superAdminAuth, (req, res) => {
+  const orgs = listAllOrgs();
+  const total = countOrgs();
+  res.json({ orgs, total });
+});
+
+// Super-admin: delete an organization
+app.delete('/api/admin/orgs/:id', superAdminAuth, (req, res) => {
+  const org = getOrgById(req.params.id);
+  if (!org) return res.status(404).json({ error: 'Organization not found' });
+  deleteOrgById(req.params.id);
+  res.json({ success: true, message: `Deleted organization "${org.name}" (/${org.slug})` });
+});
+
+// Super-admin: reset passwords for an organization
+app.post('/api/admin/orgs/:id/reset-password', superAdminAuth, async (req, res) => {
+  const org = getOrgById(req.params.id);
+  if (!org) return res.status(404).json({ error: 'Organization not found' });
+
+  const { adminPassword, staffPassword } = req.body;
+  const updates = {};
+
+  if (adminPassword) {
+    if (adminPassword.length < 8) return res.status(400).json({ error: 'Admin password must be at least 8 characters' });
+    updates.admin_password_hash = await hashPassword(adminPassword);
+  }
+  if (staffPassword) {
+    if (staffPassword.length < 4) return res.status(400).json({ error: 'Staff password must be at least 4 characters' });
+    updates.staff_password_hash = await hashPassword(staffPassword);
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return res.status(400).json({ error: 'Provide adminPassword and/or staffPassword' });
+  }
+
+  updateOrgSettings(org.id, updates);
+  res.json({ success: true, message: `Passwords updated for "${org.name}"` });
 });
 
 // ══════════════════════════════════════════════════════════════════

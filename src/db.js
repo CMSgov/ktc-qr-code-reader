@@ -56,6 +56,20 @@ function migrate(db) {
     CREATE INDEX IF NOT EXISTS idx_orgs_slug ON organizations(slug);
   `);
 
+  // Approval requests table (for Gmail/Outlook pending verification)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS approval_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      org_slug TEXT NOT NULL,
+      org_name TEXT NOT NULL,
+      email TEXT NOT NULL,
+      service TEXT NOT NULL DEFAULT 'gmail',
+      status TEXT NOT NULL DEFAULT 'pending',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      reviewed_at TEXT
+    );
+  `);
+
   // Migrations: add new columns if they don't exist
   const migrations = [
     `ALTER TABLE organizations ADD COLUMN save_format TEXT NOT NULL DEFAULT 'both'`,
@@ -142,4 +156,78 @@ export function updateOrgSettings(id, fields) {
   values.push(id);
 
   getDb().prepare(`UPDATE organizations SET ${sets.join(', ')} WHERE id = ?`).run(...values);
+}
+
+// ── Super Admin Operations ───────────────────────────────────────
+
+/**
+ * List all organizations (for super admin dashboard).
+ */
+export function listAllOrgs() {
+  return getDb().prepare(`
+    SELECT id, slug, name, storage_type, created_at, updated_at,
+           gmail_email, outlook_email,
+           CASE WHEN drive_refresh_token IS NOT NULL THEN 1 ELSE 0 END as has_drive,
+           CASE WHEN onedrive_refresh_token IS NOT NULL THEN 1 ELSE 0 END as has_onedrive,
+           CASE WHEN box_refresh_token IS NOT NULL THEN 1 ELSE 0 END as has_box,
+           CASE WHEN gmail_refresh_token IS NOT NULL THEN 1 ELSE 0 END as has_gmail,
+           CASE WHEN outlook_refresh_token IS NOT NULL THEN 1 ELSE 0 END as has_outlook
+    FROM organizations ORDER BY created_at DESC
+  `).all();
+}
+
+/**
+ * Delete an organization by ID.
+ */
+export function deleteOrgById(id) {
+  const org = getDb().prepare('SELECT slug FROM organizations WHERE id = ?').get(id);
+  if (org) {
+    getDb().prepare('DELETE FROM approval_requests WHERE org_slug = ?').run(org.slug);
+  }
+  getDb().prepare('DELETE FROM organizations WHERE id = ?').run(id);
+}
+
+/**
+ * Count total organizations.
+ */
+export function countOrgs() {
+  return getDb().prepare('SELECT COUNT(*) as count FROM organizations').get().count;
+}
+
+// ── Approval Requests ──────────────────────────────────────────
+
+/**
+ * Create a new approval request for Gmail/Outlook access.
+ */
+export function createApprovalRequest({ orgSlug, orgName, email, service }) {
+  // Check if a pending request already exists for this email+service
+  const existing = getDb().prepare(
+    'SELECT 1 FROM approval_requests WHERE email = ? AND service = ? AND status = ?'
+  ).get(email, service, 'pending');
+  if (existing) return { alreadyExists: true };
+
+  getDb().prepare(`
+    INSERT INTO approval_requests (org_slug, org_name, email, service)
+    VALUES (?, ?, ?, ?)
+  `).run(orgSlug, orgName, email, service);
+  return { alreadyExists: false };
+}
+
+/**
+ * List all approval requests (for admin dashboard).
+ */
+export function listApprovalRequests(status) {
+  if (status) {
+    return getDb().prepare('SELECT * FROM approval_requests WHERE status = ? ORDER BY created_at DESC').all(status);
+  }
+  return getDb().prepare('SELECT * FROM approval_requests ORDER BY created_at DESC').all();
+}
+
+/**
+ * Update an approval request status.
+ */
+export function updateApprovalRequest(id, status) {
+  getDb().prepare(
+    "UPDATE approval_requests SET status = ?, reviewed_at = datetime('now') WHERE id = ?"
+  ).run(status, id);
 }

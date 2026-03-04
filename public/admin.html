@@ -771,34 +771,42 @@
         <!-- Gmail Config Panel -->
         <div id="panel-gmail" class="config-panel">
           <div class="config-panel-title">Gmail Configuration</div>
-          <div class="drive-status">
-            <a href="#" id="gmailConnectBtn" onclick="connectGmail(event)">
-              <button type="button">Connect Gmail</button>
-            </a>
-            <span id="gmailStatusBadge" class="badge not-connected">Not connected</span>
-            <span id="gmailAccountEmail" style="font-size: 0.85rem; color: var(--gray-mid); margin-left: 8px;"></span>
-          </div>
-          <div class="form-group">
-            <label for="gmailEmailTo">Recipient Email</label>
-            <input type="email" id="gmailEmailTo" placeholder="records@clinic.example.com" required>
-            <div class="help-text">Scan results will be sent FROM your connected Gmail account TO this address.</div>
+
+          <!-- Gmail connection area -->
+          <div id="gmailConnectedArea">
+            <div class="drive-status">
+              <a href="#" id="gmailConnectBtn" onclick="connectGmail(event)">
+                <button type="button">Connect Gmail</button>
+              </a>
+              <span id="gmailStatusBadge" class="badge not-connected">Not connected</span>
+              <span id="gmailAccountEmail" style="font-size: 0.85rem; color: var(--gray-mid); margin-left: 8px;"></span>
+            </div>
+            <div class="form-group">
+              <label for="gmailEmailTo">Recipient Email</label>
+              <input type="email" id="gmailEmailTo" placeholder="records@clinic.example.com" required>
+              <div class="help-text">Scan results will be sent FROM your connected Gmail account TO this address.</div>
+            </div>
           </div>
         </div>
 
         <!-- Outlook Config Panel -->
         <div id="panel-outlook" class="config-panel">
           <div class="config-panel-title">Outlook / Microsoft 365 Configuration</div>
-          <div class="drive-status">
-            <a href="#" id="outlookConnectBtn" onclick="connectOutlook(event)">
-              <button type="button">Connect Microsoft Account</button>
-            </a>
-            <span id="outlookStatusBadge" class="badge not-connected">Not connected</span>
-            <span id="outlookAccountEmail" style="font-size: 0.85rem; color: var(--gray-mid); margin-left: 8px;"></span>
-          </div>
-          <div class="form-group">
-            <label for="outlookEmailTo">Recipient Email</label>
-            <input type="email" id="outlookEmailTo" placeholder="records@clinic.example.com" required>
-            <div class="help-text">Scan results will be sent FROM your connected Microsoft account TO this address.</div>
+
+          <!-- Outlook connection area -->
+          <div id="outlookConnectedArea">
+            <div class="drive-status">
+              <a href="#" id="outlookConnectBtn" onclick="connectOutlook(event)">
+                <button type="button">Connect Microsoft Account</button>
+              </a>
+              <span id="outlookStatusBadge" class="badge not-connected">Not connected</span>
+              <span id="outlookAccountEmail" style="font-size: 0.85rem; color: var(--gray-mid); margin-left: 8px;"></span>
+            </div>
+            <div class="form-group">
+              <label for="outlookEmailTo">Recipient Email</label>
+              <input type="email" id="outlookEmailTo" placeholder="records@clinic.example.com" required>
+              <div class="help-text">Scan results will be sent FROM your connected Microsoft account TO this address.</div>
+            </div>
           </div>
         </div>
 
@@ -869,6 +877,7 @@
     <div class="footer-inner">
       <p id="orgFooter"></p>
       <p>Powered by SMART Health Links</p>
+      <p style="margin-top:8px"><a href="/privacy" style="color:#fff;opacity:0.6;margin:0 12px">Privacy Policy</a><a href="/terms" style="color:#fff;opacity:0.6;margin:0 12px">Terms of Service</a></p>
     </div>
   </div>
 
