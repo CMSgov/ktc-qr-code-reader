@@ -656,6 +656,113 @@
 
     .file-upload { display: none; }
 
+    /* === APP VERIFICATION BANNERS === */
+    .app-verified-banner {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 20px;
+      background: var(--color-success-light);
+      border: 2px solid var(--color-success);
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #1a4301;
+    }
+
+    .app-verified-banner svg {
+      width: 22px;
+      height: 22px;
+      fill: var(--color-success);
+      flex-shrink: 0;
+    }
+
+    .app-rejected-banner {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 20px;
+      background: var(--color-error-light);
+      border: 2px solid var(--color-error);
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #8b0000;
+    }
+
+    .app-rejected-banner svg {
+      width: 22px;
+      height: 22px;
+      fill: var(--color-error);
+      flex-shrink: 0;
+    }
+
+    .app-pending-banner {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 20px;
+      background: var(--cms-blue-lightest);
+      border: 2px solid var(--cms-blue);
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--cms-blue-darkest);
+    }
+
+    .app-pending-banner svg {
+      width: 22px;
+      height: 22px;
+      fill: var(--cms-blue);
+      flex-shrink: 0;
+    }
+
+    .app-banner-reset {
+      margin-left: auto;
+      background: none;
+      border: none;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: inherit;
+      cursor: pointer;
+      text-decoration: underline;
+      padding: 0;
+    }
+
+    /* === STEP INDICATOR === */
+    .step-indicator {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--gray-mid);
+    }
+
+    .step-indicator .step {
+      padding: 4px 12px;
+      border-radius: 20px;
+      background: var(--gray-lightest);
+      border: 1px solid var(--gray-lighter);
+    }
+
+    .step-indicator .step.active {
+      background: var(--cms-blue);
+      color: var(--white);
+      border-color: var(--cms-blue);
+    }
+
+    .step-indicator .step.done {
+      background: var(--color-success-light);
+      color: var(--color-success);
+      border-color: var(--color-success);
+    }
+
     /* === ERROR PAGE === */
     .error-page {
       display: none;
@@ -765,8 +872,8 @@
   <!-- Scanner UI (shown after auth) -->
   <div id="scannerUI" style="display:none;">
     <div class="hero">
-      <h2>Scan Your Health Records</h2>
-      <p>Point your camera at a SMART Health Link QR code to securely import your health data.</p>
+      <h2 id="heroTitle">Scan the Patient's QR Code</h2>
+      <p id="heroSubtitle">Point your camera at a SMART Health Link QR code to import the patient's health data.</p>
     </div>
 
     <div class="container">
@@ -775,7 +882,10 @@
           <span class="config-label">Destination:</span>
           <span id="configInfo">Loading...</span>
         </div>
-        <a id="adminLink" href="#" class="admin-link" style="display:none;">Admin Settings</a>
+        <div style="display:flex; gap:12px; align-items:center;">
+          <a href="/setup-guide" class="admin-link" target="_blank" style="font-size:0.75rem;">Help</a>
+          <a id="adminLink" href="#" class="admin-link">Admin Settings</a>
+        </div>
       </div>
 
       <div class="scanner-section">
@@ -786,11 +896,12 @@
         <div id="reader"></div>
       </div>
 
+      <!-- App Verification Banner (shown during two-step flow) -->
+      <div id="appVerificationBanner" style="display:none;"></div>
+
       <div class="controls">
-        <button id="startBtn" class="primary" onclick="startScanner()">Start Camera</button>
-        <button id="stopBtn" onclick="stopScanner()" disabled>Stop Camera</button>
-        <button id="uploadBtn" onclick="document.getElementById('fileInput').click()">Upload Image</button>
-        <input type="file" id="fileInput" class="file-upload" accept="image/*" onchange="handleFileUpload(event)">
+        <button id="startBtn" class="primary" onclick="startScanner()">Start Scan</button>
+        <button id="stopBtn" onclick="stopScanner()" disabled>Stop Scan</button>
       </div>
 
       <div id="status" class="status"></div>
@@ -846,6 +957,11 @@
     let token = null;
     let scanner = null;
     let lastQrText = null;
+
+    // App validation state
+    let requireAppValidation = false;
+    let appVerified = false;
+    let verifiedAppName = '';
 
     // === Initialization ===
     (async function init() {
@@ -918,13 +1034,12 @@
         if (orgConfig.hasEmail) parts.push('Email');
         if (orgConfig.hasApi) parts.push('API');
         document.getElementById('configInfo').textContent = parts.join(' + ');
-      }
 
-      // Show admin link if token looks like admin
-      // (the server decides actual permissions; this is just UI convenience)
-      const adminToken = sessionStorage.getItem('ktc_admin_token_' + slug);
-      if (adminToken) {
-        document.getElementById('adminLink').style.display = 'inline-block';
+        // Set up app validation
+        requireAppValidation = !!orgConfig.requireAppValidation;
+        if (requireAppValidation) {
+          updateAppValidationUI();
+        }
       }
     }
 
@@ -993,27 +1108,79 @@
       setStatus('info', 'Camera stopped.');
     }
 
-    function handleFileUpload(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      clearResults();
-      setStatus('info', `Scanning ${file.name}...`);
-
-      const tempScanner = new Html5Qrcode('reader');
-      tempScanner.scanFile(file, true)
-        .then(text => {
-          setStatus('info', 'QR code found. Processing...');
-          onScanSuccess(text);
-        })
-        .catch(() => {
-          setStatus('warning', 'No QR code found in that image.');
-        });
-
-      event.target.value = '';
-    }
-
     async function onScanSuccess(decodedText) {
+      // Step 1: Check if this is an app identity QR code
+      try {
+        const parsed = JSON.parse(decodedText);
+        if (parsed && parsed.type === 'cms-htei') {
+          // This is an app identity QR — handle app verification
+          if (scanner) {
+            try { await scanner.stop(); } catch {}
+            scanner = null;
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+          }
+
+          setStatus('info', `Verifying app: ${parsed.name || parsed.appId}...`);
+
+          try {
+            const resp = await fetch(`/api/verify-app?appId=${encodeURIComponent(parsed.appId)}`);
+            const data = await resp.json();
+
+            const banner = document.getElementById('appVerificationBanner');
+            if (data.approved) {
+              appVerified = true;
+              verifiedAppName = data.app.name;
+              const tierLabel = data.app.tier === 'early-adopter' ? 'Early Adopter' : 'Pledgee';
+              banner.innerHTML = `
+                <div class="app-verified-banner">
+                  <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+                  <span>✓ ${data.app.name} — Approved CMS App (${tierLabel})</span>
+                  <button class="app-banner-reset" onclick="resetAppValidation()">Reset</button>
+                </div>`;
+              banner.style.display = 'block';
+              updateAppValidationUI();
+              setStatus('info', 'App verified! Now scan the patient\'s health data QR code.');
+            } else {
+              appVerified = false;
+              banner.innerHTML = `
+                <div class="app-rejected-banner">
+                  <svg viewBox="0 0 24 24"><path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"/></svg>
+                  <span>✗ "${parsed.name || parsed.appId}" is not a recognized CMS-approved app</span>
+                  <button class="app-banner-reset" onclick="resetAppValidation()">Try Again</button>
+                </div>`;
+              banner.style.display = 'block';
+              setStatus('warning', 'App not recognized. Please scan a QR code from an approved CMS app.');
+            }
+          } catch (err) {
+            setStatus('error', 'Error verifying app: ' + err.message);
+          }
+          return;
+        }
+      } catch {
+        // Not JSON — treat as health data QR
+      }
+
+      // Step 2: If app validation is required but not completed, block health QR scan
+      if (requireAppValidation && !appVerified) {
+        if (scanner) {
+          try { await scanner.stop(); } catch {}
+          scanner = null;
+          document.getElementById('startBtn').disabled = false;
+          document.getElementById('stopBtn').disabled = true;
+        }
+        const banner = document.getElementById('appVerificationBanner');
+        banner.innerHTML = `
+          <div class="app-pending-banner">
+            <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm1 15h-2v-2h2v2zm0-4h-2V7h2v5z"/></svg>
+            <span>Please scan the patient's app QR code first to verify it is a CMS-approved app.</span>
+          </div>`;
+        banner.style.display = 'block';
+        setStatus('warning', 'App verification required. Scan the app QR code first.');
+        return;
+      }
+
+      // Normal health data QR flow
       if (scanner) {
         try { await scanner.stop(); } catch {}
         scanner = null;
@@ -1384,8 +1551,46 @@
       el.textContent = message;
     }
 
+    // === App Validation Helpers ===
+    function updateAppValidationUI() {
+      const heroTitle = document.getElementById('heroTitle');
+      const heroSubtitle = document.getElementById('heroSubtitle');
+
+      if (!requireAppValidation) {
+        heroTitle.textContent = 'Scan the Patient\'s QR Code';
+        heroSubtitle.textContent = 'Point your camera at a SMART Health Link QR code to import the patient\'s health data.';
+        return;
+      }
+
+      if (!appVerified) {
+        heroTitle.textContent = 'Step 1: Scan the Patient\'s App QR Code';
+        heroSubtitle.textContent = 'Scan the QR code from the patient\'s health app to verify it is a CMS-approved app.';
+      } else {
+        heroTitle.textContent = 'Step 2: Scan the Health Data QR Code';
+        heroSubtitle.textContent = `App verified: ${verifiedAppName}. Now scan the patient's SMART Health Link QR code.`;
+      }
+    }
+
+    function resetAppValidation() {
+      appVerified = false;
+      verifiedAppName = '';
+      const banner = document.getElementById('appVerificationBanner');
+      banner.innerHTML = '';
+      banner.style.display = 'none';
+      updateAppValidationUI();
+      setStatus('info', 'Reset. Scan the patient\'s app QR code to begin.');
+    }
+
     function resetForNewScan() {
       clearResults();
+      // Reset app validation so next scan requires it again
+      if (requireAppValidation) {
+        appVerified = false;
+        verifiedAppName = '';
+        document.getElementById('appVerificationBanner').innerHTML = '';
+        document.getElementById('appVerificationBanner').style.display = 'none';
+        updateAppValidationUI();
+      }
       setStatus('info', 'Ready to scan. Point your camera at a SMART Health Link QR code.');
     }
 

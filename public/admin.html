@@ -647,6 +647,32 @@
       </div>
     </div>
 
+    <!-- ===== APP VALIDATION ===== -->
+    <div class="card">
+      <div class="card-header">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--cms-blue)"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+        App Validation
+      </div>
+      <div class="card-body">
+        <p style="font-size: 0.875rem; color: var(--gray-mid); margin-bottom: 16px;">When enabled, staff must first scan the patient app's identification QR code to verify it is on the <a href="https://www.cms.gov/health-tech-ecosystem/early-adopters" target="_blank" style="color: var(--cms-blue); font-weight: 600;">CMS-approved apps list</a> before the health data QR code can be scanned.</p>
+        <div class="radio-group">
+          <label class="radio-card" onclick="selectAppValidation(true)">
+            <input type="radio" name="appValidation" value="yes">
+            <div class="radio-card-title">Yes — Require App Validation</div>
+            <div class="radio-card-desc">Staff must scan the patient's app QR code first to verify it's an approved CMS app.</div>
+          </label>
+          <label class="radio-card selected" onclick="selectAppValidation(false)">
+            <input type="radio" name="appValidation" value="no" checked>
+            <div class="radio-card-title">No — Skip App Validation</div>
+            <div class="radio-card-desc">Staff can scan any health QR code directly without app verification.</div>
+          </label>
+        </div>
+        <div style="margin-top: 12px; font-size: 0.8rem; color: var(--gray-mid);">
+          <a href="/test-qr-codes" target="_blank" style="color: var(--cms-blue); font-weight: 600; text-decoration: none;">View test QR codes →</a> for demo purposes.
+        </div>
+      </div>
+    </div>
+
     <!-- ===== STORAGE DESTINATION ===== -->
     <div class="card">
       <div class="card-header">
@@ -992,6 +1018,9 @@
         const saveFormat = data.saveFormat || 'both';
         selectSaveFormat(saveFormat);
 
+        // App validation
+        selectAppValidation(!!data.requireAppValidation);
+
         // Storage type
         const storageType = data.storageType || 'download';
         selectStorage(storageType);
@@ -1102,6 +1131,21 @@
     }
 
     // ============================
+    // App validation selection
+    // ============================
+    function selectAppValidation(enabled) {
+      document.querySelectorAll('input[name="appValidation"]').forEach(function(radio) {
+        const card = radio.closest('.radio-card');
+        if ((radio.value === 'yes') === enabled) {
+          card.classList.add('selected');
+          radio.checked = true;
+        } else {
+          card.classList.remove('selected');
+        }
+      });
+    }
+
+    // ============================
     // Google Drive connect
     // ============================
     function connectDrive(e) {
@@ -1156,9 +1200,12 @@
         emailTo = document.getElementById('outlookEmailTo').value.trim();
       }
 
+      const appValidation = document.querySelector('input[name="appValidation"]:checked').value === 'yes';
+
       const body = {
         storageType: storageType,
         saveFormat: saveFormat,
+        requireAppValidation: appValidation,
         driveFolderUrl: document.getElementById('driveFolderUrl').value.trim(),
         onedriveFolderPath: document.getElementById('onedriveFolderPath').value.trim(),
         boxFolderId: document.getElementById('boxFolderId').value.trim(),

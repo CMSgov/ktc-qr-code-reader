@@ -81,6 +81,7 @@ function migrate(db) {
     `ALTER TABLE organizations ADD COLUMN gmail_email TEXT`,
     `ALTER TABLE organizations ADD COLUMN outlook_refresh_token TEXT`,
     `ALTER TABLE organizations ADD COLUMN outlook_email TEXT`,
+    `ALTER TABLE organizations ADD COLUMN require_app_validation INT DEFAULT 0`,
   ];
 
   for (const sql of migrations) {
@@ -138,6 +139,7 @@ export function updateOrgSettings(id, fields) {
     'api_url', 'api_headers',
     'email_to',
     'admin_password_hash', 'staff_password_hash',
+    'require_app_validation',
   ];
 
   const sets = [];
