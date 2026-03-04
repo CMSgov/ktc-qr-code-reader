@@ -641,7 +641,7 @@ app.post('/api/orgs/:slug/test-connection', authMiddleware('admin'), async (req,
       if (!org.box_folder_id) {
         return res.json({ ok: false, error: 'No Box folder ID configured.' });
       }
-      // Test by refreshing token
+      // Test by refreshing token and verifying folder access
       try {
         const testResp = await fetch('https://api.box.com/oauth2/token', {
           method: 'POST',
@@ -653,15 +653,22 @@ app.post('/api/orgs/:slug/test-connection', authMiddleware('admin'), async (req,
             grant_type: 'refresh_token',
           }).toString(),
         });
-        if (testResp.ok) {
-          // Save new refresh token (Box rotates them)
-          const tokens = await testResp.json();
-          if (tokens.refresh_token) {
-            updateOrgSettings(org.id, { box_refresh_token: tokens.refresh_token });
-          }
-          return res.json({ ok: true, message: 'Box connected and accessible.' });
-        } else {
+        if (!testResp.ok) {
           return res.json({ ok: false, error: 'Box token may be expired. Try reconnecting.' });
+        }
+        const tokens = await testResp.json();
+        // Save new refresh token (Box rotates them on every use)
+        if (tokens.refresh_token) {
+          updateOrgSettings(org.id, { box_refresh_token: tokens.refresh_token });
+        }
+        // Verify folder access
+        const folderResp = await fetch(`https://api.box.com/2.0/folders/${org.box_folder_id}`, {
+          headers: { Authorization: `Bearer ${tokens.access_token}` },
+        });
+        if (folderResp.ok) {
+          return res.json({ ok: true, message: 'Box connected and folder accessible.' });
+        } else {
+          return res.json({ ok: false, error: `Box folder "${org.box_folder_id}" not found. Use "0" for root folder, or enter a valid folder ID from your Box URL.` });
         }
       } catch (err) {
         return res.json({ ok: false, error: err.message });
