@@ -15,7 +15,7 @@ import { uploadToOnedrive, getOnedriveAuthUrl, exchangeOnedriveCode } from './sr
 import { uploadToBox, getBoxAuthUrl, exchangeBoxCode } from './src/output/box-uploader.js';
 import { sendViaGmail, getGmailAuthUrl, exchangeGmailCode, getGmailUserEmail } from './src/output/gmail-sender.js';
 import { sendViaOutlook, getOutlookMailAuthUrl, exchangeOutlookMailCode, getOutlookUserEmail } from './src/output/outlook-sender.js';
-import { initDb, getDb, createOrg, getOrgBySlug, getOrgById, updateOrgSettings, slugExists, listAllOrgs, deleteOrgById, countOrgs, createApprovalRequest, listApprovalRequests, updateApprovalRequest } from './src/db.js';
+import { initDb, getDb, createOrg, getOrgBySlug, getOrgById, updateOrgSettings, slugExists, listAllOrgs, deleteOrgById, countOrgs, createApprovalRequest, listApprovalRequests, updateApprovalRequest, getDecryptedToken, prepareTokenForStorage } from './src/db.js';
 import { hashPassword, verifyPassword, createToken, authMiddleware } from './src/auth.js';
 import { readFileSync } from 'node:fs';
 
@@ -358,9 +358,9 @@ app.get('/auth/google/callback', async (req, res) => {
       `);
     }
 
-    // Per-org flow: save refresh token to database
+    // Per-org flow: save refresh token to database (encrypted at rest)
     if (orgSlug && orgId) {
-      updateOrgSettings(orgId, { drive_refresh_token: refreshToken, storage_type: 'drive' });
+      updateOrgSettings(orgId, { drive_refresh_token: prepareTokenForStorage(refreshToken, orgId), storage_type: 'drive' });
 
       return res.send(`
         <html><body style="font-family: Inter, sans-serif; max-width: 600px; margin: 40px auto; padding: 20px;">
@@ -640,7 +640,7 @@ app.post('/api/orgs/:slug/test-connection', authMiddleware('admin'), async (req,
         config.output.drive.clientId,
         config.output.drive.clientSecret
       );
-      oauth2.setCredentials({ refresh_token: org.drive_refresh_token });
+      oauth2.setCredentials({ refresh_token: getDecryptedToken(org, 'drive_refresh_token') });
       const drive = google.drive({ version: 'v3', auth: oauth2 });
 
       const folderId = parseFolderId(org.drive_folder_id);
@@ -711,7 +711,7 @@ app.post('/api/orgs/:slug/test-connection', authMiddleware('admin'), async (req,
           body: new URLSearchParams({
             client_id: process.env.GOOGLE_CLIENT_ID,
             client_secret: process.env.GOOGLE_CLIENT_SECRET,
-            refresh_token: org.gmail_refresh_token,
+            refresh_token: getDecryptedToken(org, 'gmail_refresh_token'),
             grant_type: 'refresh_token',
           }).toString(),
         });
@@ -739,7 +739,7 @@ app.post('/api/orgs/:slug/test-connection', authMiddleware('admin'), async (req,
           body: new URLSearchParams({
             client_id: process.env.ONEDRIVE_CLIENT_ID,
             client_secret: process.env.ONEDRIVE_CLIENT_SECRET,
-            refresh_token: org.outlook_refresh_token,
+            refresh_token: getDecryptedToken(org, 'outlook_refresh_token'),
             grant_type: 'refresh_token',
             scope: 'Mail.Send offline_access',
           }).toString(),
@@ -768,7 +768,7 @@ app.post('/api/orgs/:slug/test-connection', authMiddleware('admin'), async (req,
           body: new URLSearchParams({
             client_id: process.env.ONEDRIVE_CLIENT_ID,
             client_secret: process.env.ONEDRIVE_CLIENT_SECRET,
-            refresh_token: org.onedrive_refresh_token,
+            refresh_token: getDecryptedToken(org, 'onedrive_refresh_token'),
             grant_type: 'refresh_token',
             scope: 'Files.ReadWrite.All offline_access',
           }).toString(),
@@ -798,7 +798,7 @@ app.post('/api/orgs/:slug/test-connection', authMiddleware('admin'), async (req,
           body: new URLSearchParams({
             client_id: process.env.BOX_CLIENT_ID,
             client_secret: process.env.BOX_CLIENT_SECRET,
-            refresh_token: org.box_refresh_token,
+            refresh_token: getDecryptedToken(org, 'box_refresh_token'),
             grant_type: 'refresh_token',
           }).toString(),
         });
@@ -806,9 +806,9 @@ app.post('/api/orgs/:slug/test-connection', authMiddleware('admin'), async (req,
           return res.json({ ok: false, error: 'Box token may be expired. Try reconnecting.' });
         }
         const tokens = await testResp.json();
-        // Save new refresh token (Box rotates them on every use)
+        // Save new refresh token (Box rotates them on every use — encrypt before storing)
         if (tokens.refresh_token) {
-          updateOrgSettings(org.id, { box_refresh_token: tokens.refresh_token });
+          updateOrgSettings(org.id, { box_refresh_token: prepareTokenForStorage(tokens.refresh_token, org.id) });
         }
         // Verify folder access
         const folderResp = await fetch(`https://api.box.com/2.0/folders/${org.box_folder_id}`, {
@@ -883,7 +883,7 @@ app.get('/auth/onedrive/callback', async (req, res) => {
     const tokens = await exchangeOnedriveCode(code, redirectUri);
 
     if (orgId && tokens.refresh_token) {
-      updateOrgSettings(orgId, { onedrive_refresh_token: tokens.refresh_token, storage_type: 'onedrive' });
+      updateOrgSettings(orgId, { onedrive_refresh_token: prepareTokenForStorage(tokens.refresh_token, orgId), storage_type: 'onedrive' });
     }
 
     const backUrl = orgSlug ? `/${orgSlug}/admin` : '/';
@@ -937,7 +937,7 @@ app.get('/auth/box/callback', async (req, res) => {
     const tokens = await exchangeBoxCode(code, redirectUri);
 
     if (orgId && tokens.refresh_token) {
-      updateOrgSettings(orgId, { box_refresh_token: tokens.refresh_token, storage_type: 'box' });
+      updateOrgSettings(orgId, { box_refresh_token: prepareTokenForStorage(tokens.refresh_token, orgId), storage_type: 'box' });
     }
 
     const backUrl = orgSlug ? `/${orgSlug}/admin` : '/';
@@ -1010,7 +1010,7 @@ app.get('/auth/gmail/callback', async (req, res) => {
     }
 
     if (orgId) {
-      const updates = { gmail_refresh_token: tokens.refresh_token, storage_type: 'gmail' };
+      const updates = { gmail_refresh_token: prepareTokenForStorage(tokens.refresh_token, orgId), storage_type: 'gmail' };
       if (userEmail) updates.gmail_email = userEmail;
       updateOrgSettings(orgId, updates);
     }
@@ -1072,7 +1072,7 @@ app.get('/auth/outlook/callback', async (req, res) => {
     }
 
     if (orgId && tokens.refresh_token) {
-      const updates = { outlook_refresh_token: tokens.refresh_token, storage_type: 'outlook' };
+      const updates = { outlook_refresh_token: prepareTokenForStorage(tokens.refresh_token, orgId), storage_type: 'outlook' };
       if (userEmail) updates.outlook_email = userEmail;
       updateOrgSettings(orgId, updates);
     }
@@ -1242,7 +1242,7 @@ app.post('/api/orgs/:slug/route', authMiddleware('staff'), async (req, res) => {
         folderId: org.drive_folder_id,
         clientId: config.output.drive.clientId,
         clientSecret: config.output.drive.clientSecret,
-        refreshToken: org.drive_refresh_token,
+        refreshToken: getDecryptedToken(org, 'drive_refresh_token'),
       };
       const driveSummary = await uploadToDrive(filteredResults, driveConfig, { verbose: false });
       driveLink = driveSummary.driveFolder;
@@ -1289,7 +1289,7 @@ app.post('/api/orgs/:slug/route', authMiddleware('staff'), async (req, res) => {
   if (org.storage_type === 'gmail' && org.gmail_refresh_token && org.email_to) {
     try {
       await sendViaGmail(filteredResults, {
-        refreshToken: org.gmail_refresh_token,
+        refreshToken: getDecryptedToken(org, 'gmail_refresh_token'),
         to: org.email_to,
       }, { verbose: false });
       emailSent = true;
@@ -1302,7 +1302,7 @@ app.post('/api/orgs/:slug/route', authMiddleware('staff'), async (req, res) => {
   if (org.storage_type === 'outlook' && org.outlook_refresh_token && org.email_to) {
     try {
       await sendViaOutlook(filteredResults, {
-        refreshToken: org.outlook_refresh_token,
+        refreshToken: getDecryptedToken(org, 'outlook_refresh_token'),
         to: org.email_to,
       }, { verbose: false });
       emailSent = true;
@@ -1315,7 +1315,7 @@ app.post('/api/orgs/:slug/route', authMiddleware('staff'), async (req, res) => {
   if (org.storage_type === 'onedrive' && org.onedrive_refresh_token) {
     try {
       const odConfig = {
-        refreshToken: org.onedrive_refresh_token,
+        refreshToken: getDecryptedToken(org, 'onedrive_refresh_token'),
         folderPath: org.onedrive_folder_path || '/KillTheClipboard',
       };
       const odSummary = await uploadToOnedrive(filteredResults, odConfig, { verbose: false });
@@ -1329,13 +1329,13 @@ app.post('/api/orgs/:slug/route', authMiddleware('staff'), async (req, res) => {
   if (org.storage_type === 'box' && org.box_refresh_token) {
     try {
       const boxConfig = {
-        refreshToken: org.box_refresh_token,
+        refreshToken: getDecryptedToken(org, 'box_refresh_token'),
         folderId: org.box_folder_id,
       };
       const boxSummary = await uploadToBox(filteredResults, boxConfig, { verbose: false });
       boxLink = boxSummary.folderLink;
       if (boxSummary.newRefreshToken) {
-        updateOrgSettings(org.id, { box_refresh_token: boxSummary.newRefreshToken });
+        updateOrgSettings(org.id, { box_refresh_token: prepareTokenForStorage(boxSummary.newRefreshToken, org.id) });
       }
     } catch (err) {
       boxError = err.message;
@@ -1453,7 +1453,7 @@ app.post('/api/orgs/:slug/scan', authMiddleware('staff'), async (req, res) => {
           folderId: org.drive_folder_id,
           clientId: config.output.drive.clientId,
           clientSecret: config.output.drive.clientSecret,
-          refreshToken: org.drive_refresh_token,
+          refreshToken: getDecryptedToken(org, 'drive_refresh_token'),
         };
         const driveSummary = await uploadToDrive(filteredResults, driveConfig, { verbose: false });
         driveLink = driveSummary.driveFolder;
@@ -1500,7 +1500,7 @@ app.post('/api/orgs/:slug/scan', authMiddleware('staff'), async (req, res) => {
     if (org.storage_type === 'gmail' && org.gmail_refresh_token && org.email_to) {
       try {
         await sendViaGmail(filteredResults, {
-          refreshToken: org.gmail_refresh_token,
+          refreshToken: getDecryptedToken(org, 'gmail_refresh_token'),
           to: org.email_to,
         }, { verbose: false });
         emailSent = true;
@@ -1513,7 +1513,7 @@ app.post('/api/orgs/:slug/scan', authMiddleware('staff'), async (req, res) => {
     if (org.storage_type === 'outlook' && org.outlook_refresh_token && org.email_to) {
       try {
         await sendViaOutlook(filteredResults, {
-          refreshToken: org.outlook_refresh_token,
+          refreshToken: getDecryptedToken(org, 'outlook_refresh_token'),
           to: org.email_to,
         }, { verbose: false });
         emailSent = true;
@@ -1526,7 +1526,7 @@ app.post('/api/orgs/:slug/scan', authMiddleware('staff'), async (req, res) => {
     if (org.storage_type === 'onedrive' && org.onedrive_refresh_token) {
       try {
         const odConfig = {
-          refreshToken: org.onedrive_refresh_token,
+          refreshToken: getDecryptedToken(org, 'onedrive_refresh_token'),
           folderPath: org.onedrive_folder_path || '/KillTheClipboard',
         };
         const odSummary = await uploadToOnedrive(filteredResults, odConfig, { verbose: false });
@@ -1540,14 +1540,14 @@ app.post('/api/orgs/:slug/scan', authMiddleware('staff'), async (req, res) => {
     if (org.storage_type === 'box' && org.box_refresh_token) {
       try {
         const boxConfig = {
-          refreshToken: org.box_refresh_token,
+          refreshToken: getDecryptedToken(org, 'box_refresh_token'),
           folderId: org.box_folder_id,
         };
         const boxSummary = await uploadToBox(filteredResults, boxConfig, { verbose: false });
         boxLink = boxSummary.folderLink;
-        // Box rotates refresh tokens — save the new one
+        // Box rotates refresh tokens — save the new one (encrypted)
         if (boxSummary.newRefreshToken) {
-          updateOrgSettings(org.id, { box_refresh_token: boxSummary.newRefreshToken });
+          updateOrgSettings(org.id, { box_refresh_token: prepareTokenForStorage(boxSummary.newRefreshToken, org.id) });
         }
       } catch (err) {
         boxError = err.message;

@@ -21,7 +21,7 @@ The entire SHL pipeline — parse URI, fetch manifest, decrypt JWE, decompress, 
 The server now provides a CORS proxy that forwards encrypted JWE blobs verbatim between the browser and SHL manifest servers. It never sees decrypted content. This addresses the CORS constraint the review identified while maintaining the security boundary the review recommended.
 
 ### 3. No credentials at rest (OAuth tokens, password hashes, API keys)
-**Status: Partially addressed — disagree on full elimination. Recommend discussion.**
+**Status: Addressed — OAuth tokens now encrypted at rest. Password hashes retained by design.**
 
 We still store OAuth refresh tokens and password hashes. The review recommends eliminating these entirely via Web Share API and removing the multi-tenant password model. We believe this creates a worse security outcome for the target users (front-desk healthcare staff) for the following reasons:
 
@@ -31,12 +31,14 @@ We still store OAuth refresh tokens and password hashes. The review recommends e
 
 - **OAuth tokens are scoped and revocable.** Each token is limited to one organization, uses minimum-privilege scopes (e.g., `drive.file` for Google Drive — only files the app created), and can be disconnected by the admin at any time. The risk profile of these tokens is meaningfully different from storing PHI.
 
-**We'd welcome discussion on:** Whether there's a middle ground, such as encrypting OAuth tokens at rest with a per-org key, or whether the risk of stored tokens is acceptable given the alternative (staff-directed file saving with PHI).
+**What we implemented:** All OAuth refresh tokens (Google Drive, Gmail, OneDrive, Outlook, Box) are now encrypted at rest using AES-256-GCM. Each organization's tokens are encrypted with a unique key derived from `HMAC-SHA256(SESSION_SECRET, orgId)`. A database leak alone does not expose usable OAuth tokens — the attacker would also need the `SESSION_SECRET` environment variable. Existing plaintext tokens are automatically migrated to encrypted form on server startup.
 
 ### 4. Multi-tenant isolation risk from shared backend
-**Status: Mitigated by architecture change + existing controls.**
+**Status: Mitigated by architecture change + existing controls. Self-hosting option available.**
 
-The most critical data (decrypted PHI) no longer passes through server-side processing logic where a vulnerability could cause cross-tenant leakage during the cryptographic phase. The CORS proxy handles only encrypted blobs. The route endpoint still processes decrypted data transiently for delivery, but every API request is validated against the authenticated organization's slug, and tokens are scoped per-organization.
+The most critical data (decrypted PHI) no longer passes through server-side processing logic where a vulnerability could cause cross-tenant leakage during the cryptographic phase. The CORS proxy handles only encrypted blobs. The route endpoint still processes decrypted data transiently for delivery, but every API request is validated against the authenticated organization's slug, and tokens are scoped per-organization. OAuth tokens are encrypted with per-org keys, so a cross-tenant data leak at the database level would not expose another organization's usable credentials.
+
+**Self-hosting / single-tenant deployment:** For organizations that want to eliminate multi-tenant risk entirely, Kill the Clipboard can be self-hosted as a single-tenant instance. The application is a single Node.js server with a SQLite database — no external infrastructure dependencies. A health system can deploy it on their own infrastructure (Docker, VM, or cloud) with a single organization configured, eliminating any shared-backend concern. The same codebase supports both multi-tenant (hosted) and single-tenant (self-hosted) deployment without modification.
 
 ### 5. Server-side injection surface (SSRF)
 **Status: Fixed.**
@@ -109,8 +111,8 @@ These requirements justify the server components we maintain. We've minimized th
 | Server decrypts PHI | ✅ Fixed — decryption moved to browser |
 | SSRF via manifest fetches | ✅ Fixed — CORS proxy with SSRF blocklist |
 | XSS from SHL content | ✅ Fixed — CSP headers added |
-| No credentials at rest | ⚠️ Partially addressed — OAuth tokens still stored; discuss tradeoffs |
-| Multi-tenant isolation | ✅ Mitigated — PHI no longer in server crypto path |
+| No credentials at rest | ✅ Addressed — OAuth tokens encrypted at rest with per-org AES-256-GCM keys |
+| Multi-tenant isolation | ✅ Mitigated — PHI no longer in server crypto path; self-hosting option available |
 | Web Share API for file saving | ❌ Disagree — admin-controlled routing is safer for healthcare staff |
 | No audit trail | 🔜 Planned — routing endpoint can log non-PHI metadata |
 | Browser dependency risk | ⚠️ Acknowledged — mitigated by CSP; discuss SRI |

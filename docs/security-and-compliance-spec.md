@@ -1,6 +1,6 @@
 # Kill the Clipboard — Security & Compliance Specification
 
-**Version:** 1.1 — Client-Side Decryption Architecture
+**Version:** 1.2 — Client-Side Decryption + Encrypted Credentials at Rest
 **Date:** March 4, 2026
 **Classification:** For distribution to CISO and compliance review teams
 **Contact:** agleason@russellstreetventures.com
@@ -94,8 +94,8 @@ Kill the Clipboard is a web-based tool that enables healthcare organizations to 
 │                                                                 │
 │  ┌──────────────────────────────────────────────────────────┐  │
 │  │              SQLite Database (config only)                │  │
-│  │  • Organization settings    • OAuth refresh tokens       │  │
-│  │  • Password hashes          • NO patient data            │  │
+│  │  • Organization settings    • OAuth tokens (encrypted)   │  │
+│  │  • Password hashes (bcrypt) • NO patient data            │  │
 │  └──────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
          │                    │                    │
@@ -198,7 +198,7 @@ Step 6: Cleanup
 | Patient Health Data | FHIR Bundles, PDFs, demographics | **PHI** | In-memory only | Duration of HTTP request (~seconds) |
 | SHL Encryption Keys | AES-256 key from QR code | **Sensitive Cryptographic Material** | In-memory only | Duration of HTTP request |
 | Organization Credentials | Admin/staff password hashes | **Sensitive** | SQLite database | Until org deletion |
-| OAuth Refresh Tokens | Google, Microsoft, Box tokens | **Sensitive** | SQLite database | Until disconnected or org deletion |
+| OAuth Refresh Tokens | Google, Microsoft, Box tokens | **Sensitive** | SQLite database (encrypted with per-org AES-256-GCM key) | Until disconnected or org deletion |
 | Organization Settings | Name, slug, storage config | **Internal** | SQLite database | Until org deletion |
 
 ### PHI Handling Principles
@@ -270,7 +270,7 @@ Health records are **not stored at rest** on the server. They exist only transie
 | Data | Protection |
 |------|-----------|
 | Passwords | bcrypt hashed (cost factor 10) |
-| OAuth refresh tokens | Stored in SQLite on encrypted volume (Fly.io volume encryption) |
+| OAuth refresh tokens | Encrypted at rest with per-organization AES-256-GCM keys (derived from `HMAC-SHA256(SESSION_SECRET, orgId)`). Database also resides on encrypted Fly.io volume. |
 | Session signing key | Environment variable, not stored in code or database |
 | Database file | Resides on Fly.io persistent volume with filesystem-level access controls |
 
@@ -282,6 +282,8 @@ Health records are **not stored at rest** on the server. They exist only transie
 | JWE key management | Direct (`dir`) | jose | Unwrap content encryption key |
 | Password hashing | bcrypt (cost 10) | bcryptjs | Hash admin and staff passwords |
 | Session token signing | HMAC-SHA256 | Node.js `crypto` | Sign/verify authentication tokens |
+| OAuth token encryption | AES-256-GCM | Node.js `crypto` | Encrypt OAuth refresh tokens at rest with per-org derived keys |
+| Per-org key derivation | HMAC-SHA256 | Node.js `crypto` | Derive per-organization encryption keys from SESSION_SECRET |
 | SHC JWS decoding | Base64url + DEFLATE | Node.js `zlib` | Decode SMART Health Card payloads |
 
 ### Algorithm Restrictions
@@ -374,13 +376,17 @@ HTTP security headers are set on all responses to mitigate XSS and injection att
 - **Build:** Deterministic from lockfile (`npm ci`)
 - **CI/CD:** GitHub Actions deploys to Fly.io on push to `main` branch
 
+### Self-Hosting / Single-Tenant Deployment
+
+Kill the Clipboard can also be self-hosted as a single-tenant instance. The application is a single Node.js server with a SQLite database — no external infrastructure dependencies (no Redis, no PostgreSQL, no message queues). Organizations that want to eliminate multi-tenant risk entirely can deploy the same codebase on their own infrastructure (Docker, VM, or cloud instance) with a single organization configured. The self-hosted deployment uses the same security controls (token encryption, CSP headers, SSRF protection) as the hosted version.
+
 ### Environment Variables (Secrets)
 
 All sensitive configuration is stored as Fly.io secrets (encrypted at rest, injected at runtime):
 
 | Variable | Purpose |
 |----------|---------|
-| `SESSION_SECRET` | HMAC key for session token signing |
+| `SESSION_SECRET` | HMAC key for session token signing and per-org OAuth token encryption key derivation |
 | `GOOGLE_CLIENT_ID` | Google OAuth client identifier |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
 | `ONEDRIVE_CLIENT_ID` | Microsoft OAuth client identifier |
@@ -409,10 +415,11 @@ Each integration uses the OAuth 2.0 Authorization Code flow with the minimum req
 
 1. **Authorization:** Admin initiates OAuth flow from the admin settings page
 2. **Token exchange:** Authorization code exchanged for access + refresh tokens
-3. **Storage:** Refresh token stored in SQLite database, scoped to the authorizing organization
-4. **Usage:** Access tokens refreshed automatically when expired using stored refresh token
-5. **Revocation:** Admin can disconnect any service at any time, deleting the stored refresh token
-6. **Isolation:** Each organization's tokens are independent; no token sharing between organizations
+3. **Encryption:** Refresh token encrypted using AES-256-GCM with a key derived from `HMAC-SHA256(SESSION_SECRET, orgId)` — each organization gets a unique encryption key
+4. **Storage:** Encrypted refresh token stored in SQLite database, scoped to the authorizing organization
+5. **Usage:** Encrypted token decrypted in memory when needed; access tokens refreshed automatically when expired
+6. **Revocation:** Admin can disconnect any service at any time, deleting the stored refresh token
+7. **Isolation:** Each organization's tokens are independently encrypted; a database leak alone does not expose usable tokens
 
 ### Minimum Privilege Principle
 
@@ -456,7 +463,7 @@ This aligns with the SMART Health Cards cryptographic model and NIST-approved al
 | **Minimum Necessary** | Only processes data contained in the patient-presented QR code; does not access any additional records |
 | **Access Controls** | Dual-password authentication; role-based access (admin vs. staff); configurable session timeouts |
 | **Encryption in Transit** | All connections use HTTPS/TLS |
-| **Encryption at Rest** | Health data is not stored at rest; organization secrets stored on encrypted infrastructure |
+| **Encryption at Rest** | Health data is not stored at rest; OAuth tokens encrypted at rest with per-org AES-256-GCM keys; database on encrypted infrastructure |
 | **Audit Controls** | Each scan operation is a discrete, logged API request; OAuth token usage auditable via third-party provider logs |
 | **Integrity** | FHIR data validated for structural integrity; AES-256-GCM provides authenticated encryption (tamper detection) |
 | **Automatic Logoff** | Configurable session timeouts (1h / 4h / 8h / 12h / 24h) |
@@ -541,7 +548,7 @@ All production dependencies are well-established, actively maintained open-sourc
 | Risk | Severity | Likelihood | Mitigation |
 |------|----------|-----------|------------|
 | **PHI exposure via server compromise** | High | Very Low | PHI decryption occurs in the browser, not on the server. The server's CORS proxy only handles encrypted JWE blobs and never possesses the decryption key. The route endpoint receives decrypted data transiently for delivery only — a server compromise would require intercepting an active routing operation. |
-| **OAuth token theft** | Medium | Low | Tokens stored in SQLite on encrypted Fly.io volume. Each token scoped to one organization. Revocable by admin at any time. |
+| **OAuth token theft** | Medium | Very Low | Tokens encrypted at rest with per-organization AES-256-GCM keys derived from `HMAC-SHA256(SESSION_SECRET, orgId)`. A database leak alone does not expose usable tokens. Each token scoped to one organization. Revocable by admin at any time. |
 | **Session token forgery** | Medium | Low | HMAC-SHA256 signed with cryptographically random secret. Token expiration enforced server-side. |
 | **Password brute force** | Medium | Medium | bcrypt with cost factor 10 makes brute force computationally expensive (~100ms per attempt). |
 | **QR code spoofing (app identity)** | Low | Medium | Phase 1 uses static list (spoofable). Phase 3 roadmap adds cryptographic attestation with JWS signatures. |
@@ -604,8 +611,9 @@ All production dependencies are well-established, actively maintained open-sourc
 Because Kill the Clipboard does not persistently store PHI:
 
 - **A server breach would NOT expose historical patient records** — there are none on the server
-- **A database breach would expose:** organization names, bcrypt password hashes, and OAuth refresh tokens
-- **Impact of OAuth token exposure:** Attacker could upload files to connected cloud storage or send email from connected accounts until tokens are revoked
+- **A database breach would expose:** organization names, bcrypt password hashes, and encrypted OAuth refresh tokens
+- **Impact of database-only breach:** Limited. OAuth tokens are encrypted with per-organization AES-256-GCM keys derived from `HMAC-SHA256(SESSION_SECRET, orgId)`. An attacker with database access alone cannot use the encrypted tokens without also compromising the `SESSION_SECRET` environment variable.
+- **Impact of full server compromise (database + SESSION_SECRET):** Attacker could decrypt OAuth tokens and upload files to connected cloud storage or send email from connected accounts until tokens are revoked
 - **Mitigation:** Organizations can immediately disconnect services (revoking tokens) and change passwords from the admin page
 
 ### Recommended Organization-Level Response Procedures
@@ -624,7 +632,7 @@ Because Kill the Clipboard does not persistently store PHI:
 A: No. Health data is decrypted and processed entirely in the user's browser — it never touches the server in its decrypted form during the cryptographic processing phase. The server receives decrypted data only for the purpose of routing it to the organization's configured storage destination, and does not persist it. No health records are written to disk, stored in a database, or cached.
 
 **Q: What data IS stored on the server?**
-A: Only organization configuration: organization name, URL slug, bcrypt-hashed passwords, storage destination settings, and OAuth refresh tokens for connected cloud services. No patient health data is ever stored.
+A: Only organization configuration: organization name, URL slug, bcrypt-hashed passwords, storage destination settings, and OAuth refresh tokens (encrypted at rest with per-organization AES-256-GCM keys). No patient health data is ever stored.
 
 **Q: Is health data encrypted?**
 A: Yes, at every stage. SMART Health Links use AES-256-GCM encryption. Data remains encrypted from the SHL server through the CORS proxy all the way to the browser. Decryption only happens in the browser — the decryption key never leaves the browser. All network connections use HTTPS/TLS.

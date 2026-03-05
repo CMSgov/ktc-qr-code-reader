@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { encryptToken, decryptToken, isEncrypted, ensureEncrypted } from './crypto.js';
 
 let db;
 
@@ -88,6 +89,88 @@ function migrate(db) {
   for (const sql of migrations) {
     try { db.exec(sql); } catch { /* Column already exists */ }
   }
+
+  // Encrypt any plaintext OAuth tokens at rest
+  migrateTokenEncryption(db);
+}
+
+/**
+ * Migrate existing plaintext OAuth refresh tokens to encrypted form.
+ * Runs on every startup — idempotent (skips already-encrypted tokens).
+ */
+function migrateTokenEncryption(db) {
+  if (!process.env.SESSION_SECRET) {
+    // Can't encrypt without SESSION_SECRET — skip silently (warning logged by auth.js)
+    return;
+  }
+
+  const TOKEN_COLUMNS = [
+    'drive_refresh_token',
+    'onedrive_refresh_token',
+    'box_refresh_token',
+    'gmail_refresh_token',
+    'outlook_refresh_token',
+  ];
+
+  const orgs = db.prepare('SELECT id, ' + TOKEN_COLUMNS.join(', ') + ' FROM organizations').all();
+  let migrated = 0;
+
+  for (const org of orgs) {
+    const updates = {};
+    for (const col of TOKEN_COLUMNS) {
+      const value = org[col];
+      if (value && !isEncrypted(value)) {
+        updates[col] = ensureEncrypted(value, org.id);
+        migrated++;
+      }
+    }
+
+    if (Object.keys(updates).length > 0) {
+      const sets = Object.keys(updates).map(k => `${k} = ?`);
+      const vals = Object.values(updates);
+      db.prepare(`UPDATE organizations SET ${sets.join(', ')} WHERE id = ?`).run(...vals, org.id);
+    }
+  }
+
+  if (migrated > 0) {
+    console.log(`[Security] Encrypted ${migrated} plaintext OAuth token(s) at rest.`);
+  }
+}
+
+// ── Token Encryption Helpers ─────────────────────────────────────
+
+/**
+ * Token column names that should be encrypted at rest.
+ */
+const TOKEN_COLUMNS = [
+  'drive_refresh_token',
+  'onedrive_refresh_token',
+  'box_refresh_token',
+  'gmail_refresh_token',
+  'outlook_refresh_token',
+];
+
+/**
+ * Get a decrypted OAuth refresh token from an org record.
+ * @param {object} org - Organization row from database
+ * @param {string} column - Column name (e.g. 'drive_refresh_token')
+ * @returns {string|null} Decrypted plaintext token
+ */
+export function getDecryptedToken(org, column) {
+  const value = org[column];
+  if (!value) return null;
+  return decryptToken(value, org.id);
+}
+
+/**
+ * Prepare a token value for storage (encrypts it).
+ * @param {string} plaintext - The plaintext token
+ * @param {string} orgId - Organization UUID
+ * @returns {string|null} Encrypted token for storage
+ */
+export function prepareTokenForStorage(plaintext, orgId) {
+  if (!plaintext) return null;
+  return encryptToken(plaintext, orgId);
 }
 
 // ── CRUD Operations ──────────────────────────────────────────────
