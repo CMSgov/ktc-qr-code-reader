@@ -7,10 +7,16 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"
+    integrity="sha384-c9d8RFSL+u3exBOJ4Yp3HUJXS4znl9f+z66d1y54ig+ea249SpqR+w1wyvXz/lk+"
+    crossorigin="anonymous"></script>
   <!-- Client-side SHL processing: decryption happens in the browser, not the server -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jose/5.9.6/index.umd.min.js"></script>
-  <script src="https://unpkg.com/pako@2.1.0/dist/pako.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jose/5.9.6/index.umd.min.js"
+    integrity="sha384-WaQ/HOFuAmf6nqMQqr3QFD5MVVftUXPeHMzX8uzER+kHiGeCylqg4uOBsXVq7sEI"
+    crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/pako@2.1.0/dist/pako.min.js"
+    integrity="sha384-rNlaE5fs9dGIjmxWDALQh/RBAaGRYT5ChrzHo6tRfgrZ36iRFAiquP5g41Jsv+0j"
+    crossorigin="anonymous"></script>
   <script src="/js/shl-client.js"></script>
   <style>
     :root {
@@ -970,6 +976,18 @@
   </div>
 
   <script>
+    // === HTML Sanitization ===
+    // Prevents XSS from attacker-controlled data (SHL labels, FHIR fields, filenames)
+    function escapeHtml(str) {
+      if (str == null) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
     // === Multi-tenant state ===
     const slug = window.location.pathname.split('/').filter(Boolean)[0];
     let orgConfig = null;
@@ -1114,7 +1132,7 @@
         stopBtn.disabled = false;
         setStatus('info', 'Camera active. Point at a SMART Health Link QR code.');
       } catch (err) {
-        setStatus('error', `Camera error: ${err.message || err}`);
+        setStatus('error', `Camera error: ${escapeHtml(err.message || err)}`);
       }
     }
 
@@ -1141,7 +1159,7 @@
             document.getElementById('stopBtn').disabled = true;
           }
 
-          setStatus('info', `Verifying app: ${parsed.name || parsed.appId}...`);
+          setStatus('info', `Verifying app: ${escapeHtml(parsed.name || parsed.appId)}...`);
 
           try {
             const resp = await fetch(`/api/verify-app?appId=${encodeURIComponent(parsed.appId)}`);
@@ -1155,7 +1173,7 @@
               banner.innerHTML = `
                 <div class="app-verified-banner">
                   <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
-                  <span>✓ ${data.app.name} — Approved CMS App (${tierLabel})</span>
+                  <span>✓ ${escapeHtml(data.app.name)} — Approved CMS App (${escapeHtml(tierLabel)})</span>
                   <button class="app-banner-reset" onclick="resetAppValidation()">Reset</button>
                 </div>`;
               banner.style.display = 'block';
@@ -1166,14 +1184,14 @@
               banner.innerHTML = `
                 <div class="app-rejected-banner">
                   <svg viewBox="0 0 24 24"><path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"/></svg>
-                  <span>✗ "${parsed.name || parsed.appId}" is not a recognized CMS-approved app</span>
+                  <span>✗ "${escapeHtml(parsed.name || parsed.appId)}" is not a recognized CMS-approved app</span>
                   <button class="app-banner-reset" onclick="resetAppValidation()">Try Again</button>
                 </div>`;
               banner.style.display = 'block';
               setStatus('warning', 'App not recognized. Please scan a QR code from an approved CMS app.');
             }
           } catch (err) {
-            setStatus('error', 'Error verifying app: ' + err.message);
+            setStatus('error', 'Error verifying app: ' + escapeHtml(err.message));
           }
           return;
         }
@@ -1259,7 +1277,7 @@
           }, 1500);
           return;
         }
-        setStatus('error', `Error: ${err.message}`);
+        setStatus('error', `Error: ${escapeHtml(err.message)}`);
       }
     }
 
@@ -1311,15 +1329,15 @@
             <div class="success-icon">
               <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
             </div>
-            <h3>Saved to ${storageLabel}</h3>
-            <p>${data.summary.fhirBundles} FHIR bundle(s) and ${data.summary.pdfs} PDF(s) uploaded successfully.</p>
-            <a href="${folderLink}" target="_blank" class="open-folder-btn">Open Folder</a>
+            <h3>Saved to ${escapeHtml(storageLabel)}</h3>
+            <p>${parseInt(data.summary.fhirBundles) || 0} FHIR bundle(s) and ${parseInt(data.summary.pdfs) || 0} PDF(s) uploaded successfully.</p>
+            <a href="${escapeHtml(folderLink)}" target="_blank" class="open-folder-btn">Open Folder</a>
             <button class="scan-again-btn" onclick="resetForNewScan()">Scan Another</button>
           </div>`;
       } else if (storageError) {
         driveBanner.innerHTML = `
           <div class="drive-error-banner">
-            ${storageLabel} upload failed: ${storageError}
+            ${escapeHtml(storageLabel)} upload failed: ${escapeHtml(storageError)}
           </div>`;
       } else if (data.emailSent) {
         driveBanner.innerHTML = `
@@ -1328,7 +1346,7 @@
               <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
             </div>
             <h3>Emailed Successfully</h3>
-            <p>${data.summary.fhirBundles} FHIR bundle(s) and ${data.summary.pdfs} PDF(s) sent.</p>
+            <p>${parseInt(data.summary.fhirBundles) || 0} FHIR bundle(s) and ${parseInt(data.summary.pdfs) || 0} PDF(s) sent.</p>
             <button class="scan-again-btn" onclick="resetForNewScan()" style="border-color: var(--color-success); color: #1a4301;">Scan Another</button>
           </div>`;
       } else if (data.apiPosted) {
@@ -1338,7 +1356,7 @@
               <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
             </div>
             <h3>Sent to API</h3>
-            <p>${data.summary.fhirBundles} FHIR bundle(s) and ${data.summary.pdfs} PDF(s) posted to API endpoint.</p>
+            <p>${parseInt(data.summary.fhirBundles) || 0} FHIR bundle(s) and ${parseInt(data.summary.pdfs) || 0} PDF(s) posted to API endpoint.</p>
             <button class="scan-again-btn" onclick="resetForNewScan()" style="border-color: var(--color-success); color: #1a4301;">Scan Another</button>
           </div>`;
       } else {
@@ -1350,7 +1368,7 @@
       if (data.emailError) {
         emailBanner.innerHTML = `
           <div class="drive-error-banner">
-            Email send failed: ${data.emailError}
+            Email send failed: ${escapeHtml(data.emailError)}
           </div>`;
       } else {
         emailBanner.innerHTML = '';
@@ -1360,25 +1378,26 @@
       if (data.apiError) {
         apiBanner.innerHTML = `
           <div class="drive-error-banner">
-            API post failed: ${data.apiError}
+            API post failed: ${escapeHtml(data.apiError)}
           </div>`;
       } else {
         apiBanner.innerHTML = '';
       }
 
-      // Download mode
+      // Download mode — uses data attributes instead of inline onclick to prevent XSS
       const downloadSection = document.getElementById('downloadSection');
       if (data.storageType === 'download') {
         let downloadHtml = '<div class="result-card"><h3>Download Files</h3><div class="result-card-body"><div class="download-section"><div class="download-buttons">';
 
         const downloadItems = [];
 
-        // PDF download buttons
+        // PDF download buttons (use data-index, not inline filename)
         if (data.pdfs && data.pdfs.length > 0) {
-          for (const pdf of data.pdfs) {
+          for (let pi = 0; pi < data.pdfs.length; pi++) {
+            const pdf = data.pdfs[pi];
             if (pdf.dataBase64) {
               downloadItems.push({ name: pdf.filename, base64: pdf.dataBase64, type: 'application/pdf' });
-              downloadHtml += `<button class="download-btn" onclick="downloadFile('${pdf.filename}', '${pdf.dataBase64}', 'application/pdf')">Download ${pdf.filename}</button>`;
+              downloadHtml += `<button class="download-btn" data-download-index="${downloadItems.length - 1}">Download ${escapeHtml(pdf.filename)}</button>`;
             }
           }
         }
@@ -1389,30 +1408,44 @@
             const filename = `bundle-${i + 1}.json`;
             const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(bundle, null, 2))));
             downloadItems.push({ name: filename, base64: b64, type: 'application/json' });
-            downloadHtml += `<button class="download-btn" onclick="downloadJsonBundle(${i}, '${filename}')">Download ${filename}</button>`;
+            downloadHtml += `<button class="download-btn" data-download-index="${downloadItems.length - 1}">Download ${escapeHtml(filename)}</button>`;
           });
         }
 
         if (downloadItems.length > 1) {
-          downloadHtml += `<button class="download-all" onclick="downloadAllFiles()">Download All</button>`;
+          downloadHtml += `<button class="download-all">Download All</button>`;
         }
 
         downloadHtml += '</div></div></div></div>';
         downloadSection.innerHTML = downloadHtml;
 
-        // Store bundles globally for download
+        // Store items globally for download; attach click handlers via delegation (no inline JS)
+        window._downloadItems = downloadItems;
         window._downloadBundles = data.fhirBundles || [];
+
+        downloadSection.querySelectorAll('.download-btn[data-download-index]').forEach(btn => {
+          btn.addEventListener('click', function() {
+            const idx = parseInt(this.getAttribute('data-download-index'), 10);
+            const item = window._downloadItems[idx];
+            if (item) downloadFile(item.name, item.base64, item.type);
+          });
+        });
+
+        const dlAllBtn = downloadSection.querySelector('.download-all');
+        if (dlAllBtn) {
+          dlAllBtn.addEventListener('click', downloadAllFiles);
+        }
       } else {
         downloadSection.innerHTML = '';
       }
 
-      // Summary
+      // Summary — all external data is escaped to prevent XSS (especially data.label from SHL payload)
       const summaryHtml = `
-        ${data.label ? `<div class="stat-row"><span class="stat-label">Label</span><span class="stat-value">${data.label}</span></div>` : ''}
-        <div class="stat-row"><span class="stat-label">FHIR Bundles</span><span class="stat-value">${data.summary.fhirBundles}</span></div>
-        <div class="stat-row"><span class="stat-label">PDFs</span><span class="stat-value">${data.summary.pdfs}</span></div>
-        <div class="stat-row"><span class="stat-label">Other Entries</span><span class="stat-value">${data.summary.rawEntries}</span></div>
-        ${data.savedTo ? `<div class="stat-row"><span class="stat-label">Saved To</span><span class="stat-value">${data.savedTo}</span></div>` : ''}
+        ${data.label ? `<div class="stat-row"><span class="stat-label">Label</span><span class="stat-value">${escapeHtml(data.label)}</span></div>` : ''}
+        <div class="stat-row"><span class="stat-label">FHIR Bundles</span><span class="stat-value">${parseInt(data.summary.fhirBundles) || 0}</span></div>
+        <div class="stat-row"><span class="stat-label">PDFs</span><span class="stat-value">${parseInt(data.summary.pdfs) || 0}</span></div>
+        <div class="stat-row"><span class="stat-label">Other Entries</span><span class="stat-value">${parseInt(data.summary.rawEntries) || 0}</span></div>
+        ${data.savedTo ? `<div class="stat-row"><span class="stat-label">Saved To</span><span class="stat-value">${escapeHtml(data.savedTo)}</span></div>` : ''}
       `;
       document.getElementById('resultSummary').innerHTML = summaryHtml;
 
@@ -1424,24 +1457,25 @@
 
         let pdfHtml = '<div class="pdf-preview-container">';
         for (const pdf of data.pdfs) {
+          const safeName = escapeHtml(pdf.filename);
           if (pdf.dataBase64) {
             hasPreviews = true;
             pdfHtml += `
               <div class="pdf-preview-item">
-                <div class="pdf-label">${pdf.filename}</div>
+                <div class="pdf-label">${safeName}</div>
                 <embed src="data:application/pdf;base64,${pdf.dataBase64}" type="application/pdf">
               </div>`;
           } else if (pdf.url) {
             hasPreviews = true;
             pdfHtml += `
               <div class="pdf-preview-item">
-                <div class="pdf-label">${pdf.filename}</div>
-                <embed src="${pdf.url}" type="application/pdf">
+                <div class="pdf-label">${safeName}</div>
+                <embed src="${escapeHtml(pdf.url)}" type="application/pdf">
               </div>`;
           } else {
             pdfHtml += `
               <div class="pdf-preview-item">
-                <div class="pdf-label">${pdf.filename} (no preview available)</div>
+                <div class="pdf-label">${safeName} (no preview available)</div>
               </div>`;
           }
         }
@@ -1484,7 +1518,7 @@
 
         document.getElementById('resourceBadges').innerHTML =
           Object.entries(counts)
-            .map(([type, count]) => `<span class="resource-badge ${badgeClass(type)}">${type} (${count})</span>`)
+            .map(([type, count]) => `<span class="resource-badge ${badgeClass(type)}">${escapeHtml(type)} (${parseInt(count) || 0})</span>`)
             .join('');
 
         const previewCard = document.getElementById('previewCard');

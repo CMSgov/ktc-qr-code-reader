@@ -71,6 +71,26 @@ function migrate(db) {
     );
   `);
 
+  // Audit log table — records scan routing events (no PHI content, only metadata)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS audit_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      org_slug TEXT NOT NULL,
+      event_type TEXT NOT NULL,
+      storage_type TEXT,
+      fhir_bundle_count INTEGER DEFAULT 0,
+      pdf_count INTEGER DEFAULT 0,
+      success INTEGER DEFAULT 1,
+      error_message TEXT,
+      ip_address TEXT,
+      user_agent TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_audit_org ON audit_log(org_slug);
+    CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_log(created_at);
+  `);
+
   // Migrations: add new columns if they don't exist
   const migrations = [
     `ALTER TABLE organizations ADD COLUMN save_format TEXT NOT NULL DEFAULT 'both'`,
@@ -317,4 +337,50 @@ export function updateApprovalRequest(id, status) {
   getDb().prepare(
     "UPDATE approval_requests SET status = ?, reviewed_at = datetime('now') WHERE id = ?"
   ).run(status, id);
+}
+
+// ── Audit Log ─────────────────────────────────────────────
+
+/**
+ * Record a scan/route event in the audit log.
+ * Stores only metadata — NO PHI content (no patient names, no FHIR data, no PDFs).
+ */
+export function logAuditEvent({
+  orgSlug,
+  eventType,
+  storageType = null,
+  fhirBundleCount = 0,
+  pdfCount = 0,
+  success = true,
+  errorMessage = null,
+  ipAddress = null,
+  userAgent = null,
+}) {
+  try {
+    getDb().prepare(`
+      INSERT INTO audit_log (org_slug, event_type, storage_type, fhir_bundle_count, pdf_count, success, error_message, ip_address, user_agent)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(orgSlug, eventType, storageType, fhirBundleCount, pdfCount, success ? 1 : 0, errorMessage, ipAddress, userAgent);
+  } catch (err) {
+    // Audit logging should never break the main flow
+    console.error('[Audit] Failed to log event:', err.message);
+  }
+}
+
+/**
+ * List audit log entries for an organization (for admin dashboard).
+ */
+export function listAuditLog(orgSlug, limit = 100) {
+  return getDb().prepare(
+    'SELECT * FROM audit_log WHERE org_slug = ? ORDER BY created_at DESC LIMIT ?'
+  ).all(orgSlug, limit);
+}
+
+/**
+ * List all audit log entries (for super admin dashboard).
+ */
+export function listAllAuditLog(limit = 500) {
+  return getDb().prepare(
+    'SELECT * FROM audit_log ORDER BY created_at DESC LIMIT ?'
+  ).all(limit);
 }

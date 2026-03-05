@@ -1,6 +1,6 @@
 # Kill the Clipboard — Security & Compliance Specification
 
-**Version:** 1.2 — Client-Side Decryption + Encrypted Credentials at Rest
+**Version:** 1.3 — XSS Hardening, SRI, and Audit Logging
 **Date:** March 4, 2026
 **Classification:** For distribution to CISO and compliance review teams
 **Contact:** agleason@russellstreetventures.com
@@ -40,7 +40,8 @@ Kill the Clipboard is a web-based tool that enables healthcare organizations to 
 - **End-to-end encryption of health data.** SMART Health Links use AES-256-GCM encryption. Data remains encrypted from the SHL server all the way to the browser. The decryption key never leaves the browser.
 - **Server handles routing, not processing.** After the browser decrypts health data, it sends it to the server solely for delivery to the organization's configured storage destination (Drive, OneDrive, Box, email, or API). This preserves admin-controlled routing while keeping PHI out of the server during the cryptographic processing phase.
 - **Multi-tenant isolation.** Each healthcare organization operates under its own URL, credentials, and configuration. No data is shared between organizations.
-- **Content Security Policy.** HTTP security headers restrict script execution, connection targets, and embedding to mitigate XSS and injection attacks.
+- **Defense-in-depth against XSS.** All external data (SHL labels, FHIR fields, filenames) is HTML-sanitized before rendering. Content Security Policy headers restrict script execution and data exfiltration. CDN scripts are verified via Subresource Integrity (SRI) hashes.
+- **Server-side audit logging.** Every scan/route operation is logged with non-PHI metadata (timestamp, org, storage destination, record counts, success/failure). No patient data is written to the audit log.
 - **Standards-based.** Built on SMART Health Links, FHIR R4, and SMART Health Cards — the same interoperability standards mandated by ONC and adopted by major EHR vendors and health apps.
 
 ---
@@ -331,19 +332,63 @@ The server includes a CORS proxy endpoint that bridges browser requests to SHL m
 
 HTTP security headers are set on all responses to mitigate XSS and injection attacks:
 
-- `script-src 'self' 'unsafe-inline' https://unpkg.com https://cdnjs.cloudflare.com` — scripts only from self and trusted CDNs
-- `connect-src 'self'` — AJAX/fetch requests only to same origin
+- `script-src 'self' 'unsafe-inline' https://unpkg.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net` — scripts only from self and trusted CDNs
+- `connect-src 'self'` — AJAX/fetch requests only to same origin (prevents data exfiltration)
 - `object-src 'none'` — no plugin-based content (Flash, Java)
 - `base-uri 'self'` — prevents base tag injection
 - `X-Content-Type-Options: nosniff` — prevents MIME type sniffing
 - `X-Frame-Options: DENY` — prevents clickjacking
 - `Referrer-Policy: strict-origin-when-cross-origin` — limits referrer information
 
+### Subresource Integrity (SRI)
+
+All CDN-hosted scripts include `integrity` attributes with SHA-384 hashes and `crossorigin="anonymous"`. This ensures that if a CDN is compromised or a script is tampered with in transit, the browser will refuse to execute it. Covered libraries:
+
+| Library | Version | Source |
+|---------|---------|--------|
+| html5-qrcode | 2.3.8 | unpkg.com |
+| jose | 5.9.6 | cdnjs.cloudflare.com |
+| pako | 2.1.0 | unpkg.com |
+| qrcode | 1.4.4 | cdn.jsdelivr.net |
+
+### XSS Prevention
+
+All external data rendered via `innerHTML` is sanitized through an `escapeHtml()` function that escapes HTML special characters (`<`, `>`, `&`, `"`, `'`). This prevents injection attacks from attacker-controlled content in:
+
+- SHL `label` fields (the primary poisoned-QR attack vector)
+- FHIR resource type names
+- PDF filenames from DocumentReference attachments
+- App identity names from verification QR codes
+- Error messages from storage providers
+- Storage labels and folder links
+
+Download buttons use `data-*` attributes and event listeners instead of inline `onclick` handlers with interpolated filenames, preventing attribute injection.
+
 ### Browser Security
 
 - Static HTML pages served for scanner, admin, registration
 - API endpoints return JSON responses
+- Server-side FHIR validation rejects malformed data before routing
 - Browser camera access requires HTTPS (enforced by browser security model)
+
+### Audit Logging
+
+Every scan/route operation is logged to an `audit_log` table with metadata only (no PHI):
+
+| Field | Description |
+|-------|-------------|
+| `org_slug` | Organization identifier |
+| `event_type` | Type of event (e.g., `scan_route`) |
+| `storage_type` | Destination (drive, onedrive, box, gmail, outlook, api, download) |
+| `fhir_bundle_count` | Number of FHIR bundles processed |
+| `pdf_count` | Number of PDFs processed |
+| `success` | Whether the operation succeeded |
+| `error_message` | Error details if failed |
+| `ip_address` | Client IP address |
+| `user_agent` | Client user agent string |
+| `created_at` | Timestamp |
+
+Audit logs are accessible via admin API endpoints and can be used for compliance reporting, incident investigation, and usage analytics.
 
 ---
 
@@ -464,7 +509,7 @@ This aligns with the SMART Health Cards cryptographic model and NIST-approved al
 | **Access Controls** | Dual-password authentication; role-based access (admin vs. staff); configurable session timeouts |
 | **Encryption in Transit** | All connections use HTTPS/TLS |
 | **Encryption at Rest** | Health data is not stored at rest; OAuth tokens encrypted at rest with per-org AES-256-GCM keys; database on encrypted infrastructure |
-| **Audit Controls** | Each scan operation is a discrete, logged API request; OAuth token usage auditable via third-party provider logs |
+| **Audit Controls** | Each scan/route operation is logged to `audit_log` table with non-PHI metadata (timestamp, org, storage type, record counts, success/failure, IP, user agent). Admin and super-admin API endpoints for log review. OAuth token usage auditable via third-party provider logs. |
 | **Integrity** | FHIR data validated for structural integrity; AES-256-GCM provides authenticated encryption (tamper detection) |
 | **Automatic Logoff** | Configurable session timeouts (1h / 4h / 8h / 12h / 24h) |
 | **Unique User Identification** | Organizations identified by unique slug; admin and staff roles separated |
@@ -556,7 +601,7 @@ All production dependencies are well-established, actively maintained open-sourc
 | **Cross-tenant data access** | High | Very Low | Token-based slug verification on every request. Staff tokens cannot access other organizations' data. |
 | **Decompression bomb (zip bomb via JWE)** | Medium | Low | 5 MB maximum decompression limit enforced on all inflate operations. |
 | **SSRF via malicious SHL URL** | Medium | Low | CORS proxy validates all URLs against SSRF blocklist (RFC 1918 private ranges, localhost, link-local, non-HTTP protocols). Only HTTPS URLs to external hosts are proxied. |
-| **XSS via SHL content** | Medium | Low | Content Security Policy headers restrict script execution to trusted sources. SHL labels and FHIR data displayed using `textContent` (not `innerHTML`) where possible. |
+| **XSS via SHL content** | Medium | Very Low | All external data HTML-sanitized via `escapeHtml()` before `innerHTML` rendering. CSP restricts script sources. CDN scripts verified via SRI hashes. `connect-src 'self'` blocks data exfiltration. Poisoned QR code attack vector eliminated. |
 
 ---
 

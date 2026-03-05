@@ -15,7 +15,7 @@ import { uploadToOnedrive, getOnedriveAuthUrl, exchangeOnedriveCode } from './sr
 import { uploadToBox, getBoxAuthUrl, exchangeBoxCode } from './src/output/box-uploader.js';
 import { sendViaGmail, getGmailAuthUrl, exchangeGmailCode, getGmailUserEmail } from './src/output/gmail-sender.js';
 import { sendViaOutlook, getOutlookMailAuthUrl, exchangeOutlookMailCode, getOutlookUserEmail } from './src/output/outlook-sender.js';
-import { initDb, getDb, createOrg, getOrgBySlug, getOrgById, updateOrgSettings, slugExists, listAllOrgs, deleteOrgById, countOrgs, createApprovalRequest, listApprovalRequests, updateApprovalRequest, getDecryptedToken, prepareTokenForStorage } from './src/db.js';
+import { initDb, getDb, createOrg, getOrgBySlug, getOrgById, updateOrgSettings, slugExists, listAllOrgs, deleteOrgById, countOrgs, createApprovalRequest, listApprovalRequests, updateApprovalRequest, getDecryptedToken, prepareTokenForStorage, logAuditEvent, listAuditLog, listAllAuditLog } from './src/db.js';
 import { hashPassword, verifyPassword, createToken, authMiddleware } from './src/auth.js';
 import { readFileSync } from 'node:fs';
 
@@ -125,10 +125,12 @@ app.use(express.json({ limit: '50mb' }));
 
 // ── Content Security Policy ──
 // Mitigates XSS by restricting which scripts, styles, and connections are allowed.
+// CDN scripts are pinned to specific versions and verified via Subresource Integrity (SRI) hashes.
+// Note: 'unsafe-inline' is required for onclick handlers in HTML; all innerHTML uses escapeHtml().
 app.use((req, res, next) => {
   res.setHeader('Content-Security-Policy', [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' https://unpkg.com https://cdnjs.cloudflare.com https://fonts.googleapis.com",
+    "script-src 'self' 'unsafe-inline' https://unpkg.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: blob:",
@@ -1343,6 +1345,20 @@ app.post('/api/orgs/:slug/route', authMiddleware('staff'), async (req, res) => {
     }
   }
 
+  // Audit log — record the scan event (metadata only, no PHI content)
+  const anyError = driveError || onedriveError || boxError || emailError || apiError;
+  logAuditEvent({
+    orgSlug: org.slug,
+    eventType: 'scan_route',
+    storageType: org.storage_type,
+    fhirBundleCount: filteredResults.fhirBundles.length,
+    pdfCount: filteredResults.pdfs.length,
+    success: !anyError,
+    errorMessage: anyError || null,
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent')?.slice(0, 200) || null,
+  });
+
   res.json({
     status: 'success',
     label,
@@ -1688,6 +1704,15 @@ app.get('/api/orgs/:slug/approval-status', authMiddleware('admin'), (req, res) =
   res.json({ status: row ? row.status : 'none' });
 });
 
+// Audit log: list recent scan events for an organization (admin only, no PHI)
+app.get('/api/orgs/:slug/audit-log', authMiddleware('admin'), (req, res) => {
+  const org = getOrgBySlug(req.params.slug);
+  if (!org) return res.status(404).json({ error: 'Org not found' });
+  const limit = Math.min(parseInt(req.query.limit) || 100, 500);
+  const entries = listAuditLog(org.slug, limit);
+  res.json(entries);
+});
+
 // ── Super-admin middleware ──
 function superAdminAuth(req, res, next) {
   const key = req.headers['x-admin-key'];
@@ -1718,6 +1743,13 @@ app.get('/api/admin/orgs', superAdminAuth, (req, res) => {
   const orgs = listAllOrgs();
   const total = countOrgs();
   res.json({ orgs, total });
+});
+
+// Super-admin: view audit log across all organizations
+app.get('/api/admin/audit-log', superAdminAuth, (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit) || 500, 2000);
+  const entries = listAllAuditLog(limit);
+  res.json(entries);
 });
 
 // Super-admin: delete an organization

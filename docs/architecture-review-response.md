@@ -46,30 +46,45 @@ The most critical data (decrypted PHI) no longer passes through server-side proc
 The CORS proxy includes SSRF protection that blocks requests to private/internal IP ranges (RFC 1918), localhost, link-local addresses, and non-HTTP protocols. Only HTTPS requests to external hosts are proxied. Header forwarding is restricted to an allowlist (`Content-Type`, `Accept`).
 
 ### 6. XSS risk from attacker-controlled SHL content
-**Status: Fixed.**
+**Status: Fixed — HTML sanitization + CSP + SRI.**
 
-We've added Content Security Policy headers on all responses:
-- `script-src` restricted to `self` and specific trusted CDNs
-- `connect-src 'self'` — no exfiltration to external origins
+A [threat model report](https://fhir-search.exe.xyz/threat-model-report.html#poc) demonstrated that a poisoned SHL QR code could inject malicious HTML via the `label` field (e.g., `<img onerror="...">`) and exfiltrate data from subsequent scans. We've implemented defense-in-depth:
+
+**HTML Sanitization:** All external data rendered via `innerHTML` is now sanitized through an `escapeHtml()` function that escapes `<`, `>`, `&`, `"`, and `'`. This covers: SHL labels, FHIR resource types, PDF filenames, app names, error messages, and storage labels. Download buttons use `data-*` attributes and event listeners instead of inline `onclick` with interpolated filenames.
+
+**Content Security Policy headers:**
+- `script-src` restricted to `'self'` and specific trusted CDNs (unpkg, cdnjs, jsdelivr)
+- `connect-src 'self'` — prevents exfiltration to external origins
 - `object-src 'none'` — no plugin content
 - `X-Frame-Options: DENY` — no clickjacking
 - `X-Content-Type-Options: nosniff`
 
-Additionally, FHIR data display uses `textContent` where possible to prevent script injection from SHL labels or FHIR content.
+**Server-side FHIR validation:** The route endpoint re-validates all FHIR bundles before routing, rejecting malformed data.
 
 ### 7. Data accessible to any script running in browser origin
-**Status: Acknowledged — inherent to any client-side processing.**
+**Status: Mitigated — SRI hashes implemented.**
 
-This is a valid concern and applies equally to the review's recommended architecture. Any script running on the page origin can access decrypted PHI in browser memory. Our mitigations: CSP headers restrict what scripts can load and where they can send data; production dependencies are pinned to specific versions from trusted CDNs; `connect-src 'self'` prevents a compromised script from exfiltrating data to an external server.
+This is a valid concern and applies equally to the review's recommended architecture. Any script running on the page origin can access decrypted PHI in browser memory. Our mitigations:
 
-**Worth discussing:** Subresource Integrity (SRI) hashes on CDN script tags for additional supply-chain protection.
+- **Subresource Integrity (SRI):** All CDN script tags now include `integrity` attributes with SHA-384 hashes and `crossorigin="anonymous"`. If a CDN is compromised or a script is tampered with, the browser will refuse to execute it. Covered: `html5-qrcode@2.3.8`, `jose@5.9.6`, `pako@2.1.0`, `qrcode@1.4.4`.
+- **CSP headers** restrict what scripts can load and where they can send data
+- **`connect-src 'self'`** prevents a compromised script from exfiltrating data to an external server
+- Production dependencies are pinned to specific versions
 
 ### 8. No server-side audit trail
-**Status: Acknowledged — not yet implemented.**
+**Status: Fixed — audit logging implemented.**
 
-The review correctly notes that a client-side architecture cannot provide centralized logging of who scanned what and when. Our route endpoint does see each delivery operation, so adding audit logging there (timestamp, org, storage destination, record count — no PHI content) is straightforward and on our roadmap.
+The route endpoint now records every scan event in an `audit_log` table with the following metadata (no PHI content):
+- Timestamp
+- Organization slug
+- Storage destination type (Drive, OneDrive, Box, Gmail, Outlook, API, download)
+- FHIR bundle count and PDF count
+- Success/failure status and error messages
+- Client IP address and user agent
 
-**Worth discussing:** What level of audit detail health systems need, and whether a lightweight server-side audit log at the routing layer satisfies compliance requirements.
+Audit logs are accessible via:
+- **Admin API:** `GET /api/orgs/:slug/audit-log` (per-organization, requires admin auth)
+- **Super-admin API:** `GET /api/admin/audit-log` (all organizations)
 
 ---
 
@@ -110,12 +125,12 @@ These requirements justify the server components we maintain. We've minimized th
 |---|---|
 | Server decrypts PHI | ✅ Fixed — decryption moved to browser |
 | SSRF via manifest fetches | ✅ Fixed — CORS proxy with SSRF blocklist |
-| XSS from SHL content | ✅ Fixed — CSP headers added |
+| XSS from SHL content | ✅ Fixed — HTML sanitization (`escapeHtml`), CSP headers, SRI hashes |
 | No credentials at rest | ✅ Addressed — OAuth tokens encrypted at rest with per-org AES-256-GCM keys |
 | Multi-tenant isolation | ✅ Mitigated — PHI no longer in server crypto path; self-hosting option available |
 | Web Share API for file saving | ❌ Disagree — admin-controlled routing is safer for healthcare staff |
-| No audit trail | 🔜 Planned — routing endpoint can log non-PHI metadata |
-| Browser dependency risk | ⚠️ Acknowledged — mitigated by CSP; discuss SRI |
+| No audit trail | ✅ Fixed — route endpoint logs non-PHI metadata to `audit_log` table |
+| Browser dependency risk | ✅ Fixed — SRI hashes on all CDN scripts; CSP restricts script sources |
 | Fully static architecture | ❌ Disagree for current requirements — health systems need automated routing |
 
 We'd welcome a follow-up conversation on the items marked for discussion, particularly around the tradeoffs between stored credentials and staff-directed file saving in a healthcare front-desk environment.
