@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Setup Guide | Kill the Clipboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --cms-blue: #0071bc;
+      --cms-blue-dark: #205493;
+      --cms-blue-darkest: #112e51;
+      --cms-blue-light: #4992d6;
+      --cms-blue-lightest: #e6f0f8;
+      --cms-cyan: #02bfe7;
+      --cms-cyan-dark: #0186a2;
+      --cms-gold: #f3ce3b;
+      --cms-gold-dark: #c9a616;
+      --cms-gold-light: #fef9e9;
+      --color-success: #2e8540;
+      --color-success-light: #e7f4e4;
+      --color-error: #e31c3d;
+      --color-error-light: #fce4ec;
+      --color-warn: #f8c41f;
+      --color-warn-light: #fef9e9;
+      --gray-darkest: #1b1b1b;
+      --gray-dark: #333334;
+      --gray-mid: #5b616b;
+      --gray-light: #aeb0b5;
+      --gray-lighter: #d6d7d9;
+      --gray-lightest: #f1f1f1;
+      --white: #ffffff;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--white);
+      color: var(--gray-dark);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .topbar {
+      background: var(--cms-blue-darkest);
+      color: var(--white);
+      padding: 8px 24px;
+      font-size: 0.75rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .topbar span { opacity: 0.7; }
+
+    .site-header {
+      background: var(--white);
+      border-bottom: 4px solid var(--cms-gold);
+      padding: 20px 24px;
+    }
+    .header-inner {
+      max-width: 800px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .site-title {
+      font-family: 'Instrument Serif', Georgia, serif;
+      font-size: 1.75rem;
+      color: var(--cms-blue-darkest);
+      letter-spacing: -0.02em;
+      text-decoration: none;
+    }
+    .site-title em { font-style: italic; color: var(--cms-blue); }
+    .back-to-admin {
+      font-size: 0.85rem;
+      color: var(--cms-blue);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .back-to-admin:hover { text-decoration: underline; }
+
+    .gold-rule {
+      height: 3px;
+      background: linear-gradient(90deg, var(--cms-gold) 0%, var(--cms-gold-dark) 100%);
+      border: none;
+      margin: 0;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, var(--cms-blue-darkest) 0%, var(--cms-blue-dark) 100%);
+      color: var(--white);
+      padding: 40px 24px;
+      text-align: center;
+    }
+    .hero h2 {
+      font-family: 'Instrument Serif', Georgia, serif;
+      font-size: 2.25rem;
+      font-weight: 400;
+      letter-spacing: -0.03em;
+      margin-bottom: 8px;
+    }
+    .hero p {
+      font-size: 1rem;
+      opacity: 0.8;
+      max-width: 540px;
+      margin: 0 auto;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 32px 24px;
+    }
+
+    /* Step cards */
+    .step-card {
+      background: var(--white);
+      border: 1px solid var(--gray-lighter);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .step-header {
+      background: var(--cms-blue-lightest);
+      border-bottom: 1px solid var(--gray-lighter);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .step-number {
+      width: 32px;
+      height: 32px;
+      background: var(--cms-blue);
+      color: var(--white);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .step-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--cms-blue-darkest);
+    }
+    .step-body {
+      padding: 20px;
+      font-size: 0.925rem;
+      line-height: 1.7;
+      color: var(--gray-dark);
+    }
+    .step-body p { margin-bottom: 12px; }
+    .step-body p:last-child { margin-bottom: 0; }
+
+    /* Sub-options */
+    .option-list {
+      list-style: none;
+      padding: 0;
+      margin: 12px 0 0 0;
+    }
+    .option-item {
+      background: var(--gray-lightest);
+      border: 1px solid var(--gray-lighter);
+      border-radius: 4px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+    }
+    .option-item:last-child { margin-bottom: 0; }
+    .option-name {
+      font-weight: 700;
+      color: var(--cms-blue-darkest);
+      font-size: 0.9rem;
+      margin-bottom: 4px;
+    }
+    .option-desc {
+      font-size: 0.85rem;
+      color: var(--gray-mid);
+      line-height: 1.5;
+    }
+    .option-steps {
+      margin-top: 8px;
+      padding-left: 18px;
+      font-size: 0.85rem;
+      color: var(--gray-mid);
+      line-height: 1.6;
+    }
+
+    /* Info callout */
+    .info-callout {
+      background: var(--cms-gold-light);
+      border: 1px solid var(--cms-gold);
+      border-left: 4px solid var(--cms-gold-dark);
+      border-radius: 4px;
+      padding: 14px 18px;
+      margin-top: 16px;
+      font-size: 0.85rem;
+      color: #654501;
+      line-height: 1.5;
+    }
+    .info-callout strong {
+      color: #4a3200;
+    }
+
+    .tip-callout {
+      background: var(--cms-blue-lightest);
+      border: 1px solid var(--cms-blue-light);
+      border-left: 4px solid var(--cms-blue);
+      border-radius: 4px;
+      padding: 14px 18px;
+      margin-top: 16px;
+      font-size: 0.85rem;
+      color: var(--cms-blue-darkest);
+      line-height: 1.5;
+    }
+
+    /* Footer */
+    .site-footer {
+      background: var(--cms-blue-darkest);
+      color: var(--white);
+      padding: 32px 24px;
+      text-align: center;
+      font-size: 0.8rem;
+      margin-top: 40px;
+    }
+    .site-footer p { opacity: 0.6; margin-bottom: 4px; }
+    .footer-inner { max-width: 800px; margin: 0 auto; }
+
+    @media (max-width: 480px) {
+      .hero h2 { font-size: 1.75rem; }
+      .site-title { font-size: 1.4rem; }
+      .header-inner { flex-direction: column; gap: 4px; align-items: flex-start; }
+      .step-body { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <span>Setup Guide</span>
+    <span></span>
+  </div>
+
+  <div class="site-header">
+    <div class="header-inner">
+      <a href="/" class="site-title">Kill <em>the</em> Clipboard</a>
+      <a href="javascript:history.back()" class="back-to-admin">&larr; Back to Admin</a>
+    </div>
+  </div>
+
+  <hr class="gold-rule">
+
+  <div class="hero">
+    <h2>Setup Guide</h2>
+    <p>Follow these steps to configure Kill the Clipboard for your practice or health system.</p>
+  </div>
+
+  <div class="container">
+
+    <!-- STEP 1: CREATE YOUR ORGANIZATION -->
+    <div class="step-card">
+      <div class="step-header">
+        <div class="step-number">1</div>
+        <div class="step-title">Create Your Organization</div>
+      </div>
+      <div class="step-body">
+        <p>Visit the <a href="/register">registration page</a> and choose a name and URL slug for your practice. The slug becomes part of your unique scanner URL:</p>
+        <p style="font-family: monospace; background: var(--gray-lightest); padding: 8px 12px; border-radius: 4px; font-size: 0.85rem; color: var(--cms-blue-darkest);">
+          killtheclipboard.fly.dev/<strong>your-slug</strong>
+        </p>
+        <p>Your staff will use this URL to access the scanner. Choose something short and easy to remember, like your practice name.</p>
+      </div>
+    </div>
+
+    <!-- STEP 2: SET FILE FORMAT -->
+    <div class="step-card">
+      <div class="step-header">
+        <div class="step-number">2</div>
+        <div class="step-title">Set Your File Format</div>
+      </div>
+      <div class="step-body">
+        <p>In the Admin Settings, choose what format you want the patient's health data delivered in:</p>
+        <ul class="option-list">
+          <li class="option-item">
+            <div class="option-name">PDF + FHIR (Both)</div>
+            <div class="option-desc">Generates both a human-readable PDF summary and structured FHIR JSON data. Best for most practices.</div>
+          </li>
+          <li class="option-item">
+            <div class="option-name">PDF Only</div>
+            <div class="option-desc">Generates just the PDF document. Good if your staff prefers printed or visual records.</div>
+          </li>
+          <li class="option-item">
+            <div class="option-name">FHIR Only</div>
+            <div class="option-desc">Generates only the structured FHIR JSON data. Best for integration with EHR systems.</div>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- STEP 3: SET PASSWORDS -->
+    <div class="step-card">
+      <div class="step-header">
+        <div class="step-number">3</div>
+        <div class="step-title">Set Passwords</div>
+      </div>
+      <div class="step-body">
+        <p>Your organization has two levels of access, each with its own password:</p>
+        <ul class="option-list">
+          <li class="option-item">
+            <div class="option-name">Admin Password</div>
+            <div class="option-desc">Protects the Admin Settings page. Only administrators should have this password. Used to configure storage destinations, change passwords, and manage integrations. Admin sessions last <strong>24 hours</strong>.</div>
+          </li>
+          <li class="option-item">
+            <div class="option-name">Staff Password</div>
+            <div class="option-desc">Shared with front-desk staff or clinical staff who will scan patient QR codes. Provides access to the scanner only &mdash; not settings. Staff sessions last <strong>12 hours</strong>.</div>
+          </li>
+        </ul>
+        <div class="tip-callout">
+          <strong>Tip:</strong> You can change both passwords at any time from the Admin Settings page under "Change Passwords."
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4: CHOOSE DATA DESTINATION -->
+    <div class="step-card">
+      <div class="step-header">
+        <div class="step-number">4</div>
+        <div class="step-title">Choose How to Receive Patient Data</div>
+      </div>
+      <div class="step-body">
+        <p>When staff scan a patient's QR code, where should the extracted health data go? Choose one of the following destinations in Admin Settings:</p>
+
+        <ul class="option-list">
+          <li class="option-item">
+            <div class="option-name">Direct Download</div>
+            <div class="option-desc">No setup needed. Files download directly in the staff member's browser after each scan.</div>
+          </li>
+
+          <li class="option-item">
+            <div class="option-name">Google Drive</div>
+            <div class="option-desc">Automatically upload scanned files to a Google Drive folder.</div>
+            <ol class="option-steps">
+              <li>Select "Google Drive" as the storage destination</li>
+              <li>Click <strong>Connect Google Drive</strong> and sign in with your Google account</li>
+              <li>Authorize Kill the Clipboard to create files in Drive</li>
+              <li>Enter the Google Drive folder URL where files should be saved</li>
+            </ol>
+          </li>
+
+          <li class="option-item">
+            <div class="option-name">OneDrive</div>
+            <div class="option-desc">Automatically upload scanned files to a Microsoft OneDrive folder.</div>
+            <ol class="option-steps">
+              <li>Select "OneDrive" as the storage destination</li>
+              <li>Click <strong>Connect OneDrive</strong> and sign in with your Microsoft account</li>
+              <li>Authorize the application</li>
+              <li>Set the folder path where files should be saved (e.g., <code>/KillTheClipboard</code>)</li>
+            </ol>
+          </li>
+
+          <li class="option-item">
+            <div class="option-name">Box</div>
+            <div class="option-desc">Automatically upload scanned files to a Box folder.</div>
+            <ol class="option-steps">
+              <li>Select "Box" as the storage destination</li>
+              <li>Click <strong>Connect Box</strong> and sign in with your Box account</li>
+              <li>Authorize the application</li>
+              <li>Enter the Box folder ID from the folder's URL (use <code>0</code> for the root folder)</li>
+            </ol>
+          </li>
+
+          <li class="option-item">
+            <div class="option-name">Gmail</div>
+            <div class="option-desc">Send scanned data as email attachments via your Gmail account.</div>
+            <ol class="option-steps">
+              <li>Select "Gmail" as the storage destination</li>
+              <li>Click <strong>Connect Gmail</strong> and sign in with your Google account</li>
+              <li>Authorize Kill the Clipboard to send emails on your behalf</li>
+              <li>Enter the recipient email address where scan results should be sent</li>
+            </ol>
+            <div class="info-callout">
+              <strong>Note:</strong> Emails are sent FROM your connected Gmail account TO the recipient address you specify. Each scan sends one email with the patient data attached.
+            </div>
+          </li>
+
+          <li class="option-item">
+            <div class="option-name">Outlook</div>
+            <div class="option-desc">Send scanned data as email attachments via your Microsoft Outlook account.</div>
+            <ol class="option-steps">
+              <li>Select "Outlook" as the storage destination</li>
+              <li>Click <strong>Connect Outlook</strong> and sign in with your Microsoft account</li>
+              <li>Authorize the application</li>
+              <li>Enter the recipient email address</li>
+            </ol>
+          </li>
+
+          <li class="option-item">
+            <div class="option-name">API / Webhook</div>
+            <div class="option-desc">POST scan results as JSON to any URL endpoint. Best for custom integrations with EHR systems or internal tools.</div>
+            <ol class="option-steps">
+              <li>Select "API / Webhook" as the storage destination</li>
+              <li>Enter your API endpoint URL</li>
+              <li>Optionally add custom HTTP headers for authentication</li>
+              <li>Use <strong>Test Connection</strong> to verify your endpoint responds</li>
+            </ol>
+            <div class="info-callout">
+              <strong>Payload format:</strong> The POST body contains a JSON object with <code>fhirBundles</code> (array of FHIR Bundle resources) and <code>pdfs</code> (array with base64-encoded PDF data).
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- STEP 5: SCANNING -->
+    <div class="step-card">
+      <div class="step-header">
+        <div class="step-number">5</div>
+        <div class="step-title">How Scanning Works</div>
+      </div>
+      <div class="step-body">
+        <p>Once configured, your staff workflow is simple:</p>
+        <ol class="option-steps" style="margin-top: 0;">
+          <li>Staff navigates to your organization's scanner URL and signs in with the staff password</li>
+          <li>Tap <strong>Start Scan</strong> and point the camera at the patient's QR code</li>
+          <li>The QR code is read, the SMART Health Link is processed, and the patient's health data is extracted</li>
+          <li>Staff can view the data on screen (patient info, FHIR resources, PDF preview)</li>
+          <li>The data is automatically sent to whichever destination the admin configured</li>
+        </ol>
+
+        <div class="info-callout">
+          <strong>About QR codes:</strong> Only valid SMART Health Link QR codes will be recognized and processed. Standard QR codes, website links, or non-health QR codes will not be accepted. If a QR code is not a valid SMART Health Link, the scanner will display a message indicating it was not recognized.
+        </div>
+
+        <div class="tip-callout" style="margin-top: 12px;">
+          <strong>Passcodes:</strong> Some SMART Health Links are protected with a passcode. If the patient's QR code requires one, the staff member will be prompted to enter the passcode before data can be extracted. The patient should provide this passcode.
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6: SESSION INFO -->
+    <div class="step-card">
+      <div class="step-header">
+        <div class="step-number">6</div>
+        <div class="step-title">Session Timeouts &amp; Security</div>
+      </div>
+      <div class="step-body">
+        <p>For security, sessions expire automatically:</p>
+        <ul class="option-list">
+          <li class="option-item">
+            <div class="option-name">Admin sessions &mdash; 24 hours</div>
+            <div class="option-desc">After 24 hours of inactivity, administrators will need to sign in again to access settings.</div>
+          </li>
+          <li class="option-item">
+            <div class="option-name">Staff sessions &mdash; 12 hours</div>
+            <div class="option-desc">After 12 hours, staff will need to re-enter the staff password to continue scanning. This covers a typical shift without requiring multiple logins.</div>
+          </li>
+        </ul>
+        <p style="margin-top: 12px;">All data is transmitted securely over HTTPS. Patient health data is processed in real time and is not stored on our servers.</p>
+      </div>
+    </div>
+
+    <!-- NEED HELP? -->
+    <div style="text-align: center; padding: 20px 0;">
+      <p style="color: var(--gray-mid); font-size: 0.9rem;">
+        Questions? Contact your system administrator or visit the
+        <a href="https://github.com/Amy-at-CMS/killtheclipboard" style="color: var(--cms-blue); font-weight: 600;">GitHub repository</a>
+        for technical documentation.
+      </p>
+    </div>
+
+  </div>
+
+  <div class="site-footer">
+    <div class="footer-inner">
+      <p>Powered by SMART Health Links</p>
+      <p style="margin-top:8px">
+        <a href="/privacy" style="color:#fff;opacity:0.6;margin:0 12px">Privacy Policy</a>
+        <a href="/terms" style="color:#fff;opacity:0.6;margin:0 12px">Terms of Service</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>

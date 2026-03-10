@@ -1,0 +1,8 @@
+node_modules/
+shl-output/
+config.json
+.DS_Store
+data/
+*.db
+*.db-wal
+*.db-shm
