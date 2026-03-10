@@ -34,7 +34,7 @@ No more clipboard. No more faxes. No more manual data entry.
 ## Quick Start
 
 ```bash
-git clone https://github.com/Amy-at-CMS/killtheclipboard.git
+git clone https://github.com/CMSgov/ktc-qr-code-reader.git
 cd killtheclipboard
 npm install
 npm start
