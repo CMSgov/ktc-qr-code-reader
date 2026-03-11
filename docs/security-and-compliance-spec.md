@@ -741,8 +741,8 @@ A: The application runs on Fly.io in the `iad` region (Ashburn, Virginia, United
 A: A staff password specific to each organization. Sessions are time-limited (configurable from 1 to 24 hours) and use HMAC-SHA256 signed tokens with server-side expiration enforcement.
 
 **Q: Is the source code available for review?**
-A: Yes. The project is open source and available at [github.com/CMSgov/ktc-qr-code-reader](https://github.com/CMSgov/ktc-qr-code-reader).
+A: Yes. The project is open source and available at [github.com/CMSgov/kill-the-clipboard-qr-code-reader](https://github.com/CMSgov/kill-the-clipboard-qr-code-reader).
 
 ---
 
-*This document is intended for CISO and compliance team review. For technical implementation details, see the project's [GitHub repository](https://github.com/CMSgov/ktc-qr-code-reader). For privacy policy, see [killtheclipboard.fly.dev/privacy](https://killtheclipboard.fly.dev/privacy).*
+*This document is intended for CISO and compliance team review. For technical implementation details, see the project's [GitHub repository](https://github.com/CMSgov/kill-the-clipboard-qr-code-reader). For privacy policy, see [killtheclipboard.fly.dev/privacy](https://killtheclipboard.fly.dev/privacy).*
