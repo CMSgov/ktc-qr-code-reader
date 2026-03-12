@@ -9,7 +9,16 @@
   "scripts": {
     "start": "node server.js",
     "scan": "node bin/shl-scan.js",
-    "test": "node --test src/**/*.test.js"
+    "generate:approved-apps": "node scripts/generate-approved-apps.js",
+    "generate:sanitize": "node scripts/generate-sanitize.js",
+    "build:core": "npm run generate:approved-apps && npm run generate:sanitize && node scripts/build-core.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^2.1.0",
+    "vitest": "^2.1.0"
   },
   "keywords": [
     "smart-health-link",

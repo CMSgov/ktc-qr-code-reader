@@ -17,7 +17,9 @@
   <script src="https://unpkg.com/pako@2.1.0/dist/pako.min.js"
     integrity="sha384-rNlaE5fs9dGIjmxWDALQh/RBAaGRYT5ChrzHo6tRfgrZ36iRFAiquP5g41Jsv+0j"
     crossorigin="anonymous"></script>
+  <script src="/js/sanitize.js"></script>
   <script src="/js/shl-client.js"></script>
+  <script src="/js/approved-apps.js"></script>
   <style>
     :root {
       /* CMS Primary */
@@ -254,6 +256,35 @@
     }
 
     /* === PASSCODE FORM === */
+    .confirm-fetch-box {
+      padding: 16px 20px;
+      background: var(--cms-blue-lightest);
+      border: 1px solid var(--cms-blue-light);
+      border-left: 4px solid var(--cms-cyan);
+      border-radius: 4px;
+      margin-bottom: 16px;
+    }
+    .confirm-fetch-box p {
+      margin: 0 0 12px 0;
+      font-size: 0.9rem;
+      color: var(--gray-dark);
+    }
+    .confirm-fetch-actions {
+      display: flex;
+      gap: 8px;
+    }
+    .confirm-fetch-actions button { flex: 0 0 auto; }
+    .confirm-fetch-box.unknown-issuer {
+      background: var(--cms-gold-light);
+      border-left-color: var(--cms-gold-dark);
+      color: var(--gray-darkest);
+    }
+    .confirm-fetch-box.unknown-issuer .confirm-fetch-note {
+      font-size: 0.85rem;
+      margin-top: 8px;
+      color: #654501;
+    }
+
     .passcode-form {
       display: none;
       padding: 20px;
@@ -916,6 +947,16 @@
 
       <div id="status" class="status"></div>
 
+      <!-- Confirm before fetch (security: show SHL source before fetching) -->
+      <div id="confirmFetchBox" class="confirm-fetch-box" style="display:none;">
+        <p id="confirmFetchMessage"></p>
+        <p id="confirmFetchNote" class="confirm-fetch-note" style="display:none;"></p>
+        <div class="confirm-fetch-actions">
+          <button type="button" class="primary" id="confirmFetchContinue" onclick="confirmFetchContinue()">Continue</button>
+          <button type="button" id="confirmFetchCancel" onclick="confirmFetchCancel()">Cancel</button>
+        </div>
+      </div>
+
       <div id="passcodeForm" class="passcode-form">
         <label>This SMART Health Link requires a passcode:</label>
         <input type="text" id="passcodeInput" placeholder="Enter passcode" autocomplete="off">
@@ -957,7 +998,7 @@
     <div class="footer-inner">
       <p id="orgFooter"></p>
       <p>Powered by SMART Health Links</p>
-      <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.15);">
+      <div id="adminFooterBlock" style="margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.15);">
         <a href="#" id="adminFooterLink" onclick="showAdminPasswordPrompt(event)" style="color: rgba(255,255,255,0.5); font-size: 0.75rem; text-decoration: none;">Admin Settings</a>
       </div>
       <!-- Admin password modal -->
@@ -977,29 +1018,7 @@
   </div>
 
   <script>
-    // === HTML Sanitization ===
-    // Prevents XSS from attacker-controlled data (SHL labels, FHIR fields, filenames)
-    function escapeHtml(str) {
-      if (str == null) return '';
-      return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-    }
-
-    // Validate that a string is safe base64 (only A-Za-z0-9+/= characters).
-    // Prevents attribute injection via crafted base64 in <embed src="data:...">.
-    function isSafeBase64(str) {
-      return typeof str === 'string' && /^[A-Za-z0-9+/=\s]+$/.test(str);
-    }
-
-    // Validate that a URL uses https: protocol only.
-    // Prevents javascript: and data: URI injection in href/src attributes.
-    function isSafeUrl(url) {
-      try { return new URL(url).protocol === 'https:'; } catch { return false; }
-    }
+    // escapeHtml, isSafeBase64, isSafeUrl from /js/sanitize.js (generated from src/util/sanitize.js)
 
     // === Multi-tenant state ===
     const slug = window.location.pathname.split('/').filter(Boolean)[0];
@@ -1014,8 +1033,38 @@
     let appVerified = false;
     let verifiedAppName = '';
 
+    // === Core mode (client-only, no server auth) ===
+    const isCore = !!(typeof window !== 'undefined' && window.__CORE_ONLY__);
+
+    // === Known SHL issuer hosts (spoofed-content mitigation) ===
+    function isKnownShlManifestHost(hostname) {
+      if (!hostname || typeof hostname !== 'string') return false;
+      const list = (typeof window !== 'undefined' && window.KNOWN_SHL_MANIFEST_HOSTS) || [];
+      const host = hostname.toLowerCase();
+      for (let i = 0; i < list.length; i++) {
+        const allowed = String(list[i]).toLowerCase();
+        if (host === allowed || host.endsWith('.' + allowed)) return true;
+      }
+      return false;
+    }
+
     // === Initialization ===
     (async function init() {
+      if (isCore) {
+        orgConfig = { name: 'Kill the Clipboard', storageType: 'download' };
+        orgName = orgConfig.name;
+        applyBranding(orgConfig);
+        // Core: no admin or login — hide all admin-related UI
+        const passwordAdminDiv = document.querySelector('.password-admin-link');
+        if (passwordAdminDiv) passwordAdminDiv.style.display = 'none';
+        const configAdminLink = document.getElementById('configAdminLink');
+        if (configAdminLink) configAdminLink.style.display = 'none';
+        const adminFooterBlock = document.getElementById('adminFooterBlock');
+        if (adminFooterBlock) adminFooterBlock.style.display = 'none';
+        showScanner();
+        return;
+      }
+
       if (!slug) {
         showError();
         return;
@@ -1191,19 +1240,17 @@
 
           setStatus('info', `Verifying app: ${escapeHtml(parsed.name || parsed.appId)}...`);
 
-          try {
-            const resp = await fetch(`/api/verify-app?appId=${encodeURIComponent(parsed.appId)}`);
-            const data = await resp.json();
-
-            const banner = document.getElementById('appVerificationBanner');
-            if (data.approved) {
+          const banner = document.getElementById('appVerificationBanner');
+          if (isCore && window.APPROVED_APPS_CORE) {
+            const app = window.APPROVED_APPS_CORE.find(function(a) { return a.appId === parsed.appId; });
+            if (app) {
               appVerified = true;
-              verifiedAppName = data.app.name;
-              const tierLabel = data.app.tier === 'early-adopter' ? 'Early Adopter' : 'Pledgee';
+              verifiedAppName = app.name;
+              const tierLabel = app.tier === 'early-adopter' ? 'Early Adopter' : 'Pledgee';
               banner.innerHTML = `
                 <div class="app-verified-banner">
                   <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
-                  <span>✓ ${escapeHtml(data.app.name)} — Approved CMS App (${escapeHtml(tierLabel)})</span>
+                  <span>✓ ${escapeHtml(app.name)} — Approved CMS App (${escapeHtml(tierLabel)})</span>
                   <button class="app-banner-reset" onclick="resetAppValidation()">Reset</button>
                 </div>`;
               banner.style.display = 'block';
@@ -1220,8 +1267,38 @@
               banner.style.display = 'block';
               setStatus('warning', 'App not recognized. Please scan a QR code from an approved CMS app.');
             }
-          } catch (err) {
-            setStatus('error', 'Error verifying app: ' + escapeHtml(err.message));
+          } else {
+            try {
+              const resp = await fetch(`/api/verify-app?appId=${encodeURIComponent(parsed.appId)}`);
+              const data = await resp.json();
+
+              if (data.approved) {
+                appVerified = true;
+                verifiedAppName = data.app.name;
+                const tierLabel = data.app.tier === 'early-adopter' ? 'Early Adopter' : 'Pledgee';
+                banner.innerHTML = `
+                  <div class="app-verified-banner">
+                    <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+                    <span>✓ ${escapeHtml(data.app.name)} — Approved CMS App (${escapeHtml(tierLabel)})</span>
+                    <button class="app-banner-reset" onclick="resetAppValidation()">Reset</button>
+                  </div>`;
+                banner.style.display = 'block';
+                updateAppValidationUI();
+                setStatus('info', 'App verified! Now scan the patient\'s health data QR code.');
+              } else {
+                appVerified = false;
+                banner.innerHTML = `
+                  <div class="app-rejected-banner">
+                    <svg viewBox="0 0 24 24"><path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"/></svg>
+                    <span>✗ "${escapeHtml(parsed.name || parsed.appId)}" is not a recognized CMS-approved app</span>
+                    <button class="app-banner-reset" onclick="resetAppValidation()">Try Again</button>
+                  </div>`;
+                banner.style.display = 'block';
+                setStatus('warning', 'App not recognized. Please scan a QR code from an approved CMS app.');
+              }
+            } catch (err) {
+              setStatus('error', 'Error verifying app: ' + escapeHtml(err.message));
+            }
           }
           return;
         }
@@ -1248,7 +1325,7 @@
         return;
       }
 
-      // Normal health data QR flow
+      // Normal health data QR flow — confirm before fetch (security)
       if (scanner) {
         try { await scanner.stop(); } catch {}
         scanner = null;
@@ -1257,23 +1334,89 @@
       }
 
       lastQrText = decodedText;
+
+      let shlPayload = null;
+      try {
+        shlPayload = parseShlUri(decodedText);
+      } catch (_) {}
+
+      if (shlPayload) {
+        let hostLabel = 'unknown';
+        try {
+          hostLabel = new URL(shlPayload.url).hostname;
+        } catch (_) {}
+        const fileCount = (shlPayload.label && shlPayload.label.length > 0) ? '' : ' (content will load after fetch)';
+        const knownIssuer = isKnownShlManifestHost(hostLabel);
+        const box = document.getElementById('confirmFetchBox');
+        const msgEl = document.getElementById('confirmFetchMessage');
+        const noteEl = document.getElementById('confirmFetchNote');
+        box.classList.toggle('unknown-issuer', !knownIssuer);
+        if (knownIssuer) {
+          msgEl.textContent = 'SMART Health Link from ' + hostLabel + fileCount + ' (known issuer). Click Continue to fetch and decrypt, or Cancel to abort.';
+          noteEl.style.display = 'none';
+          noteEl.textContent = '';
+        } else {
+          msgEl.textContent = 'SMART Health Link from ' + hostLabel + fileCount + '.';
+          noteEl.textContent = 'This domain is not in your list of known SHL issuers. Data could be spoofed. Only continue if you trust this source.';
+          noteEl.style.display = 'block';
+        }
+        box.style.display = 'block';
+        window._pendingConfirmQrText = decodedText;
+        setStatus('info', knownIssuer ? 'Confirm to fetch this SMART Health Link.' : 'Unverified issuer — confirm only if you trust this source.');
+        return;
+      }
+
       setStatus('info', 'QR code detected. Processing SMART Health Link...');
       await processScan(decodedText);
     }
 
+    function confirmFetchContinue() {
+      const qr = window._pendingConfirmQrText;
+      window._pendingConfirmQrText = null;
+      document.getElementById('confirmFetchBox').style.display = 'none';
+      if (qr) {
+        setStatus('info', 'Fetching and decrypting...');
+        processScan(qr);
+      }
+    }
+
+    function confirmFetchCancel() {
+      window._pendingConfirmQrText = null;
+      document.getElementById('confirmFetchBox').style.display = 'none';
+      setStatus('info', 'Cancelled. Click Start Scan to try again.');
+    }
+
     async function processScan(qrText, passcode) {
       try {
-        // ── Client-side SHL processing ──
-        // All decryption happens in the browser. The server never sees decrypted PHI.
-        // Server is only used as a CORS proxy (for encrypted blobs) and for routing
-        // the decrypted data to the configured storage destination.
-
         setStatus('info', 'Parsing SMART Health Link...');
 
-        const data = await processScanClientSide(qrText, slug, token, {
-          passcode,
-          orgName: orgName,
-        });
+        let data;
+        if (isCore) {
+          data = await processScanCore(qrText, {
+            passcode,
+            orgName,
+            proxyBaseUrl: typeof window !== 'undefined' && window.__CORE_PROXY_URL__ || null,
+          });
+          if (data.status === 'ok') {
+            data = {
+              status: 'success',
+              summary: {
+                fhirBundles: (data.fhirBundles && data.fhirBundles.length) || 0,
+                pdfs: (data.pdfs && data.pdfs.length) || 0,
+                rawEntries: 0,
+              },
+              fhirBundles: data.fhirBundles,
+              pdfs: data.pdfs,
+              label: data.label,
+              storageType: 'download',
+            };
+          }
+        } else {
+          data = await processScanClientSide(qrText, slug, token, {
+            passcode,
+            orgName: orgName,
+          });
+        }
 
         if (data.status === 'not_shl') {
           setStatus('warning', data.message);
@@ -1292,13 +1435,13 @@
         }
 
         if (data.status === 'success') {
-          setStatus('info', 'Saving...');
+          setStatus('info', isCore ? 'Ready to download or share.' : 'Saving...');
           document.getElementById('passcodeForm').classList.remove('visible');
           await new Promise(r => setTimeout(r, 300));
           showResults(data);
         }
       } catch (err) {
-        if (err.message === 'SESSION_EXPIRED') {
+        if (!isCore && err.message === 'SESSION_EXPIRED') {
           sessionStorage.removeItem('ktc_token_' + slug);
           token = null;
           setStatus('error', 'Session expired. Please log in again.');
@@ -1445,6 +1588,9 @@
         if (downloadItems.length > 1) {
           downloadHtml += `<button class="download-all">Download All</button>`;
         }
+        if (typeof navigator !== 'undefined' && navigator.share) {
+          downloadHtml += `<button class="share-btn" id="webShareBtn">Share</button>`;
+        }
 
         downloadHtml += '</div></div></div></div>';
         downloadSection.innerHTML = downloadHtml;
@@ -1464,6 +1610,10 @@
         const dlAllBtn = downloadSection.querySelector('.download-all');
         if (dlAllBtn) {
           dlAllBtn.addEventListener('click', downloadAllFiles);
+        }
+        const webShareBtn = document.getElementById('webShareBtn');
+        if (webShareBtn) {
+          webShareBtn.addEventListener('click', shareDownloadFiles);
         }
       } else {
         downloadSection.innerHTML = '';
@@ -1617,6 +1767,32 @@
       });
     }
 
+    async function shareDownloadFiles() {
+      const items = window._downloadItems;
+      if (!items || items.length === 0 || !navigator.share) return;
+      try {
+        const files = items.map(function(item) {
+          const buffer = base64ToArrayBuffer(item.base64);
+          return new File([buffer], item.name, { type: item.type });
+        });
+        if (navigator.canShare && navigator.canShare({ files })) {
+          await navigator.share({
+            title: 'Health records',
+            files: files,
+          });
+        } else {
+          await navigator.share({
+            title: 'Health records',
+            text: items.length + ' file(s) from SMART Health Link scan.',
+          });
+        }
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          setStatus('error', 'Share failed: ' + escapeHtml(err.message));
+        }
+      }
+    }
+
     // === Status and clear ===
     function setStatus(type, message) {
       const el = document.getElementById('status');
@@ -1678,6 +1854,8 @@
       document.getElementById('previewCard').style.display = 'none';
       document.getElementById('passcodeForm').classList.remove('visible');
       document.getElementById('passcodeInput').value = '';
+      document.getElementById('confirmFetchBox').style.display = 'none';
+      window._pendingConfirmQrText = null;
       document.getElementById('status').className = 'status';
     }
 

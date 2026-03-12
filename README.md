@@ -134,6 +134,24 @@ When registering OAuth apps, use these callback URLs (replace `your-domain.com` 
 | Outlook | `https://your-domain.com/auth/outlook/callback` |
 | Box | `https://your-domain.com/auth/box/callback` |
 
+## Core (client-only) deployment
+
+**Core** is a client-only scanner: no server handles PHI, no auth, save via Web Share (mobile) or browser download (desktop). It can run on a static host or CDN with zero backend.
+
+1. **Build the Core artifact:**
+   ```bash
+   npm run build:core
+   ```
+   This writes `dist/core/index.html` and `dist/core/js/` (shl-client.js, approved-apps.js).
+
+2. **Deploy** the contents of `dist/core/` to any static host or CDN (e.g. S3 + CloudFront, Netlify, GitHub Pages). No Node server is required. Serve `index.html` at the root of the deployment (or as the default document) so script paths `js/...` resolve.
+
+3. **HTTPS** is required for camera access in production.
+
+4. **Optional CORS proxy:** If SHL manifest servers don’t send CORS headers, you can run the full app with `ENABLE_CORE_PROXY=1` and point the Core client at the proxy: before loading the scanner, set `window.__CORE_PROXY_URL__ = 'https://your-server.com/api/shl-proxy'` (e.g. in a small inline script in `index.html`). The proxy only forwards encrypted traffic and uses the same SSRF/rate limits as the org-scoped proxy.
+
+See **docs/core-deployment.md** for details (browser support, Web Share, confirm-before-fetch).
+
 ## Architecture
 
 ```
@@ -163,7 +181,34 @@ public/
   setup-guide.html — Step-by-step setup walkthrough
   privacy.html     — Privacy policy
   terms.html       — Terms of service
+data/
+  approved-apps.js — Single source for CMS approved apps + known SHL manifest hosts
 ```
+
+## Development (DRY)
+
+To avoid duplication, some assets are generated from a single source:
+
+| Source | Generated / used by | Command |
+|--------|---------------------|--------|
+| `data/approved-apps.js` | `public/js/approved-apps.js`, server | `npm run generate:approved-apps` |
+| `src/util/sanitize.js` | `public/js/sanitize.js`, server | `npm run generate:sanitize` |
+
+**Approved apps:** The list in `data/approved-apps.js` comes from the **CMS "Kill the Clipboard"** program: 12 early adopters and 71+ pledgees (see [CMS health tech ecosystem](https://www.cms.gov/health-tech-ecosystem/early-adopters) and [Kill the Clipboard](https://www.cms.gov/health-tech-ecosystem/early-adopters/kill-the-clipboard)). This file is maintained by hand; when CMS updates the participant list, edit `data/approved-apps.js`, then run `npm run generate:approved-apps`. The server imports from `data/`; the client loads the generated script. Core build runs this automatically.
+
+**Sanitize (escapeHtml, isSafeBase64, isSafeUrl):** Edit `src/util/sanitize.js`; run `npm run generate:sanitize` to update the client script. The server imports from `src/util/sanitize.js`.
+
+**Remaining duplication (by design):** SHL URI parsing exists in both `src/shl/uri-parser.js` (Node) and `public/js/shl-client.js` (browser) because the client cannot import Node modules. Timeout and size constants (e.g. 30s, 5 MB) are repeated in client and server so each runtime is self-contained.
+
+## Testing
+
+Tests use **Vitest** and live in **`__tests__`** folders next to the code they test: `src/**/__tests__/**` and `data/**/__tests__/**`. The top-level `test/` directory is reserved for future integration or end-to-end tests (e.g. server health, API).
+
+- **Run once (CI):** `npm test` (runs `vitest run`)
+- **Watch mode:** `npm run test:watch` (runs `vitest`)
+- **Coverage:** `npm run test:coverage` (runs `vitest run --coverage`; report in `coverage/`)
+
+Coverage is enforced at **80%** for lines, functions, and statements (77% for branches); `npm run test:coverage` must pass in CI. Some integration-heavy modules (cli, input, output, SHL manifest/decryptor/fhir-extractor) are excluded from coverage; see `vitest.config.js`.
 
 ## License
 

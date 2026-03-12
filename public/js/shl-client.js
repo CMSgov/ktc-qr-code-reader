@@ -102,21 +102,50 @@ function parseShlUri(text) {
 
 
 // ════════════════════════════════════════════════════════
-//  CORS Proxy — fetch via server (encrypted only)
+//  Fetch: direct (Core) or via CORS proxy
 // ════════════════════════════════════════════════════════
 
+// Timeouts to avoid hanging on slow or unresponsive SHL servers (robustness + DoS mitigation)
+const FETCH_TIMEOUT_MS = 30_000; // 30 seconds
+
 /**
- * Fetch a URL through the server's CORS proxy.
- * The proxy only ever sees encrypted JWE blobs — never decrypted PHI.
+ * Direct fetch (no proxy). Used when proxyBaseUrl is null (Core standalone)
+ * or for try-direct-then-proxy. Returns shape compatible with proxy response.
+ */
+async function directFetch(url, { method = 'GET', body = null, headers = {} }) {
+  const opts = { method, headers: { ...headers }, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) };
+  if (body != null && method !== 'GET') {
+    opts.body = typeof body === 'string' ? body : JSON.stringify(body);
+  }
+  const resp = await fetch(url, opts);
+  const text = await resp.text();
+  let parsedBody = null;
+  try {
+    parsedBody = text ? JSON.parse(text) : null;
+  } catch {
+    // response is not JSON (e.g. raw JWE)
+  }
+  return {
+    status: resp.status,
+    body: text,
+    parsedBody,
+    ok: resp.ok,
+  };
+}
+
+/**
+ * Fetch via server CORS proxy (encrypted only). Token optional for Core proxy.
  */
 async function proxyFetch(proxyBaseUrl, token, { url, method = 'GET', body = null, headers = {} }) {
+  const headersOut = { 'Content-Type': 'application/json' };
+  if (token) {
+    headersOut['Authorization'] = `Bearer ${token}`;
+  }
   const resp = await fetch(proxyBaseUrl, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
+    headers: headersOut,
     body: JSON.stringify({ url, method, body, headers }),
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
 
   if (!resp.ok) {
@@ -127,67 +156,99 @@ async function proxyFetch(proxyBaseUrl, token, { url, method = 'GET', body = nul
   return resp.json();
 }
 
-
-// ════════════════════════════════════════════════════════
-//  Manifest Fetcher (via CORS proxy)
-// ════════════════════════════════════════════════════════
-
-async function fetchManifestClient(shlPayload, proxyBaseUrl, token, config = {}) {
+/**
+ * Fetch manifest: direct first when possible, optional proxy fallback.
+ * fetchOptions: { proxyBaseUrl?, token? }. If proxyBaseUrl is null/undefined, direct only.
+ */
+async function fetchManifestClient(shlPayload, fetchOptions, config = {}) {
   const { recipient = 'Killtheclipboard', passcode = null } = config;
   const hasPasscode = shlPayload.flag.includes('P');
   const isDirect = shlPayload.flag.includes('U');
+  const proxyBaseUrl = fetchOptions.proxyBaseUrl ?? null;
+  const token = fetchOptions.token ?? null;
 
   if (hasPasscode && !passcode) {
     throw new Error('This SHL requires a passcode.');
   }
 
-  if (isDirect) {
-    const url = new URL(shlPayload.url);
-    url.searchParams.set('recipient', recipient);
-
-    const result = await proxyFetch(proxyBaseUrl, token, {
-      url: url.toString(),
-      method: 'GET',
+  const tryDirect = async () => {
+    if (isDirect) {
+      const url = new URL(shlPayload.url);
+      url.searchParams.set('recipient', recipient);
+      const result = await directFetch(url.toString(), { method: 'GET' });
+      if (!result.ok) throw new Error(`Manifest fetch failed: ${result.status}`);
+      return {
+        files: [{ contentType: 'application/jose', embedded: result.body }],
+      };
+    }
+    const postBody = { recipient };
+    if (hasPasscode && passcode) postBody.passcode = passcode;
+    const result = await directFetch(shlPayload.url, {
+      method: 'POST',
+      body: postBody,
+      headers: { 'Content-Type': 'application/json' },
     });
+    if (result.status === 401) {
+      const remaining = result.parsedBody?.remainingAttempts;
+      throw new Error(
+        `Invalid passcode.${remaining != null ? ` ${remaining} attempts remaining.` : ''}`
+      );
+    }
+    if (result.status === 404) {
+      throw new Error('This SHL is no longer active (deactivated or expired).');
+    }
+    if (result.status === 429) {
+      throw new Error('Rate limited by SHL server. Please try again later.');
+    }
+    if (result.status && result.status >= 400) {
+      throw new Error(`SHL manifest fetch failed: ${result.status}`);
+    }
+    return result.parsedBody || (result.body ? JSON.parse(result.body) : null);
+  };
 
-    return {
-      files: [{ contentType: 'application/jose', embedded: result.body }],
-    };
+  const useProxy = async () => {
+    if (isDirect) {
+      const url = new URL(shlPayload.url);
+      url.searchParams.set('recipient', recipient);
+      const result = await proxyFetch(proxyBaseUrl, token, { url: url.toString(), method: 'GET' });
+      return {
+        files: [{ contentType: 'application/jose', embedded: result.body }],
+      };
+    }
+    const postBody = { recipient };
+    if (hasPasscode && passcode) postBody.passcode = passcode;
+    const result = await proxyFetch(proxyBaseUrl, token, {
+      url: shlPayload.url,
+      method: 'POST',
+      body: postBody,
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (result.status === 401) {
+      const remaining = result.parsedBody?.remainingAttempts;
+      throw new Error(
+        `Invalid passcode.${remaining != null ? ` ${remaining} attempts remaining.` : ''}`
+      );
+    }
+    if (result.status === 404) {
+      throw new Error('This SHL is no longer active (deactivated or expired).');
+    }
+    if (result.status === 429) {
+      throw new Error('Rate limited by SHL server. Please try again later.');
+    }
+    if (result.status && result.status >= 400) {
+      throw new Error(`SHL manifest fetch failed: ${result.status}`);
+    }
+    return result.parsedBody || JSON.parse(result.body);
+  };
+
+  if (proxyBaseUrl) {
+    try {
+      return await tryDirect();
+    } catch {
+      return await useProxy();
+    }
   }
-
-  const postBody = { recipient };
-  if (hasPasscode && passcode) {
-    postBody.passcode = passcode;
-  }
-
-  const result = await proxyFetch(proxyBaseUrl, token, {
-    url: shlPayload.url,
-    method: 'POST',
-    body: postBody,
-    headers: { 'Content-Type': 'application/json' },
-  });
-
-  // Handle SHL-specific error statuses
-  if (result.status === 401) {
-    const remaining = result.parsedBody?.remainingAttempts;
-    throw new Error(
-      `Invalid passcode.${remaining != null ? ` ${remaining} attempts remaining.` : ''}`
-    );
-  }
-
-  if (result.status === 404) {
-    throw new Error('This SHL is no longer active (deactivated or expired).');
-  }
-
-  if (result.status === 429) {
-    throw new Error('Rate limited by SHL server. Please try again later.');
-  }
-
-  if (result.status && result.status >= 400) {
-    throw new Error(`SHL manifest fetch failed: ${result.status}`);
-  }
-
-  return result.parsedBody || JSON.parse(result.body);
+  return await tryDirect();
 }
 
 
@@ -231,14 +292,20 @@ async function decryptToStringClient(jweString, keyBytes) {
 //  FHIR Extractor (browser-side)
 // ════════════════════════════════════════════════════════
 
-async function extractHealthDataClient(manifest, keyBytes, proxyBaseUrl, token) {
+// Cap number of manifest files to prevent memory exhaustion and long-running tabs (robustness)
+const MAX_MANIFEST_FILES = 100;
+
+async function extractHealthDataClient(manifest, keyBytes, fetchOptions) {
   const results = {
     fhirBundles: [],
     pdfs: [],
     raw: [],
   };
+  const proxyBaseUrl = fetchOptions.proxyBaseUrl ?? null;
+  const token = fetchOptions.token ?? null;
 
-  for (const file of manifest.files || []) {
+  const files = (manifest.files || []).slice(0, MAX_MANIFEST_FILES);
+  for (const file of files) {
     let text;
     let contentType = file.contentType;
 
@@ -248,20 +315,26 @@ async function extractHealthDataClient(manifest, keyBytes, proxyBaseUrl, token) 
         text = decrypted.text;
         if (decrypted.contentType) contentType = decrypted.contentType;
       } else if (file.location) {
-        // Fetch file via CORS proxy (still encrypted)
-        const result = await proxyFetch(proxyBaseUrl, token, {
-          url: file.location,
-          method: 'GET',
-        });
-        const jwe = result.body;
+        let jwe;
+        if (proxyBaseUrl) {
+          const result = await proxyFetch(proxyBaseUrl, token, {
+            url: file.location,
+            method: 'GET',
+          });
+          jwe = result.body;
+        } else {
+          const result = await directFetch(file.location, { method: 'GET' });
+          if (!result.ok) throw new Error(`File fetch failed: ${result.status}`);
+          jwe = result.body;
+        }
         const decrypted = await decryptToStringClient(jwe, keyBytes);
         text = decrypted.text;
         if (decrypted.contentType) contentType = decrypted.contentType;
       } else {
         continue;
       }
-    } catch (err) {
-      console.warn('Failed to decrypt SHL file:', err.message);
+    } catch {
+      // Decryption or fetch failed for this file; skip (do not log to avoid timing/error leakage)
       continue;
     }
 
@@ -347,6 +420,9 @@ function extractPdfsFromBundle(resource) {
 }
 
 
+// Same limit as JWE path to prevent decompression-bomb DoS via SHC payloads
+const MAX_SHC_DECOMPRESSED_SIZE = 5_000_000; // 5 MB
+
 function decodeShcJwsBrowser(jws) {
   try {
     const parts = jws.split('.');
@@ -354,6 +430,7 @@ function decodeShcJwsBrowser(jws) {
 
     const payloadBytes = base64urlDecode(parts[1]);
     const decompressed = pako.inflateRaw(payloadBytes);
+    if (decompressed.length > MAX_SHC_DECOMPRESSED_SIZE) return null;
     const text = new TextDecoder().decode(decompressed);
     return JSON.parse(text);
   } catch {
@@ -441,16 +518,19 @@ async function processScanClientSide(qrText, slug, token, options = {}) {
     return { status: 'need_passcode', label: shlPayload.label };
   }
 
-  const proxyBaseUrl = `/api/orgs/${slug}/shl-proxy`;
+  const fetchOptions = {
+    proxyBaseUrl: `/api/orgs/${slug}/shl-proxy`,
+    token,
+  };
 
-  // Step 2: Fetch encrypted manifest via CORS proxy
-  const manifest = await fetchManifestClient(shlPayload, proxyBaseUrl, token, {
+  // Step 2: Fetch encrypted manifest (direct or via CORS proxy)
+  const manifest = await fetchManifestClient(shlPayload, fetchOptions, {
     recipient: orgName,
     passcode,
   });
 
   // Step 3+4: Decrypt and extract in browser
-  const results = await extractHealthDataClient(manifest, shlPayload.key, proxyBaseUrl, token);
+  const results = await extractHealthDataClient(manifest, shlPayload.key, fetchOptions);
 
   // Validate FHIR data
   if (results.fhirBundles.length > 0) {
@@ -500,4 +580,72 @@ async function processScanClientSide(qrText, slug, token, options = {}) {
   }
 
   return routeResp.json();
+}
+
+// ════════════════════════════════════════════════════════
+//  Core pipeline: no /route — save via Web Share / download only
+// ════════════════════════════════════════════════════════
+
+/**
+ * Core client-only pipeline. Does not call /route; returns extracted data
+ * for the UI to render Card Details and Web Share / download.
+ *
+ * @param {string} qrText - Raw QR code text
+ * @param {object} options - { passcode, orgName, proxyBaseUrl? }
+ *   proxyBaseUrl: optional CORS proxy URL (no auth). If null/omitted, direct fetch only.
+ * @returns {object} - { status, fhirBundles?, pdfs?, label?, error?, ... }
+ */
+async function processScanCore(qrText, options = {}) {
+  const { passcode = null, orgName = 'Killtheclipboard', proxyBaseUrl = null } = options;
+
+  let shlPayload;
+  try {
+    shlPayload = parseShlUri(qrText);
+  } catch (err) {
+    throw new Error(err.message);
+  }
+
+  if (!shlPayload) {
+    return { status: 'not_shl', message: 'QR code does not contain a SMART Health Link.' };
+  }
+
+  if (shlPayload.flag.includes('P') && !passcode) {
+    return { status: 'need_passcode', label: shlPayload.label };
+  }
+
+  const fetchOptions = { proxyBaseUrl, token: null };
+
+  const manifest = await fetchManifestClient(shlPayload, fetchOptions, {
+    recipient: orgName,
+    passcode,
+  });
+
+  const results = await extractHealthDataClient(manifest, shlPayload.key, fetchOptions);
+
+  if (results.fhirBundles.length > 0) {
+    const validation = validateFhirBundlesClient(results.fhirBundles);
+    if (!validation.valid) {
+      return {
+        status: 'validation_failed',
+        error: `Invalid FHIR data: ${validation.errors.join('; ')}`,
+        label: shlPayload.label,
+      };
+    }
+  }
+
+  if (results.fhirBundles.length === 0 && results.pdfs.length === 0) {
+    return {
+      status: 'validation_failed',
+      error: 'No valid FHIR bundles or PDF documents found in the scanned data.',
+      label: shlPayload.label,
+    };
+  }
+
+  return {
+    status: 'ok',
+    fhirBundles: results.fhirBundles,
+    pdfs: results.pdfs,
+    label: shlPayload.label,
+    storageType: 'download',
+  };
 }

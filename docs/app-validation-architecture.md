@@ -17,6 +17,7 @@ However, SMART Health Link QR codes don't identify the source app. We need a sep
 ### How It Works
 - App identity QR codes contain static JSON: `{"type":"cms-htei","name":"Apple","appId":"apple"}`
 - Scanner checks `appId` against a hardcoded list of 83 CMS-approved apps
+- The list is derived from the [CMS Kill the Clipboard](https://www.cms.gov/health-tech-ecosystem/early-adopters/kill-the-clipboard) program (12 early adopters, 71+ pledgees); see [CMS health tech ecosystem](https://www.cms.gov/health-tech-ecosystem/early-adopters). It lives in `data/approved-apps.js` and is maintained by hand (no automated sync with CMS).
 - Admin toggle enables/disables the two-step flow per organization
 
 ### Limitations

@@ -1,4 +1,5 @@
 node_modules/
+dist/
 shl-output/
 config.json
 .DS_Store
@@ -6,3 +7,5 @@ data/
 *.db
 *.db-wal
 *.db-shm
+coverage/
+.idea

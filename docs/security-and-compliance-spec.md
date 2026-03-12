@@ -14,7 +14,7 @@
 3. [Architecture](#3-architecture)
 4. [Data Flow](#4-data-flow)
 5. [Data Classification & Handling](#5-data-classification--handling)
-6. [Authentication & Access Control](#6-authentication--access-control)
+6. [Authentication & Access Control](#6-authentication--access-control) — includes [Rationale: Custom Tokens vs. JWT](#rationale-custom-tokens-vs-jwt)
 7. [Encryption & Cryptography](#7-encryption--cryptography)
 8. [Network Security](#8-network-security)
 9. [Infrastructure & Deployment](#9-infrastructure--deployment)
@@ -123,7 +123,7 @@ The system is designed to **structurally eliminate** threat categories rather th
 
 | Component | Technology | Version | Runs In |
 |-----------|-----------|---------|---------|
-| Runtime | Node.js | 20.x LTS | Server |
+| Runtime | Node.js | 22.x | Server |
 | Web Framework | Express | 5.x | Server |
 | Database | SQLite (better-sqlite3) | Embedded | Server |
 | JWE Decryption | jose (UMD browser build) | 5.x | **Browser** |
@@ -132,6 +132,8 @@ The system is designed to **structurally eliminate** threat categories rather th
 | Password Hashing | bcryptjs | 3.x | Server |
 | Google APIs | googleapis | 171.x | Server |
 | Email (SMTP) | nodemailer | 8.x | Server |
+
+**QR decoding:** Browser scanner pages use **html5-qrcode** for live camera capture and decoding. **jsQR** is used on the server and in the CLI to decode QR codes from image files and PDFs (e.g. the `shl-scan` command and image/PDF input pipelines); it does not handle camera or DOM.
 
 ---
 
@@ -229,7 +231,7 @@ Each organization has two independent authentication levels:
 - **Hashing algorithm:** bcrypt with cost factor 10
 - **Salting:** Automatic per-hash salt (bcrypt standard)
 - **Plaintext storage:** Never — only bcrypt hashes are stored
-- **Password requirements:** Minimum 6 characters (configurable by organization)
+- **Password requirements:** Admin password must be at least 8 characters. Staff password must be at least 6 characters (configurable by organization).
 
 ### Session Token Architecture
 
@@ -239,6 +241,30 @@ Each organization has two independent authentication levels:
 - **Token delivery:** Returned to client as JSON; stored in browser `localStorage`; sent as `Authorization: Bearer` header
 - **Expiration:** Enforced server-side on every request; tokens cannot be extended without re-authentication
 - **No sensitive data in tokens:** Tokens contain only organizational identifiers, never patient data
+
+### Rationale: Custom Tokens vs. JWT
+
+Kill the Clipboard uses **custom HMAC-SHA256–signed session tokens** rather than JSON Web Tokens (JWT) for authentication. This section documents the reasoning so that auditors and security reviewers can assess the decision.
+
+**What we use.** Session tokens have the form `base64url(payload).signature`, where the payload is a JSON object containing only organization slug, role, organization ID, and expiration timestamp. The signature is `HMAC-SHA256(payload, SESSION_SECRET)` encoded in base64url. Verification recomputes the signature with the same secret and compares it to the token’s signature using a **timing-safe comparison** (`crypto.timingSafeEqual`) to prevent timing side-channel attacks. The implementation is contained in a single module (`src/auth.js`) with no external authentication libraries for token creation or verification.
+
+**Why we did not adopt JWT for session authentication.** JWT (RFC 7519) is widely used and supports many algorithms and claim sets. For our use case—single-application, server-issued and server-verified session tokens with a shared secret—we chose a minimal custom scheme for the following reasons.
+
+1. **Elimination of algorithm confusion.** JWTs carry a header that typically includes an `alg` (algorithm) parameter. Implementations that trust this header have been vulnerable to attacks (e.g., “alg: none,” or confusion between asymmetric and symmetric algorithms). Our tokens carry **no algorithm identifier**; the server always verifies with HMAC-SHA256 and the configured secret. There is no code path that could accept a different algorithm or “none,” so this class of vulnerability does not apply.
+
+2. **Minimal, auditable surface.** The token format and verification logic are small and explicit: one way to create a token, one way to verify it. We do not depend on a JWT library’s defaults, claim handling, or algorithm support. Security reviewers and auditors can inspect the entire token lifecycle in one place. With JWT, correct use requires constraining the library (e.g., fixing the algorithm, validating expiration and audience); our design bakes in a single, fixed behavior.
+
+3. **Explicit timing-safe verification.** Signature comparison is security-sensitive; non–timing-safe comparison can leak information about the expected value. Our implementation uses the Node.js `crypto.timingSafeEqual()` API explicitly for token signature verification (and for super-admin API key and OAuth state verification). We do not rely on a third-party library to do this correctly.
+
+4. **No unnecessary claims or extensibility.** The payload contains only what the application needs: slug, role, orgId, and expiration. We do not use or expose JWT-style claims such as `iss`, `aud`, or `sub`. Keeping the payload minimal reduces the risk of misinterpretation or misuse and keeps the security contract easy to state and verify.
+
+5. **Fit for the architecture.** Tokens are issued and validated only by this application, and the signing secret (`SESSION_SECRET`) is held only by the server. We do not need a standard token format for third-party validation, multi-service federation, or public-key verification. The custom format is sufficient for our single-service, server-held-secret model and avoids the complexity and historical pitfalls of JWT in this context.
+
+**Open source and auditability.** The project is open source. The custom token implementation is fully visible and short enough to review in a single sitting. We document this design so that external reviewers and auditors can see that the choice was deliberate and that the implementation follows a single, constrained algorithm and verification path. We are not relying on “security through obscurity”; we are relying on a small, explicit design that avoids entire categories of JWT-related bugs.
+
+**When JWT would be the preferred choice.** We would consider JWT if (a) another service (e.g., an API gateway or a separate microservice) needed to validate the same tokens without sharing the signing secret (e.g., with asymmetric signing), (b) a compliance or procurement requirement explicitly called for a standard such as JWT, or (c) we needed to interoperate with OAuth/OIDC or other systems that consume JWTs. None of these conditions apply to the current architecture. If they do in the future, we would adopt JWT with a constrained configuration (e.g., a single allowed algorithm, timing-safe verification, and minimal claims) and document that decision similarly.
+
+**Conclusion.** The use of custom HMAC-SHA256–signed session tokens is a **documented, deliberate design decision** that reduces attack surface (no algorithm header, no JWT library dependency for auth) while providing integrity and expiration guarantees appropriate for server-side session authentication. The implementation is auditable, uses timing-safe comparison, and is scoped to the single-service model. We retain the option to move to JWT if future requirements (e.g., multi-service or third-party validation) make it necessary.
 
 ### Route Protection
 
@@ -384,7 +410,7 @@ Rate limiting protects against brute-force attacks and abuse using `express-rate
 
 | Endpoint | Limit | Window | Purpose |
 |----------|-------|--------|---------|
-| `/api/orgs/:slug/auth` | 20 attempts | 15 minutes | Prevents password brute-force (especially important given 4-character minimum for staff passwords) |
+| `/api/orgs/:slug/auth` | 20 attempts | 15 minutes | Prevents password brute-force (especially important given 6-character minimum for staff passwords; admin requires 8) |
 | `/api/orgs/:slug/shl-proxy` | 30 requests | 1 minute | Prevents proxy abuse |
 | `/api/orgs` (registration) | 5 requests | 1 hour | Prevents registration spam |
 | Super-admin endpoints | 20 attempts | 15 minutes | Protects admin API key |
@@ -437,7 +463,7 @@ Audit logs are accessible via admin API endpoints and can be used for compliance
 | Platform | Fly.io (PaaS) |
 | Region | `iad` (US-East, Ashburn, Virginia) |
 | Instance type | Shared CPU, 1 GB RAM |
-| Operating system | Debian (node:20-slim container) |
+| Operating system | Debian (node:22-slim container) |
 | Minimum instances | 1 (auto-scale) |
 | HTTPS enforcement | Yes, at edge |
 | Data residency | United States |
@@ -452,7 +478,7 @@ Audit logs are accessible via admin API endpoints and can be used for compliance
 
 ### Container Security
 
-- **Base image:** `node:20-slim` (minimal Debian variant)
+- **Base image:** `node:22-slim` (minimal Debian variant)
 - **Dependencies:** Production only (`npm ci --omit=dev`)
 - **Build:** Deterministic from lockfile (`npm ci`)
 - **CI/CD:** GitHub Actions deploys to Fly.io on push to `main` branch
@@ -463,18 +489,22 @@ Kill the Clipboard can also be self-hosted as a single-tenant instance. The appl
 
 ### Environment Variables (Secrets)
 
-All sensitive configuration is stored as Fly.io secrets (encrypted at rest, injected at runtime):
+All sensitive configuration is stored as Fly.io secrets (encrypted at rest, injected at runtime). Required for production (see also production-readiness §4.1, §9.3):
 
-| Variable | Purpose |
-|----------|---------|
-| `SESSION_SECRET` | HMAC key for session token signing and per-org OAuth token encryption key derivation |
-| `GOOGLE_CLIENT_ID` | Google OAuth client identifier |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
-| `ONEDRIVE_CLIENT_ID` | Microsoft OAuth client identifier |
-| `ONEDRIVE_CLIENT_SECRET` | Microsoft OAuth client secret |
-| `BOX_CLIENT_ID` | Box OAuth client identifier |
-| `BOX_CLIENT_SECRET` | Box OAuth client secret |
-| `PUBLIC_URL` | Application public URL for OAuth callbacks |
+| Variable | Purpose | Required |
+|----------|---------|----------|
+| `ADMIN_KEY` | Super-admin dashboard password; protects `/admin` (org list, approvals, password resets). | Yes |
+| `DATABASE_PATH` | Path to the SQLite database file (e.g. `/data/db.sqlite`). | Yes |
+| `PORT` | HTTP port the server listens on (e.g. `3000`). | Yes |
+| `SESSION_SECRET` | HMAC key for session token signing and per-org OAuth token encryption key derivation. Required in production; do not use random per-process fallback. | Yes |
+| `GOOGLE_CLIENT_ID` | Google OAuth client identifier (Drive, Gmail). | If using Google |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret. | If using Google |
+| `ONEDRIVE_CLIENT_ID` | Microsoft OAuth client identifier (OneDrive, Outlook). | If using Microsoft |
+| `ONEDRIVE_CLIENT_SECRET` | Microsoft OAuth client secret. | If using Microsoft |
+| `BOX_CLIENT_ID` | Box OAuth client identifier. | If using Box |
+| `BOX_CLIENT_SECRET` | Box OAuth client secret. | If using Box |
+| `PUBLIC_URL` | Application public URL for OAuth callbacks (e.g. `https://your-domain.com`). | If using OAuth |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | SMTP settings for Email destination and approval notifications. | If using Email destination |
 
 ---
 

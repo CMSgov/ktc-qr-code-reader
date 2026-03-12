@@ -4,6 +4,8 @@ import { dirname, join } from 'node:path';
 import { networkInterfaces } from 'node:os';
 import { randomUUID, timingSafeEqual } from 'node:crypto';
 import { loadConfig } from './src/config.js';
+import { APPROVED_APPS } from './data/approved-apps.js';
+import { escapeHtml } from './src/util/sanitize.js';
 import { parseShlUri } from './src/shl/uri-parser.js';
 import { fetchManifest } from './src/shl/manifest.js';
 import { extractHealthData, validateFhirBundles } from './src/shl/fhir-extractor.js';
@@ -33,107 +35,7 @@ const HOST = process.env.HOST || config.server?.host || '0.0.0.0';
 
 const RESERVED_SLUGS = ['register', 'admin', 'api', 'auth', 'public', 'static', 'assets', 'health', 'index.html', 'privacy', 'terms', 'super-admin', 'setup-guide', 'test-qr-codes'];
 
-// ── CMS Health Tech Ecosystem — Kill the Clipboard Approved Apps ──
-const APPROVED_APPS = [
-  // Early Adopters (12)
-  { appId: 'apple', name: 'Apple', tier: 'early-adopter' },
-  { appId: 'bwell', name: 'b.well Connected Health', tier: 'early-adopter' },
-  { appId: 'citizen-health', name: 'Citizen Health', tier: 'early-adopter' },
-  { appId: 'cvs-health', name: 'CVS Health', tier: 'early-adopter' },
-  { appId: 'fasten-health', name: 'Fasten Health', tier: 'early-adopter' },
-  { appId: 'flexpa', name: 'Flexpa', tier: 'early-adopter' },
-  { appId: 'google', name: 'Google', tier: 'early-adopter' },
-  { appId: 'nanthealth', name: 'NantHealth', tier: 'early-adopter' },
-  { appId: 'samsung', name: 'Samsung', tier: 'early-adopter' },
-  { appId: 'sharecare', name: 'Sharecare', tier: 'early-adopter' },
-  { appId: 'unitedhealth-group', name: 'UnitedHealth Group', tier: 'early-adopter' },
-  { appId: 'zocdoc', name: 'Zocdoc', tier: 'early-adopter' },
-  // Pledgees (71)
-  { appId: '1kosmos', name: '1Kosmos', tier: 'pledgee' },
-  { appId: 'actuvi', name: 'Actuvi LLC', tier: 'pledgee' },
-  { appId: 'andor-health', name: 'Andor Health', tier: 'pledgee' },
-  { appId: 'andromeda-health', name: 'Andromeda Health Corp', tier: 'pledgee' },
-  { appId: 'capital-rx', name: 'Capital Rx Inc.', tier: 'pledgee' },
-  { appId: 'coco-health', name: 'Coco Health', tier: 'pledgee' },
-  { appId: 'coligomed', name: 'ColigoMed', tier: 'pledgee' },
-  { appId: 'connxus', name: 'Connxus', tier: 'pledgee' },
-  { appId: 'credibl', name: 'Credibl', tier: 'pledgee' },
-  { appId: 'cuezen', name: 'CueZen Inc.', tier: 'pledgee' },
-  { appId: 'cyrencare', name: 'CyrenCare', tier: 'pledgee' },
-  { appId: 'docusign', name: 'Docusign', tier: 'pledgee' },
-  { appId: 'edwin-health', name: 'Edwin Health', tier: 'pledgee' },
-  { appId: 'es-digital-health', name: 'ES Digital Health', tier: 'pledgee' },
-  { appId: 'evisit', name: 'eVisit', tier: 'pledgee' },
-  { appId: 'exammed', name: 'ExamMed LLC', tier: 'pledgee' },
-  { appId: 'fabric', name: 'Fabric', tier: 'pledgee' },
-  { appId: 'fawkes-biodata', name: 'Fawkes Biodata', tier: 'pledgee' },
-  { appId: 'flagler-health', name: 'Flagler Health', tier: 'pledgee' },
-  { appId: 'formdr', name: 'FormDr', tier: 'pledgee' },
-  { appId: 'genoplex', name: 'Genoplex', tier: 'pledgee' },
-  { appId: 'goodrx', name: 'GoodRx', tier: 'pledgee' },
-  { appId: 'guava-health', name: 'Guava Health', tier: 'pledgee' },
-  { appId: 'haau3', name: 'haau3', tier: 'pledgee' },
-  { appId: 'health-bank-one', name: 'Health Bank One Inc.', tier: 'pledgee' },
-  { appId: 'health-note', name: 'Health Note', tier: 'pledgee' },
-  { appId: 'healthbookplus', name: 'HealthBook+', tier: 'pledgee' },
-  { appId: 'healthex', name: 'HealthEx', tier: 'pledgee' },
-  { appId: 'healthhive', name: 'HealthHive', tier: 'pledgee' },
-  { appId: 'healthtree', name: 'HealthTree Foundation', tier: 'pledgee' },
-  { appId: 'healthy-insights', name: 'Healthy Insights Inc.', tier: 'pledgee' },
-  { appId: 'healthyr', name: 'Healthyr', tier: 'pledgee' },
-  { appId: 'humetrix', name: 'Humetrix Health', tier: 'pledgee' },
-  { appId: 'imprivata', name: 'Imprivata Inc.', tier: 'pledgee' },
-  { appId: 'inpursuit-health', name: 'InPursuit Health LLC', tier: 'pledgee' },
-  { appId: 'intelichart', name: 'InteliChart', tier: 'pledgee' },
-  { appId: 'january-ai', name: 'January AI', tier: 'pledgee' },
-  { appId: 'jeeva-ai', name: 'Jeeva AI Health Systems LLC', tier: 'pledgee' },
-  { appId: 'kintsugi', name: 'Kintsugi Mindful Wellness', tier: 'pledgee' },
-  { appId: 'login-health', name: 'Login.Health', tier: 'pledgee' },
-  { appId: 'luma-health', name: 'Luma Health', tier: 'pledgee' },
-  { appId: 'lymeless', name: 'LymeLess Health', tier: 'pledgee' },
-  { appId: 'magical', name: 'Magical', tier: 'pledgee' },
-  { appId: 'marsha-health', name: 'MARSHA Health', tier: 'pledgee' },
-  { appId: 'massive-bio', name: 'Massive Bio Inc.', tier: 'pledgee' },
-  { appId: 'mhdg', name: 'Medical Home Development Group', tier: 'pledgee' },
-  { appId: 'medicasoft', name: 'MedicaSoft', tier: 'pledgee' },
-  { appId: 'medthread', name: 'MedThread', tier: 'pledgee' },
-  { appId: 'mihin', name: 'MiHIN', tier: 'pledgee' },
-  { appId: 'miracural', name: 'Miracural AI', tier: 'pledgee' },
-  { appId: 'nourish', name: 'Nourish', tier: 'pledgee' },
-  { appId: 'orion-health', name: 'Orion Health', tier: 'pledgee' },
-  { appId: 'otis-health', name: 'Otis Health', tier: 'pledgee' },
-  { appId: 'patient-centric', name: 'Patient Centric Solutions', tier: 'pledgee' },
-  { appId: 'patient-com', name: 'Patient.com', tier: 'pledgee' },
-  { appId: 'patientory', name: 'Patientory Inc.', tier: 'pledgee' },
-  { appId: 'pfps-us', name: 'Patients for Patient Safety US', tier: 'pledgee' },
-  { appId: 'penn-medicine', name: 'Penn Medicine', tier: 'pledgee' },
-  { appId: 'phreesia', name: 'Phreesia', tier: 'pledgee' },
-  { appId: 'primary-record', name: 'Primary Record', tier: 'pledgee' },
-  { appId: 'pulsar-health', name: 'Pulsar Health Inc', tier: 'pledgee' },
-  { appId: 'seqster', name: 'SEQSTER', tier: 'pledgee' },
-  { appId: 'sprinter-health', name: 'Sprinter Health', tier: 'pledgee' },
-  { appId: 'sync-md', name: 'Sync.MD', tier: 'pledgee' },
-  { appId: 'commons-project', name: 'The Commons Project Foundation', tier: 'pledgee' },
-  { appId: 'trialcliniq', name: 'TrialClinIQ', tier: 'pledgee' },
-  { appId: 'vinyl-health', name: 'Vinyl Health', tier: 'pledgee' },
-  { appId: 'wellconnector', name: 'WellConnector', tier: 'pledgee' },
-  { appId: 'wellnavigator', name: 'WellNavigator LLC', tier: 'pledgee' },
-  { appId: 'xcures', name: 'xCures', tier: 'pledgee' },
-  { appId: 'yosi-health', name: 'Yosi Health', tier: 'pledgee' },
-];
-
 app.use(express.json({ limit: '10mb' }));
-
-// ── Server-side HTML escaping (for OAuth error pages) ──
-function escapeHtml(str) {
-  if (str == null) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
 
 // ── Slug validation (for OAuth state parameters) ──
 function isValidSlug(slug) {
@@ -1238,16 +1140,14 @@ function isPrivateIpv4(hostname) {
   return false;
 }
 
-// SHL CORS Proxy — forwards encrypted requests to SHL manifest servers
-// The decryption key never leaves the browser. Server only sees encrypted JWE blobs.
-app.post('/api/orgs/:slug/shl-proxy', proxyLimiter, authMiddleware('staff'), async (req, res) => {
+// SHL CORS Proxy handler — same SSRF/size rules for org-scoped and Core (unauthenticated) proxy
+async function handleShlProxyRequest(req, res) {
   const { url, method = 'GET', body = null, headers = {} } = req.body;
 
   if (!url) {
     return res.status(400).json({ error: 'URL is required' });
   }
 
-  // SSRF protection
   if (isPrivateUrl(url)) {
     return res.status(403).json({ error: 'Requests to private/internal addresses are not allowed' });
   }
@@ -1256,10 +1156,9 @@ app.post('/api/orgs/:slug/shl-proxy', proxyLimiter, authMiddleware('staff'), asy
     const fetchOptions = {
       method: method.toUpperCase(),
       headers: {},
-      redirect: 'manual',  // Don't follow redirects — prevents SSRF via redirect to private IPs
+      redirect: 'manual',
     };
 
-    // Only allow safe headers to be forwarded
     const safeHeaders = ['content-type', 'accept'];
     for (const [key, value] of Object.entries(headers)) {
       if (safeHeaders.includes(key.toLowerCase())) {
@@ -1274,9 +1173,11 @@ app.post('/api/orgs/:slug/shl-proxy', proxyLimiter, authMiddleware('staff'), asy
       }
     }
 
+    const SHL_PROXY_TIMEOUT_MS = 30_000; // 30s — avoid hanging on slow SHL servers
+    fetchOptions.signal = AbortSignal.timeout(SHL_PROXY_TIMEOUT_MS);
+
     let proxyResp = await fetch(url, fetchOptions);
 
-    // Handle redirects safely — validate each redirect target against SSRF
     let redirectCount = 0;
     const MAX_REDIRECTS = 3;
     while (proxyResp.status >= 300 && proxyResp.status < 400 && redirectCount < MAX_REDIRECTS) {
@@ -1298,12 +1199,11 @@ app.post('/api/orgs/:slug/shl-proxy', proxyLimiter, authMiddleware('staff'), asy
 
     const responseText = await proxyResp.text();
 
-    // Return the raw response so the browser can handle decryption
     let parsedBody = null;
     try {
       parsedBody = JSON.parse(responseText);
     } catch {
-      // Not JSON — likely a JWE string, which is expected
+      // Not JSON — likely a JWE string
     }
 
     res.json({
@@ -1312,10 +1212,18 @@ app.post('/api/orgs/:slug/shl-proxy', proxyLimiter, authMiddleware('staff'), asy
       parsedBody,
     });
   } catch (err) {
-    console.error(`[${req.params.slug}] SHL proxy error: ${err.message}`);
+    const slug = req.params?.slug || 'core';
+    console.error(`[${slug}] SHL proxy error: ${err.message}`);
     res.status(502).json({ error: `Failed to reach SHL server: ${err.message}` });
   }
-});
+}
+
+app.post('/api/orgs/:slug/shl-proxy', proxyLimiter, authMiddleware('staff'), handleShlProxyRequest);
+
+// Core optional unauthenticated CORS proxy (encrypted traffic only). Enable with ENABLE_CORE_PROXY=1
+if (process.env.ENABLE_CORE_PROXY === '1') {
+  app.post('/api/shl-proxy', proxyLimiter, (req, res) => handleShlProxyRequest(req, res));
+}
 
 // Route endpoint — receives already-decrypted data from browser and routes to storage
 // The browser decrypted the SHL data; this endpoint only handles delivery.
