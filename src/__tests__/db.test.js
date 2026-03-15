@@ -130,4 +130,71 @@ describe('prepareTokenForStorage and getDecryptedToken', () => {
     const org = dbModule.getOrgBySlug('no-token-org');
     expect(dbModule.getDecryptedToken(org, 'drive_refresh_token')).toBe(null);
   });
+
+  it('prepareTokenForStorage returns null for empty plaintext', () => {
+    expect(dbModule.prepareTokenForStorage('', 'org-any')).toBe(null);
+    expect(dbModule.prepareTokenForStorage(null, 'org-any')).toBe(null);
+  });
+});
+
+describe('approval request workflows', () => {
+  it('creates request, blocks duplicate pending, updates status, and lists', () => {
+    const first = dbModule.createApprovalRequest({
+      orgSlug: 'approval-org',
+      orgName: 'Approval Org',
+      email: 'ops@example.org',
+      service: 'gmail',
+    });
+    expect(first).toEqual({ alreadyExists: false });
+
+    const duplicate = dbModule.createApprovalRequest({
+      orgSlug: 'approval-org',
+      orgName: 'Approval Org',
+      email: 'ops@example.org',
+      service: 'gmail',
+    });
+    expect(duplicate).toEqual({ alreadyExists: true });
+
+    const pending = dbModule.listApprovalRequests('pending');
+    const req = pending.find((r) => r.email === 'ops@example.org' && r.service === 'gmail');
+    expect(req).toBeTruthy();
+
+    dbModule.updateApprovalRequest(req.id, 'approved');
+    const approved = dbModule.listApprovalRequests('approved');
+    expect(approved.some((r) => r.id === req.id && r.reviewed_at)).toBe(true);
+
+    const all = dbModule.listApprovalRequests();
+    expect(all.length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe('updateOrgSettings allowlist and no-op branches', () => {
+  it('ignores unknown fields and leaves row unchanged', () => {
+    dbModule.createOrg({
+      id: 'org-update-allowlist',
+      slug: 'update-allowlist',
+      name: 'Allowlist Org',
+      adminPasswordHash: 'a',
+      staffPasswordHash: 's',
+    });
+    const before = dbModule.getOrgById('org-update-allowlist');
+    dbModule.updateOrgSettings('org-update-allowlist', { not_allowed: 'x', also_bad: 123 });
+    const after = dbModule.getOrgById('org-update-allowlist');
+    expect(after.name).toBe(before.name);
+    expect(after.storage_type).toBe(before.storage_type);
+  });
+});
+
+describe('deleteOrgById and audit helpers', () => {
+  it('deletes org even when org does not exist', () => {
+    expect(() => dbModule.deleteOrgById('org-that-does-not-exist')).not.toThrow();
+  });
+
+  it('lists all audit log entries and honors default/explicit limits', () => {
+    dbModule.logAuditEvent({ orgSlug: 'audit-org', eventType: 'scan_route' });
+    const limited = dbModule.listAllAuditLog(1);
+    expect(limited.length).toBeLessThanOrEqual(1);
+    const defaults = dbModule.listAllAuditLog();
+    expect(Array.isArray(defaults)).toBe(true);
+  });
 });

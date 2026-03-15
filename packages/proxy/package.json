@@ -1,0 +1,15 @@
+{
+  "name": "@ktc/proxy",
+  "version": "0.2.0-alpha",
+  "description": "Minimal CORS proxy for SHL manifest fetches (encrypted traffic only)",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "vitest run --passWithNoTests --root ../../ packages/proxy"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.2.1"
+  }
+}

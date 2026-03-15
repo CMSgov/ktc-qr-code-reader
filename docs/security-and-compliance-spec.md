@@ -36,7 +36,7 @@ Kill the Clipboard is a web-based tool that enables healthcare organizations to 
 
 **Key security properties:**
 
-- **PHI never reaches the server.** All health data decryption and processing happens in the user's browser. The server functions as a CORS proxy for encrypted payloads and a routing layer for delivery — it never sees, processes, or stores decrypted patient data.
+- **Server never decrypts PHI.** All health data decryption and cryptographic processing happens in the user's browser. The proxy only forwards encrypted payloads. When sidecar/server routing is enabled, decrypted payloads are received transiently in memory for delivery and are not persisted.
 - **End-to-end encryption of health data.** SMART Health Links use AES-256-GCM encryption. Data remains encrypted from the SHL server all the way to the browser. The decryption key never leaves the browser.
 - **Server handles routing, not processing.** After the browser decrypts health data, it sends it to the server solely for delivery to the organization's configured storage destination (Drive, OneDrive, Box, email, or API). This preserves admin-controlled routing while keeping PHI out of the server during the cryptographic processing phase.
 - **Multi-tenant isolation.** Each healthcare organization operates under its own URL, credentials, and configuration. No data is shared between organizations.
@@ -50,7 +50,7 @@ Kill the Clipboard is a web-based tool that enables healthcare organizations to 
 
 ### What It Does
 
-1. A patient presents a SMART Health Link QR code from their health app (e.g., Apple Health, Epic MyChart, or any of the 83 CMS-approved apps).
+1. A patient presents a SMART Health Link QR code from their health app (for example Apple Health, Epic MyChart, or any of the 83 CMS-approved apps).
 2. A front-desk staff member scans the QR code using the organization's Kill the Clipboard scanner page on a tablet or computer.
 3. The system decodes the SMART Health Link, retrieves and decrypts the patient's FHIR health data and/or PDF documents.
 4. The extracted data is routed to the organization's configured destination (Google Drive, OneDrive, Box, email, or API endpoint).
@@ -80,8 +80,8 @@ Kill the Clipboard is a web-based tool that enables healthcare organizations to 
 │  └──────────┘  └──────────┘  └──────────┘  └───────────────┘  │
 │                                                                 │
 │  Decryption key stays here. PHI is decrypted here.             │
-│  Server never sees the decryption key or decrypted health data │
-│  during the cryptographic processing phase.                     │
+│  Server never sees the decryption key and never performs       │
+│  decryption.                                                    │
 └──────────┬─────────────────────────────────┬────────────────────┘
            │ HTTPS (encrypted blobs only)    │ HTTPS (decrypted data
            │                                 │ for routing to storage)
@@ -114,10 +114,10 @@ Kill the Clipboard is a web-based tool that enables healthcare organizations to 
 
 The system is designed to **structurally eliminate** threat categories rather than mitigate them:
 
-- The server cannot leak decrypted PHI because it never performs decryption
+- The server cannot leak decryption keys because it never performs decryption
 - The CORS proxy cannot be used to exfiltrate health data because it only handles encrypted blobs — the decryption key never leaves the browser
 - A server compromise yields organization configuration data, not patient records
-- SSRF protection on the CORS proxy prevents requests to internal/private networks
+- SSRF protection on the CORS proxy prevents requests to internal/private networks, including DNS-rebinding style hostnames
 
 ### Technology Stack
 
@@ -133,7 +133,7 @@ The system is designed to **structurally eliminate** threat categories rather th
 | Google APIs           | googleapis               | 171.x    | Server      |
 | Email (SMTP)          | nodemailer               | 8.x      | Server      |
 
-**QR decoding:** Browser scanner pages use **html5-qrcode** for live camera capture and decoding. **jsQR** is used on the server and in the CLI to decode QR codes from image files and PDFs (e.g. the `shl-scan` command and image/PDF input pipelines); it does not handle camera or DOM.
+**QR decoding:** Browser scanner pages use **html5-qrcode** for live camera capture and decoding. **jsQR** is used on the server and in the CLI to decode QR codes from image files and PDFs (for example the `shl-scan` command and image/PDF input pipelines); it does not handle camera or DOM.
 
 ---
 
@@ -238,7 +238,7 @@ Each organization has two independent authentication levels:
 - **Format:** Custom compact token: `base64url(payload).HMAC-SHA256(payload)`
 - **Signing key:** `SESSION_SECRET` environment variable (cryptographically random, set at deployment)
 - **Payload contents:** Organization slug, role (admin/staff), organization ID, expiration timestamp
-- **Token delivery:** Returned to client as JSON; stored in browser `localStorage`; sent as `Authorization: Bearer` header
+- **Token delivery:** Returned to client as JSON; stored in browser `sessionStorage`; sent as `Authorization: Bearer` header
 - **Expiration:** Enforced server-side on every request; tokens cannot be extended without re-authentication
 - **No sensitive data in tokens:** Tokens contain only organizational identifiers, never patient data
 
@@ -250,9 +250,9 @@ Kill the Clipboard uses **custom HMAC-SHA256–signed session tokens** rather th
 
 **Why we did not adopt JWT for session authentication.** JWT (RFC 7519) is widely used and supports many algorithms and claim sets. For our use case—single-application, server-issued and server-verified session tokens with a shared secret—we chose a minimal custom scheme for the following reasons.
 
-1. **Elimination of algorithm confusion.** JWTs carry a header that typically includes an `alg` (algorithm) parameter. Implementations that trust this header have been vulnerable to attacks (e.g., “alg: none,” or confusion between asymmetric and symmetric algorithms). Our tokens carry **no algorithm identifier**; the server always verifies with HMAC-SHA256 and the configured secret. There is no code path that could accept a different algorithm or “none,” so this class of vulnerability does not apply.
+1. **Elimination of algorithm confusion.** JWTs carry a header that typically includes an `alg` (algorithm) parameter. Implementations that trust this header have been vulnerable to attacks (for example “alg: none,” or confusion between asymmetric and symmetric algorithms). Our tokens carry **no algorithm identifier**; the server always verifies with HMAC-SHA256 and the configured secret. There is no code path that could accept a different algorithm or “none,” so this class of vulnerability does not apply.
 
-2. **Minimal, auditable surface.** The token format and verification logic are small and explicit: one way to create a token, one way to verify it. We do not depend on a JWT library’s defaults, claim handling, or algorithm support. Security reviewers and auditors can inspect the entire token lifecycle in one place. With JWT, correct use requires constraining the library (e.g., fixing the algorithm, validating expiration and audience); our design bakes in a single, fixed behavior.
+2. **Minimal, auditable surface.** The token format and verification logic are small and explicit: one way to create a token, one way to verify it. We do not depend on a JWT library’s defaults, claim handling, or algorithm support. Security reviewers and auditors can inspect the entire token lifecycle in one place. With JWT, correct use requires constraining the library (for example fixing the algorithm, validating expiration and audience); our design bakes in a single, fixed behavior.
 
 3. **Explicit timing-safe verification.** Signature comparison is security-sensitive; non–timing-safe comparison can leak information about the expected value. Our implementation uses the Node.js `crypto.timingSafeEqual()` API explicitly for token signature verification (and for super-admin API key and OAuth state verification). We do not rely on a third-party library to do this correctly.
 
@@ -262,9 +262,9 @@ Kill the Clipboard uses **custom HMAC-SHA256–signed session tokens** rather th
 
 **Open source and auditability.** The project is open source. The custom token implementation is fully visible and short enough to review in a single sitting. We document this design so that external reviewers and auditors can see that the choice was deliberate and that the implementation follows a single, constrained algorithm and verification path. We are not relying on “security through obscurity”; we are relying on a small, explicit design that avoids entire categories of JWT-related bugs.
 
-**When JWT would be the preferred choice.** We would consider JWT if (a) another service (e.g., an API gateway or a separate microservice) needed to validate the same tokens without sharing the signing secret (e.g., with asymmetric signing), (b) a compliance or procurement requirement explicitly called for a standard such as JWT, or (c) we needed to interoperate with OAuth/OIDC or other systems that consume JWTs. None of these conditions apply to the current architecture. If they do in the future, we would adopt JWT with a constrained configuration (e.g., a single allowed algorithm, timing-safe verification, and minimal claims) and document that decision similarly.
+**When JWT would be the preferred choice.** We would consider JWT if (a) another service (for example an API gateway or a separate microservice) needed to validate the same tokens without sharing the signing secret (for example with asymmetric signing), (b) a compliance or procurement requirement explicitly called for a standard such as JWT, or (c) we needed to interoperate with OAuth/OIDC or other systems that consume JWTs. None of these conditions apply to the current architecture. If they do in the future, we would adopt JWT with a constrained configuration (for example a single allowed algorithm, timing-safe verification, and minimal claims) and document that decision similarly.
 
-**Conclusion.** The use of custom HMAC-SHA256–signed session tokens is a **documented, deliberate design decision** that reduces attack surface (no algorithm header, no JWT library dependency for auth) while providing integrity and expiration guarantees appropriate for server-side session authentication. The implementation is auditable, uses timing-safe comparison, and is scoped to the single-service model. We retain the option to move to JWT if future requirements (e.g., multi-service or third-party validation) make it necessary.
+**Conclusion.** The use of custom HMAC-SHA256–signed session tokens is a **documented, deliberate design decision** that reduces attack surface (no algorithm header, no JWT library dependency for auth) while providing integrity and expiration guarantees appropriate for server-side session authentication. The implementation is auditable, uses timing-safe comparison, and is scoped to the single-service model. We retain the option to move to JWT if future requirements (for example multi-service or third-party validation) make it necessary.
 
 ### Route Protection
 
@@ -349,12 +349,13 @@ The JWE decryptor explicitly restricts accepted algorithms:
 
 The server includes a CORS proxy endpoint that bridges browser requests to SHL manifest servers. This proxy has strict security controls:
 
-- **SSRF protection:** Blocks requests to private/internal IP ranges (RFC 1918, RFC 4193), localhost, link-local, cloud metadata endpoints (169.254.169.254, metadata.google.internal), IPv6-mapped IPv4 addresses, and non-HTTP protocols
+- **URL policy + SSRF protection:** Allows only `https:` upstream requests and blocks private/internal IP ranges (RFC 1918, RFC 4193), localhost, link-local, cloud metadata endpoints (169.254.169.254, metadata.google.internal), IPv6-mapped IPv4 addresses, and non-HTTPS protocols
+- **DNS-aware blocking:** Hostnames are resolved and blocked if any resolved address is private/internal
 - **Redirect validation:** HTTP redirects are not auto-followed; each redirect target is validated against the SSRF blocklist before following, with a maximum of 3 redirects
 - **Header allowlisting:** Only safe HTTP headers (`Content-Type`, `Accept`) are forwarded
-- **Method restriction:** Only `GET` and `POST` methods are proxied
+- **Method passthrough with safeguards:** Caller method is forwarded (default `GET`), with header allowlisting and redirect re-validation
 - **Rate limiting:** 30 requests per minute per IP address
-- **Authentication required:** Staff or admin token required to use the proxy
+- **Authentication model:** Standalone `@ktc/proxy` is intentionally unauthenticated; deployments should restrict network exposure as needed
 - **Encrypted payloads only:** The proxy transports encrypted JWE blobs — the decryption key never leaves the browser, so the proxy cannot read the health data
 
 ### Content Security Policy (CSP)
@@ -413,7 +414,7 @@ Rate limiting protects against brute-force attacks and abuse using `express-rate
 | Endpoint                    | Limit       | Window     | Purpose                                                                                                              |
 | --------------------------- | ----------- | ---------- | -------------------------------------------------------------------------------------------------------------------- |
 | `/api/orgs/:slug/auth`      | 20 attempts | 15 minutes | Prevents password brute-force (especially important given 6-character minimum for staff passwords; admin requires 8) |
-| `/api/orgs/:slug/shl-proxy` | 30 requests | 1 minute   | Prevents proxy abuse                                                                                                 |
+| `/api/shl-proxy` (standalone proxy) | 30 requests | 1 minute   | Prevents proxy abuse                                                                                                 |
 | `/api/orgs` (registration)  | 5 requests  | 1 hour     | Prevents registration spam                                                                                           |
 | Super-admin endpoints       | 20 attempts | 15 minutes | Protects admin API key                                                                                               |
 
@@ -442,7 +443,7 @@ Every scan/route operation is logged to an `audit_log` table with metadata only 
 | Field               | Description                                                       |
 | ------------------- | ----------------------------------------------------------------- |
 | `org_slug`          | Organization identifier                                           |
-| `event_type`        | Type of event (e.g., `scan_route`)                                |
+| `event_type`        | Type of event (for example `scan_route`)                          |
 | `storage_type`      | Destination (drive, onedrive, box, gmail, outlook, api, download) |
 | `fhir_bundle_count` | Number of FHIR bundles processed                                  |
 | `pdf_count`         | Number of PDFs processed                                          |
@@ -496,8 +497,8 @@ All sensitive configuration is stored as Fly.io secrets (encrypted at rest, inje
 | Variable                                                        | Purpose                                                                                                                                               | Required                   |
 | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
 | `ADMIN_KEY`                                                     | Super-admin dashboard password; protects `/admin` (org list, approvals, password resets).                                                             | Yes                        |
-| `DATABASE_PATH`                                                 | Path to the SQLite database file (e.g. `/data/db.sqlite`).                                                                                            | Yes                        |
-| `PORT`                                                          | HTTP port the server listens on (e.g. `3000`).                                                                                                        | Yes                        |
+| `DATABASE_PATH`                                                 | Path to the SQLite database file (for example `/data/db.sqlite`).                                                                                    | Yes                        |
+| `PORT`                                                          | HTTP port the server listens on (for example `3000`).                                                                                                 | Yes                        |
 | `SESSION_SECRET`                                                | HMAC key for session token signing and per-org OAuth token encryption key derivation. Required in production; do not use random per-process fallback. | Yes                        |
 | `GOOGLE_CLIENT_ID`                                              | Google OAuth client identifier (Drive, Gmail).                                                                                                        | If using Google            |
 | `GOOGLE_CLIENT_SECRET`                                          | Google OAuth client secret.                                                                                                                           | If using Google            |
@@ -505,7 +506,7 @@ All sensitive configuration is stored as Fly.io secrets (encrypted at rest, inje
 | `ONEDRIVE_CLIENT_SECRET`                                        | Microsoft OAuth client secret.                                                                                                                        | If using Microsoft         |
 | `BOX_CLIENT_ID`                                                 | Box OAuth client identifier.                                                                                                                          | If using Box               |
 | `BOX_CLIENT_SECRET`                                             | Box OAuth client secret.                                                                                                                              | If using Box               |
-| `PUBLIC_URL`                                                    | Application public URL for OAuth callbacks (e.g. `https://your-domain.com`).                                                                          | If using OAuth             |
+| `PUBLIC_URL`                                                    | Application public URL for OAuth callbacks (for example `https://your-domain.com`).                                                                   | If using OAuth             |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | SMTP settings for Email destination and approval notifications.                                                                                       | If using Email destination |
 
 ---
@@ -593,7 +594,7 @@ Kill the Clipboard is designed as a **data routing tool**, not a data storage sy
 | Authentication and session management                             | Kill the Clipboard          |
 | Multi-tenant data isolation                                       | Kill the Clipboard          |
 | Business Associate Agreement with cloud storage provider          | Subscribing organization    |
-| Email account HIPAA compliance (e.g., Google Workspace HIPAA BAA) | Subscribing organization    |
+| Email account HIPAA compliance (for example Google Workspace HIPAA BAA) | Subscribing organization    |
 | Staff training on scanner use                                     | Subscribing organization    |
 | Physical security of scanning devices                             | Subscribing organization    |
 | Destination system access controls                                | Subscribing organization    |
@@ -668,7 +669,7 @@ All production dependencies are well-established, actively maintained open-sourc
 | **SQL injection**                         | High     | Very Low   | All database queries use parameterized statements. Column names validated against allowlist.                                                                                                                                                                                                                     |
 | **Cross-tenant data access**              | High     | Very Low   | Token-based slug verification on every request. Staff tokens cannot access other organizations' data.                                                                                                                                                                                                            |
 | **Decompression bomb (zip bomb via JWE)** | Medium   | Low        | 5 MB maximum decompression limit enforced on all inflate operations.                                                                                                                                                                                                                                             |
-| **SSRF via malicious SHL URL**            | Medium   | Very Low   | CORS proxy validates all URLs against SSRF blocklist (RFC 1918, RFC 4193, localhost, link-local, cloud metadata, IPv6-mapped addresses). Redirects validated before following (max 3). Rate limited to 30 requests/minute per IP.                                                                                |
+| **SSRF via malicious SHL URL**            | Medium   | Very Low   | CORS proxy enforces `https:` upstream requests, validates URLs against SSRF blocklists (RFC 1918, RFC 4193, localhost, link-local, cloud metadata, IPv6-mapped addresses), resolves hostnames and blocks private/internal DNS results, validates redirects before following (max 3), and rate limits to 30 requests/minute per IP. |
 | **OAuth CSRF (storage hijack)**           | High     | Very Low   | OAuth state parameters are HMAC-signed with `SESSION_SECRET`. Callback verifies signature using timing-safe comparison before trusting the state payload. Forged state is silently rejected.                                                                                                                     |
 | **XSS via SHL content**                   | Medium   | Very Low   | All external data HTML-sanitized via `escapeHtml()` before `innerHTML` rendering. CSP restricts script sources. CDN scripts verified via SRI hashes. `connect-src 'self'` blocks data exfiltration. Poisoned QR code attack vector eliminated.                                                                   |
 

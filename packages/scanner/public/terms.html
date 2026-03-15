@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Terms of Service — Kill the Clipboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --cms-blue: #0071bc;
+        --cms-blue-dark: #205493;
+        --cms-blue-darkest: #112e51;
+        --cms-blue-lightest: #e6f0f8;
+        --cms-gold: #f3ce3b;
+        --cms-gold-dark: #c9a616;
+        --gray-darkest: #1b1b1b;
+        --gray-dark: #333334;
+        --gray-mid: #5b616b;
+        --gray-light: #aeb0b5;
+        --gray-lighter: #d6d7d9;
+        --gray-lightest: #f1f1f1;
+        --white: #ffffff;
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: var(--white);
+        color: var(--gray-dark);
+        min-height: 100vh;
+        -webkit-font-smoothing: antialiased;
+      }
+      .topbar {
+        background: var(--cms-blue-darkest);
+        color: var(--white);
+        padding: 8px 24px;
+        font-size: 0.75rem;
+      }
+      .topbar span { opacity: 0.7; }
+      .site-header {
+        background: var(--white);
+        border-bottom: 4px solid var(--cms-gold);
+        padding: 20px 24px;
+      }
+      .header-inner {
+        max-width: 800px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .site-title {
+        font-family: 'Instrument Serif', Georgia, serif;
+        font-size: 1.75rem;
+        color: var(--cms-blue-darkest);
+        letter-spacing: -0.02em;
+        text-decoration: none;
+      }
+      .site-title em { font-style: italic; color: var(--cms-blue); }
+      .gold-rule {
+        height: 3px;
+        background: linear-gradient(90deg, var(--cms-gold) 0%, var(--cms-gold-dark) 100%);
+        border: none;
+        margin: 0;
+      }
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 40px 24px;
+      }
+      h1 {
+        font-family: 'Instrument Serif', Georgia, serif;
+        font-size: 2rem;
+        font-weight: 400;
+        color: var(--cms-blue-darkest);
+        margin-bottom: 8px;
+        letter-spacing: -0.02em;
+      }
+      .last-updated {
+        font-size: 0.85rem;
+        color: var(--gray-mid);
+        margin-bottom: 32px;
+      }
+      h2 {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--cms-blue-darkest);
+        margin-top: 32px;
+        margin-bottom: 12px;
+      }
+      p, li {
+        font-size: 0.95rem;
+        line-height: 1.7;
+        color: var(--gray-mid);
+        margin-bottom: 12px;
+      }
+      ul {
+        padding-left: 24px;
+        margin-bottom: 16px;
+      }
+      li { margin-bottom: 6px; }
+      a { color: var(--cms-blue); }
+      .site-footer {
+        background: var(--cms-blue-darkest);
+        color: var(--white);
+        padding: 32px 24px;
+        text-align: center;
+        font-size: 0.8rem;
+        margin-top: 40px;
+      }
+      .site-footer p { opacity: 0.6; margin-bottom: 4px; }
+      .site-footer a { color: var(--white); opacity: 0.6; margin: 0 12px; }
+      .footer-inner { max-width: 800px; margin: 0 auto; }
+      @media (max-width: 480px) {
+        h1 { font-size: 1.5rem; }
+        .site-title { font-size: 1.4rem; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="topbar"><span>SMART Health Link Scanner</span></div>
+    <div class="site-header">
+      <div class="header-inner">
+        <a href="/" class="site-title">Kill <em>the</em> Clipboard</a>
+      </div>
+    </div>
+    <hr class="gold-rule" />
+
+    <div class="container">
+      <h1>Terms of Service</h1>
+      <p class="last-updated">Last updated: March 3, 2026</p>
+
+      <p>
+        These Terms of Service ("Terms") govern your use of Kill the Clipboard ("the Service"), a
+        web-based tool for scanning SMART Health Link QR codes and routing health data to configured
+        destinations.
+      </p>
+
+      <h2>1. Acceptance of Terms</h2>
+      <p>
+        By registering an organization or using the Service, you agree to be bound by these Terms.
+        If you are using the Service on behalf of an organization, you represent that you have
+        authority to bind that organization to these Terms.
+      </p>
+
+      <h2>2. Description of Service</h2>
+      <p>Kill the Clipboard provides healthcare organizations with the ability to:</p>
+      <ul>
+        <li>Scan SMART Health Link QR codes to extract patient health records</li>
+        <li>
+          Route extracted FHIR data and PDF documents to configured destinations including Google
+          Drive, OneDrive, Box, email, FHIR servers, and API endpoints
+        </li>
+        <li>Send health records via connected Gmail or Microsoft Outlook accounts</li>
+        <li>Manage organization-level settings and user access</li>
+      </ul>
+
+      <h2>3. Account Responsibilities</h2>
+      <ul>
+        <li>
+          You are responsible for maintaining the security of your organization's admin and staff
+          passwords.
+        </li>
+        <li>You are responsible for all activity that occurs under your organization's account.</li>
+        <li>You must notify us immediately of any unauthorized use of your account.</li>
+        <li>
+          You are responsible for ensuring that your use of the Service complies with all applicable
+          laws and regulations, including HIPAA where applicable.
+        </li>
+      </ul>
+
+      <h2>4. Acceptable Use</h2>
+      <p>
+        You agree to use the Service only for its intended purpose of processing and routing health
+        records. You agree not to:
+      </p>
+      <ul>
+        <li>Use the Service for any unlawful purpose</li>
+        <li>Attempt to gain unauthorized access to other organizations' data or settings</li>
+        <li>Interfere with or disrupt the Service or its infrastructure</li>
+        <li>Reverse engineer, decompile, or attempt to extract the source code of the Service</li>
+        <li>Use the Service to transmit malware or malicious content</li>
+      </ul>
+
+      <h2>5. Third-Party Services</h2>
+      <p>
+        The Service integrates with third-party services (Google Drive, Gmail, OneDrive, Outlook,
+        Box). Your use of these integrations is also subject to the respective terms of service of
+        those providers. We are not responsible for the availability or conduct of third-party
+        services.
+      </p>
+
+      <h2>6. Health Data and HIPAA</h2>
+      <p>The Service is designed to support HIPAA-compliant workflows. However:</p>
+      <ul>
+        <li>
+          Organizations are responsible for their own HIPAA compliance, including executing any
+          necessary Business Associate Agreements with their email and storage providers.
+        </li>
+        <li>
+          The Service processes health data transiently and does not permanently store patient
+          health information.
+        </li>
+        <li>
+          Organizations are responsible for ensuring that their configured destinations and email
+          accounts meet their compliance requirements.
+        </li>
+      </ul>
+
+      <h2>7. Service Availability</h2>
+      <p>
+        We strive to maintain high availability of the Service but do not guarantee uninterrupted
+        access. We may perform maintenance or updates that temporarily affect availability. We will
+        make reasonable efforts to provide advance notice of planned downtime.
+      </p>
+
+      <h2>8. Limitation of Liability</h2>
+      <p>
+        To the fullest extent permitted by law, the Service is provided "as is" without warranties
+        of any kind. We shall not be liable for any indirect, incidental, special, consequential, or
+        punitive damages arising from your use of the Service.
+      </p>
+
+      <h2>9. Termination</h2>
+      <p>
+        Either party may terminate use of the Service at any time. We reserve the right to suspend
+        or terminate accounts that violate these Terms. Upon termination, we will delete your
+        organization's configuration data and revoke any stored OAuth tokens.
+      </p>
+
+      <h2>10. Changes to These Terms</h2>
+      <p>
+        We may update these Terms from time to time. Continued use of the Service after changes are
+        posted constitutes acceptance of the revised Terms.
+      </p>
+
+      <h2>11. Contact</h2>
+      <p>
+        For questions about these Terms, please contact us at
+        <a href="mailto:agleason@russellstreetventures.com">agleason@russellstreetventures.com</a>.
+      </p>
+    </div>
+
+    <div class="site-footer">
+      <div class="footer-inner">
+        <p>Powered by SMART Health Links</p>
+        <p><a href="/privacy">Privacy Policy</a> <a href="/terms">Terms of Service</a></p>
+      </div>
+    </div>
+  </body>
+</html>

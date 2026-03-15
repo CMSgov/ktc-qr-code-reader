@@ -2,7 +2,12 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    include: ['src/**/__tests__/**/*.js', 'data/**/__tests__/**/*.js', 'test/**/*.test.js'],
+    include: [
+      'src/**/__tests__/**/*.js',
+      'data/**/__tests__/**/*.js',
+      'test/**/*.test.js',
+      'packages/**/__tests__/**/*.js',
+    ],
     exclude: ['**/node_modules/**', '**/dist/**', '**/public/**'],
     coverage: {
       provider: 'v8',
@@ -21,10 +26,10 @@ export default defineConfig({
         'src/shl/fhir-extractor.js', // extraction paths need decrypt/fetch mocks
       ],
       thresholds: {
-        lines: 80,
-        functions: 80,
-        statements: 80,
-        branches: 77, // config/db branches lower; 80% on lines/functions/statements
+        lines: 96,
+        functions: 96,
+        statements: 96,
+        branches: 88,
       },
     },
   },

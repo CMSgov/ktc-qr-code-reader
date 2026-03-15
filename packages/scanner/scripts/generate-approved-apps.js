@@ -1,18 +1,18 @@
 #!/usr/bin/env node
 /**
- * Generate public/js/approved-apps.js from data/approved-apps.js (single source of truth).
- * Run: node scripts/generate-approved-apps.js  or  npm run generate:approved-apps
+ * Generate public/js/approved-apps.js from scanner-local data source.
+ * Run from package root: npm run generate:approved-apps
  */
 import { writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { execSync } from 'node:child_process';
-import { APPROVED_APPS, KNOWN_SHL_MANIFEST_HOSTS } from '../data/approved-apps.js';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const root = join(__dirname, '..');
-const outPath = join(root, 'public', 'js', 'approved-apps.js');
+const scannerRoot = join(__dirname, '..');
+const outPath = join(scannerRoot, 'public', 'js', 'approved-apps.js');
 
+const dataPath = pathToFileURL(join(scannerRoot, 'data', 'approved-apps.js')).href;
+const { APPROVED_APPS, KNOWN_SHL_MANIFEST_HOSTS } = await import(dataPath);
 const appsJson = JSON.stringify(APPROVED_APPS, null, 2);
 const hostsJson = JSON.stringify(KNOWN_SHL_MANIFEST_HOSTS, null, 2);
 
@@ -28,5 +28,4 @@ const content = `/**
 `;
 
 writeFileSync(outPath, content, 'utf-8');
-execSync('npx oxfmt public/js/approved-apps.js', { cwd: root, stdio: 'inherit' });
-console.log('Generated public/js/approved-apps.js');
+console.log('Generated packages/scanner/public/js/approved-apps.js');

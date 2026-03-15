@@ -33,12 +33,12 @@ describe('approved-app list', () => {
 
   it('generated client file matches source count and structure', () => {
     const clientScript = readFileSync(
-      join(__dirname, '..', '..', 'public', 'js', 'approved-apps.js'),
+      join(__dirname, '..', '..', 'packages', 'scanner', 'public', 'js', 'approved-apps.js'),
       'utf-8',
     );
     expect(clientScript).toContain('APPROVED_APPS_CORE');
     expect(clientScript).toContain('KNOWN_SHL_MANIFEST_HOSTS');
-    const count = (clientScript.match(/"appId":/g) || []).length;
+    const count = (clientScript.match(/appId[:"']/g) || []).length;
     expect(count).toBe(APPROVED_APPS.length);
   });
 });

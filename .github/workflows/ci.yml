@@ -1,5 +1,5 @@
-# CI: test and build on every PR and every push to main.
-# Does not produce packages; see release.yml for tag-based packaging.
+# CI: monorepo-aware checks on every PR and push to main.
+# Runs root quality gates, then tests/builds only changed workspaces.
 
 name: CI
 
@@ -14,19 +14,94 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test-and-build:
+  root-quality:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - run: npm ci
       - run: npm run lint
       - run: npm run format:check
       - run: npm test
-      - run: npm run build
-        # Ensures Core build works; output is dist/core/
+
+  detect-changed-packages:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.changed.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve base ref
+        id: since_ref
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "ref=origin/${{ github.base_ref }}" >> "$GITHUB_OUTPUT"
+          else
+            BEFORE="${{ github.event.before }}"
+            if [[ -z "$BEFORE" || "$BEFORE" == "0000000000000000000000000000000000000000" ]]; then
+              BEFORE="origin/main~1"
+            fi
+            echo "ref=$BEFORE" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Detect changed packages
+        id: changed
+        run: |
+          REF="${{ steps.since_ref.outputs.ref }}"
+          DIFF_FILES="$(git diff --name-only "$REF"...HEAD)"
+          echo "Changed files:"
+          echo "$DIFF_FILES"
+
+          ALL_PACKAGES='["@ktc/scanner","@ktc/proxy","@ktc/sidecar"]'
+          MATRIX='[]'
+
+          # If workspace-wide files changed, run all package checks.
+          if echo "$DIFF_FILES" | grep -E '^(package\.json|package-lock\.json|vitest\.config\.js|\.github/workflows/)'; then
+            MATRIX="$ALL_PACKAGES"
+          else
+            mapfile -t PKGS < <(echo "$DIFF_FILES" | awk -F/ '/^packages\/[^/]+\// {print $2}' | sort -u)
+            for pkg in "${PKGS[@]}"; do
+              case "$pkg" in
+                scanner) MATRIX="$(jq -c '. + ["@ktc/scanner"] | unique' <<< "$MATRIX")" ;;
+                proxy) MATRIX="$(jq -c '. + ["@ktc/proxy"] | unique' <<< "$MATRIX")" ;;
+                sidecar) MATRIX="$(jq -c '. + ["@ktc/sidecar"] | unique' <<< "$MATRIX")" ;;
+              esac
+            done
+          fi
+
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+
+  affected-packages:
+    needs: detect-changed-packages
+    if: needs.detect-changed-packages.outputs.matrix != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: ${{ fromJson(needs.detect-changed-packages.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Test package
+        run: npm run test -w ${{ matrix.package }} --if-present
+
+      - name: Build package
+        run: npm run build -w ${{ matrix.package }} --if-present

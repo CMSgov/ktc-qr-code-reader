@@ -8,5 +8,7 @@ data/*.db
 *.db-wal
 *.db-shm
 coverage/
+packages/scanner/public/js/approved-apps.js
+packages/scanner/public/js/sanitize.js
 .idea
 *.zip

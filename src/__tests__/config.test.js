@@ -61,6 +61,14 @@ describe('loadConfig', () => {
     expect(config.output.api.url).toBe('https://api.example.com');
   });
 
+  it('keeps non-file mode when API_URL is set', () => {
+    process.env.OUTPUT_MODE = 'drive';
+    process.env.API_URL = 'https://api.example.com';
+    const config = loadConfig();
+    expect(config.output.mode).toBe('drive');
+    expect(config.output.api.url).toBe('https://api.example.com');
+  });
+
   it('applies GOOGLE_DRIVE_FOLDER as raw folder ID', () => {
     process.env.OUTPUT_MODE = 'file'; // so GOOGLE_DRIVE_FOLDER can set mode to drive
     process.env.GOOGLE_DRIVE_FOLDER = 'folderId123';
@@ -127,11 +135,43 @@ describe('loadConfig', () => {
     expect(config.output.api.headers.Authorization).toBe('Bearer token123');
   });
 
+  it('applies Google OAuth-related env vars', () => {
+    process.env.GOOGLE_CLIENT_ID = 'google-client-id';
+    process.env.GOOGLE_CLIENT_SECRET = 'google-client-secret';
+    process.env.GOOGLE_REFRESH_TOKEN = 'google-refresh-token';
+    process.env.GOOGLE_SERVICE_ACCOUNT_KEY = '{"type":"service_account"}';
+    const config = loadConfig();
+    expect(config.output.drive.clientId).toBe('google-client-id');
+    expect(config.output.drive.clientSecret).toBe('google-client-secret');
+    expect(config.output.drive.refreshToken).toBe('google-refresh-token');
+    expect(config.output.drive.serviceAccountKey).toBe('{"type":"service_account"}');
+  });
+
   it('applies FHIR_SERVER and sets mode to api when file', () => {
     process.env.OUTPUT_MODE = 'file';
     process.env.FHIR_SERVER = 'https://fhir.example.com';
     const config = loadConfig();
     expect(config.output.mode).toBe('api');
     expect(config.output.api.fhirServerBase).toBe('https://fhir.example.com');
+  });
+
+  it('keeps non-file mode when FHIR_SERVER is set', () => {
+    process.env.OUTPUT_MODE = 'drive';
+    process.env.FHIR_SERVER = 'https://fhir.example.com';
+    const config = loadConfig();
+    expect(config.output.mode).toBe('drive');
+    expect(config.output.api.fhirServerBase).toBe('https://fhir.example.com');
+  });
+
+  it('accepts configPath override even when file is missing', () => {
+    const baseline = loadConfig();
+    const config = loadConfig({ configPath: '/tmp/does-not-exist.json' });
+    expect(config.output.mode).toBe(baseline.output.mode);
+    expect(config.output.directory).toBe(baseline.output.directory);
+  });
+
+  it('applies CLI fhirServer override', () => {
+    const config = loadConfig({ fhirServer: 'https://cli-fhir.example.com' });
+    expect(config.output.api.fhirServerBase).toBe('https://cli-fhir.example.com');
   });
 });

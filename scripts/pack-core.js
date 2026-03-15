@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Create a zip of dist/core/ named killtheclipboard-core-<version>.zip.
- * Run after build:core (pack:core script runs build:core first).
+ * Create a zip of packages/scanner/dist/core/ named killtheclipboard-core-<version>.zip.
+ * Run after: npm run build (builds the scanner package).
  */
 import { readFileSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -12,13 +12,16 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
 const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf-8'));
 const version = pkg.version;
-const distCore = join(root, 'dist', 'core');
+const distCore = join(root, 'packages', 'scanner', 'dist', 'core');
 const zipName = `killtheclipboard-core-${version}.zip`;
 
 if (!existsSync(distCore)) {
-  console.error('dist/core/ not found. Run npm run build:core first.');
+  console.error('packages/scanner/dist/core/ not found. Run npm run build first.');
   process.exit(1);
 }
 
-execSync(`cd dist && zip -rq ../${zipName} core`, { cwd: root, stdio: 'inherit' });
+execSync(`cd packages/scanner/dist && zip -rq ../../../${zipName} core`, {
+  cwd: root,
+  stdio: 'inherit',
+});
 console.log('Created', zipName);

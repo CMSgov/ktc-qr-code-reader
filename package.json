@@ -13,34 +13,29 @@
   "bin": {
     "shl-scan": "./bin/shl-scan.js"
   },
+  "workspaces": [
+    "packages/*"
+  ],
   "type": "module",
   "scripts": {
-    "start": "node server.js",
+    "start": "node packages/sidecar/server.js",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "format": "oxfmt",
     "format:check": "oxfmt --check",
     "scan": "node bin/shl-scan.js",
-    "generate:approved-apps": "node scripts/generate-approved-apps.js",
-    "generate:sanitize": "node scripts/generate-sanitize.js",
-    "build": "npm run build:core",
-    "build:core": "npm run generate:approved-apps && npm run generate:sanitize && node scripts/build-core.js",
+    "build": "npm run build -w @ktc/scanner",
+    "pack:core": "node scripts/pack-core.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "bcryptjs": "^3.0.3",
-    "better-sqlite3": "^12.6.2",
     "commander": "^14.0.3",
-    "express": "^5.2.1",
-    "express-rate-limit": "^8.2.1",
     "googleapis": "^171.4.0",
     "jose": "^4.15.9",
     "jsqr": "^1.4.0",
-    "nodemailer": "^8.0.1",
-    "sharp": "^0.33.5",
-    "uuid": "^13.0.0"
+    "sharp": "^0.33.5"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^2.1.0",

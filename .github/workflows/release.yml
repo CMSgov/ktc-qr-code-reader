@@ -1,4 +1,4 @@
-# Release: on version tags (v*), test, build, and package Core + Tier 2+.
+# Release: on version tags (v*), package changed workspaces.
 # Run only when you push a tag (e.g. git tag v0.2.0 && git push --tags).
 
 name: Release
@@ -12,27 +12,104 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build-and-pack:
+  detect-changed-packages:
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.changed.outputs.matrix }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - run: npm ci
-      - run: npm test
-      - run: npm run build
-      - run: npm run pack:core
-      - run: npm run pack:full
+
+      - name: Compute previous tag
+        id: prev_tag
+        run: |
+          PREV_TAG="$(git tag --sort=-creatordate | sed -n '2p')"
+          if [[ -n "$PREV_TAG" ]]; then
+            echo "tag=$PREV_TAG" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Detect changed packages since previous tag
+        id: changed
+        run: |
+          ALL_PACKAGES='["@ktc/scanner","@ktc/proxy","@ktc/sidecar"]'
+          MATRIX='[]'
+
+          if [[ -n "${{ steps.prev_tag.outputs.tag }}" ]]; then
+            DIFF_FILES="$(git diff --name-only "${{ steps.prev_tag.outputs.tag }}"...HEAD)"
+          else
+            DIFF_FILES="$(git ls-files)"
+          fi
+
+          echo "Changed files:"
+          echo "$DIFF_FILES"
+
+          # If workspace-wide files changed, release all workspace artifacts.
+          if echo "$DIFF_FILES" | grep -E '^(package\.json|package-lock\.json|vitest\.config\.js|\.github/workflows/)'; then
+            MATRIX="$ALL_PACKAGES"
+          else
+            mapfile -t PKGS < <(echo "$DIFF_FILES" | awk -F/ '/^packages\/[^/]+\// {print $2}' | sort -u)
+            for pkg in "${PKGS[@]}"; do
+              case "$pkg" in
+                scanner) MATRIX="$(jq -c '. + ["@ktc/scanner"] | unique' <<< "$MATRIX")" ;;
+                proxy) MATRIX="$(jq -c '. + ["@ktc/proxy"] | unique' <<< "$MATRIX")" ;;
+                sidecar) MATRIX="$(jq -c '. + ["@ktc/sidecar"] | unique' <<< "$MATRIX")" ;;
+              esac
+            done
+          fi
+
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+
+  package-changed-workspaces:
+    needs: detect-changed-packages
+    if: needs.detect-changed-packages.outputs.matrix != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: ${{ fromJson(needs.detect-changed-packages.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Test package
+        run: npm run test -w ${{ matrix.package }} --if-present
+
+      - name: Build package
+        run: npm run build -w ${{ matrix.package }} --if-present
+
+      - name: Build scanner core zip artifact
+        if: matrix.package == '@ktc/scanner'
+        run: |
+          npm run pack:core
+          mkdir -p release
+          mv killtheclipboard-core-*.zip release/
+
+      - name: Build proxy/sidecar tarball artifact
+        if: matrix.package != '@ktc/scanner'
+        run: |
+          PKG_NAME="${{ matrix.package }}"
+          PKG_DIR="${PKG_NAME##*/}"
+          VERSION="$(node -p "JSON.parse(require('node:fs').readFileSync('packages/' + process.argv[1] + '/package.json', 'utf8')).version" "$PKG_DIR")"
+          mkdir -p release
+          tar -czf "release/killtheclipboard-${PKG_DIR}-${VERSION}.tgz" -C "packages/${PKG_DIR}" .
 
       - uses: actions/upload-artifact@v4
         with:
-          name: core-package
-          path: killtheclipboard-core-*.zip
-      - uses: actions/upload-artifact@v4
-        with:
-          name: full-package
-          path: killtheclipboard-full-*.zip
+          name: ${{ matrix.package }}-release-artifact
+          path: release/*

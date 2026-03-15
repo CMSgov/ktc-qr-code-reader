@@ -4,7 +4,7 @@
 **From:** Amy Gleason
 **Re:** Architecture review of Kill the Clipboard
 
-Thank you for the thorough review. We've implemented several of the recommended changes and want to walk through each concern, what we did, and where we think further discussion would be valuable.
+Thank you for the thorough review. We implemented several of the recommended changes, and this document explains each concern, what changed, and where further discussion is still useful.
 
 ---
 
@@ -32,7 +32,7 @@ We still store OAuth refresh tokens and password hashes. The review recommends e
 
 - **The password model enforces organizational access control.** Without it, anyone with the scanner URL can use it. The dual-password system (admin vs. staff) ensures only authorized personnel access the scanner and only administrators can change where data goes.
 
-- **OAuth tokens are scoped and revocable.** Each token is limited to one organization, uses minimum-privilege scopes (e.g., `drive.file` for Google Drive — only files the app created), and can be disconnected by the admin at any time. The risk profile of these tokens is meaningfully different from storing PHI.
+- **OAuth tokens are scoped and revocable.** Each token is limited to one organization, uses minimum-privilege scopes (for example `drive.file` for Google Drive — only files the app created), and can be disconnected by the admin at any time. The risk profile of these tokens is meaningfully different from storing PHI.
 
 **What we implemented:** All OAuth refresh tokens (Google Drive, Gmail, OneDrive, Outlook, Box) are now encrypted at rest using AES-256-GCM. Each organization's tokens are encrypted with a unique key derived from `HMAC-SHA256(SESSION_SECRET, orgId)`. A database leak alone does not expose usable OAuth tokens — the attacker would also need the `SESSION_SECRET` environment variable. Existing plaintext tokens are automatically migrated to encrypted form on server startup.
 
@@ -48,13 +48,13 @@ The most critical data (decrypted PHI) no longer passes through server-side proc
 
 **Status: Fixed.**
 
-The CORS proxy includes SSRF protection that blocks requests to private/internal IP ranges (RFC 1918), localhost, link-local addresses, and non-HTTP protocols. Only HTTPS requests to external hosts are proxied. Header forwarding is restricted to an allowlist (`Content-Type`, `Accept`).
+The CORS proxy includes SSRF protection that blocks requests to private/internal IP ranges (RFC 1918), localhost, link-local addresses, and non-HTTPS protocols. It also resolves hostnames and blocks requests when DNS resolves to private/internal addresses, including redirect targets. Header forwarding is restricted to an allowlist (`Content-Type`, `Accept`).
 
 ### 6. XSS risk from attacker-controlled SHL content
 
 **Status: Fixed — HTML sanitization + CSP + SRI.**
 
-A [threat model report](https://fhir-search.exe.xyz/threat-model-report.html#poc) demonstrated that a poisoned SHL QR code could inject malicious HTML via the `label` field (e.g., `<img onerror="...">`) and exfiltrate data from subsequent scans. We've implemented defense-in-depth:
+A [threat model report](https://fhir-search.exe.xyz/threat-model-report.html#poc) demonstrated that a poisoned SHL QR code could inject malicious HTML via the `label` field (for example `<img onerror="...">`) and exfiltrate data from subsequent scans. We've implemented defense-in-depth:
 
 **HTML Sanitization:** All external data rendered via `innerHTML` is now sanitized through an `escapeHtml()` function that escapes `<`, `>`, `&`, `"`, and `'`. This covers: SHL labels, FHIR resource types, PDF filenames, app names, error messages, and storage labels. Download buttons use `data-*` attributes and event listeners instead of inline `onclick` with interpolated filenames.
 
@@ -137,7 +137,7 @@ These requirements justify the server components we maintain. We've minimized th
 | Review Concern                | Our Response                                                                      |
 | ----------------------------- | --------------------------------------------------------------------------------- |
 | Server decrypts PHI           | ✅ Fixed — decryption moved to browser                                            |
-| SSRF via manifest fetches     | ✅ Fixed — CORS proxy with SSRF blocklist                                         |
+| SSRF via manifest fetches     | ✅ Fixed — CORS proxy with HTTPS-only + DNS-aware SSRF protections                |
 | XSS from SHL content          | ✅ Fixed — HTML sanitization (`escapeHtml`), CSP headers, SRI hashes              |
 | No credentials at rest        | ✅ Addressed — OAuth tokens encrypted at rest with per-org AES-256-GCM keys       |
 | Multi-tenant isolation        | ✅ Mitigated — PHI no longer in server crypto path; self-hosting option available |
@@ -185,7 +185,7 @@ OAuth state parameters previously contained unsigned JSON (`{slug, orgId}`). An 
 No endpoints had rate limiting, making brute-force attacks trivial (especially with staff passwords as short as 4 characters). We added `express-rate-limit` with three tiers:
 
 - **Auth endpoints** (`/api/orgs/:slug/auth`): 20 attempts per 15 minutes per IP
-- **CORS proxy** (`/api/orgs/:slug/shl-proxy`): 30 requests per minute per IP
+- **CORS proxy** (`/api/shl-proxy` in standalone proxy): 30 requests per minute per IP
 - **Registration** (`/api/orgs`): 5 registrations per hour per IP
 - **Super-admin endpoints**: share the auth rate limiter
 
