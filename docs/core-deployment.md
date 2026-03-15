@@ -10,6 +10,28 @@ npm run build
 
 Output: `packages/scanner/dist/core/index.html` and `packages/scanner/dist/core/js/`, `packages/scanner/dist/core/css/`. The HTML sets `window.__CORE_ONLY__ = true` and uses relative paths so the app works when served from any base path.
 
+## Local development
+
+Generate the required JS files and serve the scanner's `public/` directory:
+
+```bash
+npm run build && npx serve packages/scanner/public
+```
+
+This starts a local server (default `http://localhost:3000`). After making changes to source data (approved-apps, sanitize), re-run `npm run build` to regenerate.
+
+Most browsers require HTTPS for camera access. For testing on a real device, use a tunnel:
+
+```bash
+npx localtunnel --port 3000
+```
+
+To serve the production build instead:
+
+```bash
+npm run build && npx serve packages/scanner/dist/core
+```
+
 ## Deploy
 
 1. Upload the contents of `packages/scanner/dist/core/` to your static host or CDN.
