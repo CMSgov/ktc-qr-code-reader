@@ -87,7 +87,9 @@ async function handleShlProxyRequest(req, res) {
         return res.status(403).json({ error: 'Redirect to private/internal address blocked' });
       }
       if (await resolvesToPrivateAddress(redirectUrl)) {
-        return res.status(403).json({ error: 'Redirect target resolves to private/internal address' });
+        return res
+          .status(403)
+          .json({ error: 'Redirect target resolves to private/internal address' });
       }
 
       currentUrl = redirectUrl;

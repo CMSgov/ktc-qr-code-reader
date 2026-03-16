@@ -411,12 +411,12 @@ Additional input validation:
 
 Rate limiting protects against brute-force attacks and abuse using `express-rate-limit`:
 
-| Endpoint                    | Limit       | Window     | Purpose                                                                                                              |
-| --------------------------- | ----------- | ---------- | -------------------------------------------------------------------------------------------------------------------- |
-| `/api/orgs/:slug/auth`      | 20 attempts | 15 minutes | Prevents password brute-force (especially important given 6-character minimum for staff passwords; admin requires 8) |
+| Endpoint                            | Limit       | Window     | Purpose                                                                                                              |
+| ----------------------------------- | ----------- | ---------- | -------------------------------------------------------------------------------------------------------------------- |
+| `/api/orgs/:slug/auth`              | 20 attempts | 15 minutes | Prevents password brute-force (especially important given 6-character minimum for staff passwords; admin requires 8) |
 | `/api/shl-proxy` (standalone proxy) | 30 requests | 1 minute   | Prevents proxy abuse                                                                                                 |
-| `/api/orgs` (registration)  | 5 requests  | 1 hour     | Prevents registration spam                                                                                           |
-| Super-admin endpoints       | 20 attempts | 15 minutes | Protects admin API key                                                                                               |
+| `/api/orgs` (registration)          | 5 requests  | 1 hour     | Prevents registration spam                                                                                           |
+| Super-admin endpoints               | 20 attempts | 15 minutes | Protects admin API key                                                                                               |
 
 Rate limit headers (`RateLimit-*`) are returned in responses per RFC 6585.
 
@@ -497,7 +497,7 @@ All sensitive configuration is stored as Fly.io secrets (encrypted at rest, inje
 | Variable                                                        | Purpose                                                                                                                                               | Required                   |
 | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
 | `ADMIN_KEY`                                                     | Super-admin dashboard password; protects `/admin` (org list, approvals, password resets).                                                             | Yes                        |
-| `DATABASE_PATH`                                                 | Path to the SQLite database file (for example `/data/db.sqlite`).                                                                                    | Yes                        |
+| `DATABASE_PATH`                                                 | Path to the SQLite database file (for example `/data/db.sqlite`).                                                                                     | Yes                        |
 | `PORT`                                                          | HTTP port the server listens on (for example `3000`).                                                                                                 | Yes                        |
 | `SESSION_SECRET`                                                | HMAC key for session token signing and per-org OAuth token encryption key derivation. Required in production; do not use random per-process fallback. | Yes                        |
 | `GOOGLE_CLIENT_ID`                                              | Google OAuth client identifier (Drive, Gmail).                                                                                                        | If using Google            |
@@ -587,18 +587,18 @@ This aligns with the SMART Health Cards cryptographic model and NIST-approved al
 
 Kill the Clipboard is designed as a **data routing tool**, not a data storage system. HIPAA compliance is a shared responsibility:
 
-| Responsibility                                                    | Owner                       |
-| ----------------------------------------------------------------- | --------------------------- |
-| Health data transient processing security                         | Kill the Clipboard          |
-| HTTPS enforcement and network security                            | Kill the Clipboard + Fly.io |
-| Authentication and session management                             | Kill the Clipboard          |
-| Multi-tenant data isolation                                       | Kill the Clipboard          |
-| Business Associate Agreement with cloud storage provider          | Subscribing organization    |
+| Responsibility                                                          | Owner                       |
+| ----------------------------------------------------------------------- | --------------------------- |
+| Health data transient processing security                               | Kill the Clipboard          |
+| HTTPS enforcement and network security                                  | Kill the Clipboard + Fly.io |
+| Authentication and session management                                   | Kill the Clipboard          |
+| Multi-tenant data isolation                                             | Kill the Clipboard          |
+| Business Associate Agreement with cloud storage provider                | Subscribing organization    |
 | Email account HIPAA compliance (for example Google Workspace HIPAA BAA) | Subscribing organization    |
-| Staff training on scanner use                                     | Subscribing organization    |
-| Physical security of scanning devices                             | Subscribing organization    |
-| Destination system access controls                                | Subscribing organization    |
-| API endpoint security (for webhook destinations)                  | Subscribing organization    |
+| Staff training on scanner use                                           | Subscribing organization    |
+| Physical security of scanning devices                                   | Subscribing organization    |
+| Destination system access controls                                      | Subscribing organization    |
+| API endpoint security (for webhook destinations)                        | Subscribing organization    |
 
 ### Business Associate Agreement (BAA) Considerations
 
@@ -659,19 +659,19 @@ All production dependencies are well-established, actively maintained open-sourc
 
 ## 15. Risk Assessment & Mitigations
 
-| Risk                                      | Severity | Likelihood | Mitigation                                                                                                                                                                                                                                                                                                       |
-| ----------------------------------------- | -------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **PHI exposure via server compromise**    | High     | Very Low   | PHI decryption occurs in the browser, not on the server. The server's CORS proxy only handles encrypted JWE blobs and never possesses the decryption key. The route endpoint receives decrypted data transiently for delivery only — a server compromise would require intercepting an active routing operation. |
-| **OAuth token theft**                     | Medium   | Very Low   | Tokens encrypted at rest with per-organization AES-256-GCM keys derived from `HMAC-SHA256(SESSION_SECRET, orgId)`. A database leak alone does not expose usable tokens. Each token scoped to one organization. Revocable by admin at any time.                                                                   |
-| **Session token forgery**                 | Medium   | Very Low   | HMAC-SHA256 signed with cryptographically random secret. Token expiration enforced server-side. Timing-safe comparison prevents side-channel attacks.                                                                                                                                                            |
-| **Password brute force**                  | Medium   | Low        | bcrypt with cost factor 10 makes brute force computationally expensive (~100ms per attempt). Rate limiting (20 attempts per 15 minutes per IP) prevents automated attacks.                                                                                                                                       |
-| **QR code spoofing (app identity)**       | Low      | Medium     | Phase 1 uses static list (spoofable). Phase 3 roadmap adds cryptographic attestation with JWS signatures.                                                                                                                                                                                                        |
-| **SQL injection**                         | High     | Very Low   | All database queries use parameterized statements. Column names validated against allowlist.                                                                                                                                                                                                                     |
-| **Cross-tenant data access**              | High     | Very Low   | Token-based slug verification on every request. Staff tokens cannot access other organizations' data.                                                                                                                                                                                                            |
-| **Decompression bomb (zip bomb via JWE)** | Medium   | Low        | 5 MB maximum decompression limit enforced on all inflate operations.                                                                                                                                                                                                                                             |
+| Risk                                      | Severity | Likelihood | Mitigation                                                                                                                                                                                                                                                                                                                         |
+| ----------------------------------------- | -------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **PHI exposure via server compromise**    | High     | Very Low   | PHI decryption occurs in the browser, not on the server. The server's CORS proxy only handles encrypted JWE blobs and never possesses the decryption key. The route endpoint receives decrypted data transiently for delivery only — a server compromise would require intercepting an active routing operation.                   |
+| **OAuth token theft**                     | Medium   | Very Low   | Tokens encrypted at rest with per-organization AES-256-GCM keys derived from `HMAC-SHA256(SESSION_SECRET, orgId)`. A database leak alone does not expose usable tokens. Each token scoped to one organization. Revocable by admin at any time.                                                                                     |
+| **Session token forgery**                 | Medium   | Very Low   | HMAC-SHA256 signed with cryptographically random secret. Token expiration enforced server-side. Timing-safe comparison prevents side-channel attacks.                                                                                                                                                                              |
+| **Password brute force**                  | Medium   | Low        | bcrypt with cost factor 10 makes brute force computationally expensive (~100ms per attempt). Rate limiting (20 attempts per 15 minutes per IP) prevents automated attacks.                                                                                                                                                         |
+| **QR code spoofing (app identity)**       | Low      | Medium     | Phase 1 uses static list (spoofable). Phase 3 roadmap adds cryptographic attestation with JWS signatures.                                                                                                                                                                                                                          |
+| **SQL injection**                         | High     | Very Low   | All database queries use parameterized statements. Column names validated against allowlist.                                                                                                                                                                                                                                       |
+| **Cross-tenant data access**              | High     | Very Low   | Token-based slug verification on every request. Staff tokens cannot access other organizations' data.                                                                                                                                                                                                                              |
+| **Decompression bomb (zip bomb via JWE)** | Medium   | Low        | 5 MB maximum decompression limit enforced on all inflate operations.                                                                                                                                                                                                                                                               |
 | **SSRF via malicious SHL URL**            | Medium   | Very Low   | CORS proxy enforces `https:` upstream requests, validates URLs against SSRF blocklists (RFC 1918, RFC 4193, localhost, link-local, cloud metadata, IPv6-mapped addresses), resolves hostnames and blocks private/internal DNS results, validates redirects before following (max 3), and rate limits to 30 requests/minute per IP. |
-| **OAuth CSRF (storage hijack)**           | High     | Very Low   | OAuth state parameters are HMAC-signed with `SESSION_SECRET`. Callback verifies signature using timing-safe comparison before trusting the state payload. Forged state is silently rejected.                                                                                                                     |
-| **XSS via SHL content**                   | Medium   | Very Low   | All external data HTML-sanitized via `escapeHtml()` before `innerHTML` rendering. CSP restricts script sources. CDN scripts verified via SRI hashes. `connect-src 'self'` blocks data exfiltration. Poisoned QR code attack vector eliminated.                                                                   |
+| **OAuth CSRF (storage hijack)**           | High     | Very Low   | OAuth state parameters are HMAC-signed with `SESSION_SECRET`. Callback verifies signature using timing-safe comparison before trusting the state payload. Forged state is silently rejected.                                                                                                                                       |
+| **XSS via SHL content**                   | Medium   | Very Low   | All external data HTML-sanitized via `escapeHtml()` before `innerHTML` rendering. CSP restricts script sources. CDN scripts verified via SRI hashes. `connect-src 'self'` blocks data exfiltration. Poisoned QR code attack vector eliminated.                                                                                     |
 
 ---
 

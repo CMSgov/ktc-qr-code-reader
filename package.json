@@ -25,6 +25,7 @@
     "format:check": "oxfmt --check",
     "scan": "node bin/shl-scan.js",
     "build": "npm run build -w @ktc/scanner",
+    "dev": "npm run pack:core && npx serve packages/scanner/dist/core -p 3000",
     "pack:core": "node scripts/pack-core.js",
     "test": "vitest run",
     "test:watch": "vitest",

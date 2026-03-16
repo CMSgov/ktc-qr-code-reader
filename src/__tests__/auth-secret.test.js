@@ -29,7 +29,9 @@ describe('auth secret fallback and malformed payload branches', () => {
     const { verifyToken } = await import('../auth.js');
 
     const payloadB64 = Buffer.from('not-json', 'utf-8').toString('base64url');
-    const sig = createHmac('sha256', process.env.SESSION_SECRET).update(payloadB64).digest('base64url');
+    const sig = createHmac('sha256', process.env.SESSION_SECRET)
+      .update(payloadB64)
+      .digest('base64url');
     const token = `${payloadB64}.${sig}`;
 
     expect(verifyToken(token)).toBe(null);
