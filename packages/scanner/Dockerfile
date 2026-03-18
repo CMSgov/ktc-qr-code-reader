@@ -1,13 +1,26 @@
-# Client-only SHL scanner — static files served by nginx.
-# Build the scanner first: npm run build -w @ktc/scanner (produces dist/core/).
+# Client-only SHL scanner — multi-stage build, static files served by nginx.
+
+# Stage 1: build the static artifact
+FROM node:22-alpine AS build
+
+WORKDIR /app
+
+COPY package.json ./
+COPY data/ data/
+COPY src/ src/
+COPY scripts/ scripts/
+COPY public/ public/
+
+RUN npm run build
+
+# Stage 2: serve with nginx
 FROM nginx:alpine
 
-# Remove default content and copy our static build
 RUN rm -rf /usr/share/nginx/html/*
 
-COPY dist/core/ /usr/share/nginx/html/
+COPY --from=build /app/dist/core/ /usr/share/nginx/html/
 
-# Optional: custom nginx config to set correct MIME types and cache headers
+# Optional: custom nginx config for MIME types, CSP, and cache headers
 # COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
