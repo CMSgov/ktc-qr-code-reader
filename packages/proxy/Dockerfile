@@ -7,6 +7,7 @@ COPY package.json package-lock.json* ./
 RUN npm ci --omit=dev
 
 COPY server.js ssrf.js ./
+COPY lib/ lib/
 
 ENV PORT=3080
 EXPOSE 3080

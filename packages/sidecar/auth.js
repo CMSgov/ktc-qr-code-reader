@@ -1,5 +1,6 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import bcrypt from 'bcryptjs';
+import { logger } from './lib/logger.js';
 
 const COST_FACTOR = 10;
 let hmacSecret;
@@ -10,8 +11,8 @@ function getSecret() {
     hmacSecret = process.env.SESSION_SECRET;
   } else {
     hmacSecret = randomBytes(32).toString('hex');
-    console.warn(
-      'WARNING: No SESSION_SECRET env var set. Using random secret — tokens will not survive restarts.',
+    logger.warn(
+      'no SESSION_SECRET env var set — using random secret; tokens will not survive restarts',
     );
   }
   return hmacSecret;
