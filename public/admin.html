@@ -1,1473 +1,1653 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Settings — Kill the Clipboard</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      /* CMS Primary */
-      --cms-blue: #0071bc;
-      --cms-blue-dark: #205493;
-      --cms-blue-darkest: #112e51;
-      --cms-blue-light: #4992d6;
-      --cms-blue-lightest: #e6f0f8;
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Settings — Kill the Clipboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        /* CMS Primary */
+        --cms-blue: #0071bc;
+        --cms-blue-dark: #205493;
+        --cms-blue-darkest: #112e51;
+        --cms-blue-light: #4992d6;
+        --cms-blue-lightest: #e6f0f8;
 
-      /* CMS Accent / Alt */
-      --cms-cyan: #02bfe7;
-      --cms-cyan-dark: #0186a2;
+        /* CMS Accent / Alt */
+        --cms-cyan: #02bfe7;
+        --cms-cyan-dark: #0186a2;
 
-      /* CMS Gold */
-      --cms-gold: #f3ce3b;
-      --cms-gold-dark: #c9a616;
-      --cms-gold-light: #fef9e9;
+        /* CMS Gold */
+        --cms-gold: #f3ce3b;
+        --cms-gold-dark: #c9a616;
+        --cms-gold-light: #fef9e9;
 
-      /* Status */
-      --color-success: #2e8540;
-      --color-success-light: #e7f4e4;
-      --color-error: #e31c3d;
-      --color-error-light: #fce4ec;
-      --color-warn: #f8c41f;
-      --color-warn-light: #fef9e9;
+        /* Status */
+        --color-success: #2e8540;
+        --color-success-light: #e7f4e4;
+        --color-error: #e31c3d;
+        --color-error-light: #fce4ec;
+        --color-warn: #f8c41f;
+        --color-warn-light: #fef9e9;
 
-      /* Neutrals */
-      --gray-darkest: #1b1b1b;
-      --gray-dark: #333334;
-      --gray-mid: #5b616b;
-      --gray-light: #aeb0b5;
-      --gray-lighter: #d6d7d9;
-      --gray-lightest: #f1f1f1;
-      --white: #ffffff;
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: var(--white);
-      color: var(--gray-dark);
-      min-height: 100vh;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    /* === TOP BAR === */
-    .topbar {
-      background: var(--cms-blue-darkest);
-      color: var(--white);
-      padding: 8px 24px;
-      font-size: 0.75rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .topbar span { opacity: 0.7; }
-
-    /* === HEADER === */
-    .site-header {
-      background: var(--white);
-      border-bottom: 4px solid var(--cms-gold);
-      padding: 20px 24px;
-    }
-
-    .header-inner {
-      max-width: 800px;
-      margin: 0 auto;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .site-title {
-      font-family: 'Instrument Serif', Georgia, serif;
-      font-size: 1.75rem;
-      color: var(--cms-blue-darkest);
-      letter-spacing: -0.02em;
-      text-decoration: none;
-    }
-
-    .site-title em {
-      font-style: italic;
-      color: var(--cms-blue);
-    }
-
-    .org-name {
-      font-size: 0.8rem;
-      color: var(--gray-mid);
-      font-weight: 500;
-    }
-
-    .gold-rule {
-      height: 3px;
-      background: linear-gradient(90deg, var(--cms-gold) 0%, var(--cms-gold-dark) 100%);
-      border: none;
-      margin: 0;
-    }
-
-    /* === MAIN CONTENT === */
-    .container {
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 32px 24px;
-    }
-
-    .page-heading {
-      font-family: 'Instrument Serif', Georgia, serif;
-      font-size: 2rem;
-      font-weight: 400;
-      color: var(--cms-blue-darkest);
-      letter-spacing: -0.02em;
-      margin-bottom: 8px;
-    }
-
-    .page-subheading {
-      font-size: 0.95rem;
-      color: var(--gray-mid);
-      margin-bottom: 32px;
-    }
-
-    /* === CARDS === */
-    .card {
-      background: var(--white);
-      border: 1px solid var(--gray-lighter);
-      border-radius: 4px;
-      overflow: hidden;
-      margin-bottom: 24px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-    }
-
-    .card-header {
-      background: var(--cms-blue-lightest);
-      border-bottom: 1px solid var(--gray-lighter);
-      padding: 12px 20px;
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: var(--cms-blue-darkest);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .card-body {
-      padding: 20px;
-    }
-
-    /* === STATUS ALERTS === */
-    .status {
-      padding: 12px 16px;
-      border-radius: 4px;
-      margin-bottom: 16px;
-      font-size: 0.875rem;
-      display: none;
-      border-left: 4px solid transparent;
-    }
-
-    .status.info {
-      display: block;
-      background: var(--cms-blue-lightest);
-      border-left-color: var(--cms-blue);
-      color: var(--cms-blue-darkest);
-    }
-
-    .status.success {
-      display: block;
-      background: var(--color-success-light);
-      border-left-color: var(--color-success);
-      color: #1a4301;
-    }
-
-    .status.error {
-      display: block;
-      background: var(--color-error-light);
-      border-left-color: var(--color-error);
-      color: #8b0000;
-    }
-
-    .status.warning {
-      display: block;
-      background: var(--color-warn-light);
-      border-left-color: var(--cms-gold-dark);
-      color: #654501;
-    }
-
-    /* === FORM ELEMENTS === */
-    label {
-      display: block;
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: var(--cms-blue-darkest);
-      margin-bottom: 6px;
-    }
-
-    input[type="text"],
-    input[type="password"],
-    input[type="email"],
-    input[type="url"],
-    textarea {
-      width: 100%;
-      padding: 10px 12px;
-      background: var(--white);
-      border: 2px solid var(--gray-lighter);
-      border-radius: 4px;
-      color: var(--gray-dark);
-      font-size: 1rem;
-      font-family: 'Inter', sans-serif;
-      margin-bottom: 4px;
-    }
-
-    input[type="text"]:focus,
-    input[type="password"]:focus,
-    input[type="email"]:focus,
-    input[type="url"]:focus,
-    textarea:focus {
-      outline: none;
-      border-color: var(--cms-blue);
-      box-shadow: 0 0 0 2px rgba(0,113,188,0.2);
-    }
-
-    textarea {
-      min-height: 80px;
-      resize: vertical;
-      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-      font-size: 0.85rem;
-    }
-
-    .help-text {
-      font-size: 0.8rem;
-      color: var(--gray-mid);
-      margin-bottom: 16px;
-      margin-top: 2px;
-    }
-
-    .form-group {
-      margin-bottom: 16px;
-    }
-
-    .form-group:last-child {
-      margin-bottom: 0;
-    }
-
-    /* === BUTTONS === */
-    button {
-      padding: 12px 20px;
-      border: 2px solid var(--gray-lighter);
-      border-radius: 4px;
-      background: var(--white);
-      color: var(--cms-blue);
-      font-family: 'Inter', sans-serif;
-      font-size: 0.875rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-
-    button:hover {
-      background: var(--cms-blue-lightest);
-      border-color: var(--cms-blue-light);
-    }
-
-    button.primary {
-      background: var(--cms-blue);
-      border-color: var(--cms-blue);
-      color: var(--white);
-    }
-
-    button.primary:hover {
-      background: var(--cms-blue-dark);
-      border-color: var(--cms-blue-dark);
-    }
-
-    button.success {
-      background: var(--color-success);
-      border-color: var(--color-success);
-      color: var(--white);
-    }
-
-    button.success:hover {
-      background: #1a4301;
-      border-color: #1a4301;
-    }
-
-    button:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-    }
-
-    button.full-width {
-      width: 100%;
-    }
-
-    /* === LOGIN SECTION === */
-    .login-section {
-      max-width: 420px;
-      margin: 60px auto;
-    }
-
-    .login-section .card-body {
-      padding: 28px 24px;
-    }
-
-    .login-section .login-heading {
-      font-family: 'Instrument Serif', Georgia, serif;
-      font-size: 1.5rem;
-      color: var(--cms-blue-darkest);
-      margin-bottom: 20px;
-      text-align: center;
-    }
-
-    .login-link {
-      text-align: center;
-      margin-top: 16px;
-      font-size: 0.85rem;
-    }
-
-    .login-link a {
-      color: var(--cms-blue);
-      text-decoration: none;
-      font-weight: 500;
-    }
-
-    .login-link a:hover {
-      text-decoration: underline;
-    }
-
-    /* === STAT ROWS (Org Info) === */
-    .stat-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 10px 0;
-      border-bottom: 1px solid var(--gray-lightest);
-      font-size: 0.9rem;
-    }
-
-    .stat-row:last-child { border-bottom: none; }
-    .stat-label { color: var(--gray-mid); }
-    .stat-value { color: var(--cms-blue-darkest); font-weight: 600; }
-
-    .stat-value a {
-      color: var(--cms-blue);
-      text-decoration: none;
-    }
-
-    .stat-value a:hover {
-      text-decoration: underline;
-    }
-
-    /* === RADIO CARD SELECTORS === */
-    .radio-group {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-bottom: 20px;
-    }
-
-    .radio-card {
-      position: relative;
-      border: 2px solid var(--gray-lighter);
-      border-radius: 4px;
-      padding: 14px 16px 14px 44px;
-      cursor: pointer;
-      transition: all 0.15s;
-      background: var(--white);
-    }
-
-    .radio-card:hover {
-      border-color: var(--cms-blue-light);
-      background: var(--cms-blue-lightest);
-    }
-
-    .radio-card.selected {
-      border-color: var(--cms-blue);
-      background: var(--cms-blue-lightest);
-      box-shadow: 0 0 0 1px var(--cms-blue);
-    }
-
-    .radio-card input[type="radio"] {
-      position: absolute;
-      left: 16px;
-      top: 50%;
-      transform: translateY(-50%);
-      margin: 0;
-      accent-color: var(--cms-blue);
-      width: 16px;
-      height: 16px;
-    }
-
-    .radio-card-title {
-      font-size: 0.9rem;
-      font-weight: 600;
-      color: var(--cms-blue-darkest);
-      margin-bottom: 2px;
-    }
-
-    .radio-card-desc {
-      font-size: 0.8rem;
-      color: var(--gray-mid);
-    }
-
-    /* === CONFIG PANELS === */
-    .config-panel {
-      display: none;
-      background: var(--gray-lightest);
-      border: 1px solid var(--gray-lighter);
-      border-radius: 4px;
-      padding: 20px;
-      margin-bottom: 20px;
-      animation: slideDown 0.2s ease-out;
-    }
-
-    .config-panel.visible {
-      display: block;
-    }
-
-    @keyframes slideDown {
-      from {
-        opacity: 0;
-        transform: translateY(-8px);
+        /* Neutrals */
+        --gray-darkest: #1b1b1b;
+        --gray-dark: #333334;
+        --gray-mid: #5b616b;
+        --gray-light: #aeb0b5;
+        --gray-lighter: #d6d7d9;
+        --gray-lightest: #f1f1f1;
+        --white: #ffffff;
       }
-      to {
-        opacity: 1;
-        transform: translateY(0);
+
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+
+      body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: var(--white);
+        color: var(--gray-dark);
+        min-height: 100vh;
+        -webkit-font-smoothing: antialiased;
       }
-    }
 
-    .config-panel-title {
-      font-size: 0.8rem;
-      font-weight: 700;
-      color: var(--gray-mid);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      margin-bottom: 16px;
-    }
+      /* === TOP BAR === */
+      .topbar {
+        background: var(--cms-blue-darkest);
+        color: var(--white);
+        padding: 8px 24px;
+        font-size: 0.75rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
 
-    /* === BADGE === */
-    .badge {
-      display: inline-block;
-      padding: 3px 10px;
-      border-radius: 3px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      letter-spacing: 0.02em;
-    }
+      .topbar span { opacity: 0.7; }
 
-    .badge.connected {
-      background: var(--color-success-light);
-      color: var(--color-success);
-      border: 1px solid var(--color-success);
-    }
+      /* === HEADER === */
+      .site-header {
+        background: var(--white);
+        border-bottom: 4px solid var(--cms-gold);
+        padding: 20px 24px;
+      }
 
-    .badge.not-connected {
-      background: var(--color-warn-light);
-      color: #654501;
-      border: 1px solid var(--cms-gold);
-    }
+      .header-inner {
+        max-width: 800px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
 
-    /* === DRIVE STATUS === */
-    .drive-status {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 16px;
-    }
+      .site-title {
+        font-family: 'Instrument Serif', Georgia, serif;
+        font-size: 1.75rem;
+        color: var(--cms-blue-darkest);
+        letter-spacing: -0.02em;
+        text-decoration: none;
+      }
 
-    /* === PASSWORD SECTION === */
-    .password-group {
-      padding: 16px 0;
-      border-bottom: 1px solid var(--gray-lightest);
-    }
+      .site-title em {
+        font-style: italic;
+        color: var(--cms-blue);
+      }
 
-    .password-group:last-child {
-      border-bottom: none;
-      padding-bottom: 0;
-    }
+      .org-name {
+        font-size: 0.8rem;
+        color: var(--gray-mid);
+        font-weight: 500;
+      }
 
-    .password-group-title {
-      font-size: 0.9rem;
-      font-weight: 700;
-      color: var(--cms-blue-darkest);
-      margin-bottom: 14px;
-    }
+      .gold-rule {
+        height: 3px;
+        background: linear-gradient(90deg, var(--cms-gold) 0%, var(--cms-gold-dark) 100%);
+        border: none;
+        margin: 0;
+      }
 
-    .password-fields {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
+      /* === MAIN CONTENT === */
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 32px 24px;
+      }
 
-    /* === SAVE AREA === */
-    .save-area {
-      margin-top: 8px;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
+      .page-heading {
+        font-family: 'Instrument Serif', Georgia, serif;
+        font-size: 2rem;
+        font-weight: 400;
+        color: var(--cms-blue-darkest);
+        letter-spacing: -0.02em;
+        margin-bottom: 8px;
+      }
 
-    .save-area button {
-      min-width: 160px;
-    }
+      .page-subheading {
+        font-size: 0.95rem;
+        color: var(--gray-mid);
+        margin-bottom: 32px;
+      }
 
-    #saveStatus {
-      font-size: 0.875rem;
-      font-weight: 500;
-    }
+      /* === CARDS === */
+      .card {
+        background: var(--white);
+        border: 1px solid var(--gray-lighter);
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 24px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      }
 
-    #saveStatus.ok { color: var(--color-success); }
-    #saveStatus.fail { color: var(--color-error); }
+      .card-header {
+        background: var(--cms-blue-lightest);
+        border-bottom: 1px solid var(--gray-lighter);
+        padding: 12px 20px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--cms-blue-darkest);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
 
-    /* === FOOTER === */
-    .site-footer {
-      background: var(--cms-blue-darkest);
-      color: var(--white);
-      padding: 32px 24px;
-      text-align: center;
-      font-size: 0.8rem;
-      margin-top: 40px;
-    }
+      .card-body {
+        padding: 20px;
+      }
 
-    .site-footer p { opacity: 0.6; margin-bottom: 4px; }
+      /* === STATUS ALERTS === */
+      .status {
+        padding: 12px 16px;
+        border-radius: 4px;
+        margin-bottom: 16px;
+        font-size: 0.875rem;
+        display: none;
+        border-left: 4px solid transparent;
+      }
 
-    .footer-inner {
-      max-width: 800px;
-      margin: 0 auto;
-    }
+      .status.info {
+        display: block;
+        background: var(--cms-blue-lightest);
+        border-left-color: var(--cms-blue);
+        color: var(--cms-blue-darkest);
+      }
 
-    /* === MOBILE === */
-    @media (max-width: 480px) {
-      .page-heading { font-size: 1.6rem; }
-      .site-title { font-size: 1.4rem; }
-      .header-inner { flex-direction: column; gap: 4px; align-items: flex-start; }
-      .save-area { flex-direction: column; align-items: stretch; }
-      .save-area button { min-width: unset; }
-      .stat-row { flex-direction: column; gap: 2px; }
-    }
-  </style>
-</head>
-<body>
-  <div class="topbar">
-    <span>Organization Admin</span>
-    <span id="orgTopbar"></span>
-  </div>
+      .status.success {
+        display: block;
+        background: var(--color-success-light);
+        border-left-color: var(--color-success);
+        color: #1a4301;
+      }
 
-  <div class="site-header">
-    <div class="header-inner">
-      <a href="/" class="site-title">Kill <em>the</em> Clipboard</a>
-      <div class="org-name" id="orgHeader"></div>
+      .status.error {
+        display: block;
+        background: var(--color-error-light);
+        border-left-color: var(--color-error);
+        color: #8b0000;
+      }
+
+      .status.warning {
+        display: block;
+        background: var(--color-warn-light);
+        border-left-color: var(--cms-gold-dark);
+        color: #654501;
+      }
+
+      /* === FORM ELEMENTS === */
+      label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--cms-blue-darkest);
+        margin-bottom: 6px;
+      }
+
+      input[type="text"],
+      input[type="password"],
+      input[type="email"],
+      input[type="url"],
+      textarea {
+        width: 100%;
+        padding: 10px 12px;
+        background: var(--white);
+        border: 2px solid var(--gray-lighter);
+        border-radius: 4px;
+        color: var(--gray-dark);
+        font-size: 1rem;
+        font-family: 'Inter', sans-serif;
+        margin-bottom: 4px;
+      }
+
+      input[type="text"]:focus,
+      input[type="password"]:focus,
+      input[type="email"]:focus,
+      input[type="url"]:focus,
+      textarea:focus {
+        outline: none;
+        border-color: var(--cms-blue);
+        box-shadow: 0 0 0 2px rgba(0,113,188,0.2);
+      }
+
+      textarea {
+        min-height: 80px;
+        resize: vertical;
+        font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+        font-size: 0.85rem;
+      }
+
+      .help-text {
+        font-size: 0.8rem;
+        color: var(--gray-mid);
+        margin-bottom: 16px;
+        margin-top: 2px;
+      }
+
+      .form-group {
+        margin-bottom: 16px;
+      }
+
+      .form-group:last-child {
+        margin-bottom: 0;
+      }
+
+      /* === BUTTONS === */
+      button {
+        padding: 12px 20px;
+        border: 2px solid var(--gray-lighter);
+        border-radius: 4px;
+        background: var(--white);
+        color: var(--cms-blue);
+        font-family: 'Inter', sans-serif;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+
+      button:hover {
+        background: var(--cms-blue-lightest);
+        border-color: var(--cms-blue-light);
+      }
+
+      button.primary {
+        background: var(--cms-blue);
+        border-color: var(--cms-blue);
+        color: var(--white);
+      }
+
+      button.primary:hover {
+        background: var(--cms-blue-dark);
+        border-color: var(--cms-blue-dark);
+      }
+
+      button.success {
+        background: var(--color-success);
+        border-color: var(--color-success);
+        color: var(--white);
+      }
+
+      button.success:hover {
+        background: #1a4301;
+        border-color: #1a4301;
+      }
+
+      button:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      button.full-width {
+        width: 100%;
+      }
+
+      /* === LOGIN SECTION === */
+      .login-section {
+        max-width: 420px;
+        margin: 60px auto;
+      }
+
+      .login-section .card-body {
+        padding: 28px 24px;
+      }
+
+      .login-section .login-heading {
+        font-family: 'Instrument Serif', Georgia, serif;
+        font-size: 1.5rem;
+        color: var(--cms-blue-darkest);
+        margin-bottom: 20px;
+        text-align: center;
+      }
+
+      .login-link {
+        text-align: center;
+        margin-top: 16px;
+        font-size: 0.85rem;
+      }
+
+      .login-link a {
+        color: var(--cms-blue);
+        text-decoration: none;
+        font-weight: 500;
+      }
+
+      .login-link a:hover {
+        text-decoration: underline;
+      }
+
+      /* === STAT ROWS (Org Info) === */
+      .stat-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--gray-lightest);
+        font-size: 0.9rem;
+      }
+
+      .stat-row:last-child { border-bottom: none; }
+      .stat-label { color: var(--gray-mid); }
+      .stat-value { color: var(--cms-blue-darkest); font-weight: 600; }
+
+      .stat-value a {
+        color: var(--cms-blue);
+        text-decoration: none;
+      }
+
+      .stat-value a:hover {
+        text-decoration: underline;
+      }
+
+      /* === RADIO CARD SELECTORS === */
+      .radio-group {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-bottom: 20px;
+      }
+
+      .radio-card {
+        position: relative;
+        border: 2px solid var(--gray-lighter);
+        border-radius: 4px;
+        padding: 14px 16px 14px 44px;
+        cursor: pointer;
+        transition: all 0.15s;
+        background: var(--white);
+      }
+
+      .radio-card:hover {
+        border-color: var(--cms-blue-light);
+        background: var(--cms-blue-lightest);
+      }
+
+      .radio-card.selected {
+        border-color: var(--cms-blue);
+        background: var(--cms-blue-lightest);
+        box-shadow: 0 0 0 1px var(--cms-blue);
+      }
+
+      .radio-card input[type="radio"] {
+        position: absolute;
+        left: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        margin: 0;
+        accent-color: var(--cms-blue);
+        width: 16px;
+        height: 16px;
+      }
+
+      .radio-card-title {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--cms-blue-darkest);
+        margin-bottom: 2px;
+      }
+
+      .radio-card-desc {
+        font-size: 0.8rem;
+        color: var(--gray-mid);
+      }
+
+      /* === CONFIG PANELS === */
+      .config-panel {
+        display: none;
+        background: var(--gray-lightest);
+        border: 1px solid var(--gray-lighter);
+        border-radius: 4px;
+        padding: 20px;
+        margin-bottom: 20px;
+        animation: slideDown 0.2s ease-out;
+      }
+
+      .config-panel.visible {
+        display: block;
+      }
+
+      @keyframes slideDown {
+        from {
+          opacity: 0;
+          transform: translateY(-8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .config-panel-title {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--gray-mid);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 16px;
+      }
+
+      /* === BADGE === */
+      .badge {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 3px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+      }
+
+      .badge.connected {
+        background: var(--color-success-light);
+        color: var(--color-success);
+        border: 1px solid var(--color-success);
+      }
+
+      .badge.not-connected {
+        background: var(--color-warn-light);
+        color: #654501;
+        border: 1px solid var(--cms-gold);
+      }
+
+      /* === DRIVE STATUS === */
+      .drive-status {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      /* === PASSWORD SECTION === */
+      .password-group {
+        padding: 16px 0;
+        border-bottom: 1px solid var(--gray-lightest);
+      }
+
+      .password-group:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+      }
+
+      .password-group-title {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: var(--cms-blue-darkest);
+        margin-bottom: 14px;
+      }
+
+      .password-fields {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      /* === SAVE AREA === */
+      .save-area {
+        margin-top: 8px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+
+      .save-area button {
+        min-width: 160px;
+      }
+
+      #saveStatus {
+        font-size: 0.875rem;
+        font-weight: 500;
+      }
+
+      #saveStatus.ok { color: var(--color-success); }
+      #saveStatus.fail { color: var(--color-error); }
+
+      /* === FOOTER === */
+      .site-footer {
+        background: var(--cms-blue-darkest);
+        color: var(--white);
+        padding: 32px 24px;
+        text-align: center;
+        font-size: 0.8rem;
+        margin-top: 40px;
+      }
+
+      .site-footer p { opacity: 0.6; margin-bottom: 4px; }
+
+      .footer-inner {
+        max-width: 800px;
+        margin: 0 auto;
+      }
+
+      /* === MOBILE === */
+      @media (max-width: 480px) {
+        .page-heading { font-size: 1.6rem; }
+        .site-title { font-size: 1.4rem; }
+        .header-inner { flex-direction: column; gap: 4px; align-items: flex-start; }
+        .save-area { flex-direction: column; align-items: stretch; }
+        .save-area button { min-width: unset; }
+        .stat-row { flex-direction: column; gap: 2px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="topbar">
+      <span>Organization Admin</span>
+      <span id="orgTopbar"></span>
     </div>
-  </div>
 
-  <hr class="gold-rule">
+    <div class="site-header">
+      <div class="header-inner">
+        <a href="/" class="site-title">Kill <em>the</em> Clipboard</a>
+        <div class="org-name" id="orgHeader"></div>
+      </div>
+    </div>
 
-  <!-- ==================== LOGIN SECTION ==================== -->
-  <div id="loginSection" class="container login-section" style="display: none;">
-    <div class="card">
-      <div class="card-body">
-        <div class="login-heading">Admin Login</div>
-        <div id="loginError" class="status" style="margin-bottom: 16px;"></div>
-        <div class="form-group">
-          <label for="loginPassword">Admin Password</label>
-          <input type="password" id="loginPassword" placeholder="Enter admin password" autocomplete="current-password">
-        </div>
-        <button class="primary full-width" id="loginBtn" onclick="handleLogin()">Sign In</button>
-        <div class="login-link">
-          Need a scanner? <a id="staffLink" href="#">Go to scanner</a>
+    <hr class="gold-rule" />
+
+    <!-- ==================== LOGIN SECTION ==================== -->
+    <div id="loginSection" class="container login-section" style="display: none;">
+      <div class="card">
+        <div class="card-body">
+          <div class="login-heading">Admin Login</div>
+          <div id="loginError" class="status" style="margin-bottom: 16px;"></div>
+          <div class="form-group">
+            <label for="loginPassword">Admin Password</label>
+            <input
+              type="password"
+              id="loginPassword"
+              placeholder="Enter admin password"
+              autocomplete="current-password"
+            />
+          </div>
+          <button class="primary full-width" id="loginBtn" onclick="handleLogin()">Sign In</button>
+          <div class="login-link">Need a scanner? <a id="staffLink" href="#">Go to scanner</a></div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- ==================== SETTINGS SECTION ==================== -->
-  <div id="settingsSection" class="container" style="display: none;">
-    <!-- Setup Guide Banner -->
-    <a href="/setup-guide" style="display: flex; align-items: center; gap: 12px; padding: 16px 20px; background: linear-gradient(135deg, var(--cms-blue-lightest) 0%, #dbeaf7 100%); border: 2px solid var(--cms-blue-light); border-radius: 6px; color: var(--cms-blue-darkest); text-decoration: none; margin-bottom: 24px;">
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="var(--cms-blue)" style="flex-shrink:0;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg>
+    <!-- ==================== SETTINGS SECTION ==================== -->
+    <div id="settingsSection" class="container" style="display: none;">
+      <!-- Setup Guide Banner -->
+      <a
+        href="/setup-guide"
+        style="display: flex; align-items: center; gap: 12px; padding: 16px 20px; background: linear-gradient(135deg, var(--cms-blue-lightest) 0%, #dbeaf7 100%); border: 2px solid var(--cms-blue-light); border-radius: 6px; color: var(--cms-blue-darkest); text-decoration: none; margin-bottom: 24px;"
+      >
+        <svg
+          width="28"
+          height="28"
+          viewBox="0 0 24 24"
+          fill="var(--cms-blue)"
+          style="flex-shrink:0;"
+        >
+          <path
+            d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"
+          />
+        </svg>
+        <div>
+          <div style="font-weight: 700; font-size: 0.95rem;">Setup Guide</div>
+          <div style="font-size: 0.8rem; color: var(--gray-mid);">
+            Step-by-step instructions for getting started with Kill the Clipboard
+          </div>
+        </div>
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="var(--cms-blue)"
+          style="flex-shrink:0; margin-left:auto;"
+        >
+          <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
+        </svg>
+      </a>
+
       <div>
-        <div style="font-weight: 700; font-size: 0.95rem;">Setup Guide</div>
-        <div style="font-size: 0.8rem; color: var(--gray-mid);">Step-by-step instructions for getting started with Kill the Clipboard</div>
+        <h1 class="page-heading" style="margin-bottom:4px;">Admin Settings</h1>
+        <p class="page-subheading">
+          Use this page to set up your organization's website for scanning patients' Kill the
+          Clipboard QR codes and to establish your configuration preferences.
+        </p>
       </div>
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--cms-blue)" style="flex-shrink:0; margin-left:auto;"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
-    </a>
 
-    <div>
-      <h1 class="page-heading" style="margin-bottom:4px;">Admin Settings</h1>
-      <p class="page-subheading">Use this page to set up your organization's website for scanning patients' Kill the Clipboard QR codes and to establish your configuration preferences.</p>
-    </div>
+      <div id="settingsStatus" class="status"></div>
 
-    <div id="settingsStatus" class="status"></div>
-
-    <!-- ===== ORG INFO ===== -->
-    <div class="card">
-      <div class="card-header">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--cms-blue)"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
-        Organization Info
-      </div>
-      <div class="card-body">
-        <div class="stat-row">
-          <span class="stat-label">Organization Name</span>
-          <span class="stat-value" id="infoOrgName">—</span>
+      <!-- ===== ORG INFO ===== -->
+      <div class="card">
+        <div class="card-header">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--cms-blue)">
+            <path
+              d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"
+            />
+          </svg>
+          Organization Info
         </div>
-        <div class="stat-row">
-          <span class="stat-label">Slug</span>
-          <span class="stat-value" id="infoSlug">—</span>
-        </div>
-        <div class="stat-row">
-          <span class="stat-label">Kill the Clipboard Scan Page Link</span>
-          <span class="stat-value" id="infoScannerUrl">—</span>
-        </div>
-        <div class="stat-row">
-          <span class="stat-label">Version</span>
-          <span class="stat-value" id="infoVersion">—</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- ===== SAVE FORMAT ===== -->
-    <div class="card">
-      <div class="card-header">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--cms-blue)"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/></svg>
-        Save Format
-      </div>
-      <div class="card-body">
-        <p style="font-size: 0.875rem; color: var(--gray-mid); margin-bottom: 16px;">When scanning a patient's QR code, choose which format(s) you want to receive.</p>
-        <div class="radio-group">
-          <label class="radio-card selected" onclick="selectSaveFormat('both')">
-            <input type="radio" name="saveFormat" value="both" checked>
-            <div class="radio-card-title">PDF + FHIR (Both)</div>
-            <div class="radio-card-desc">Save both PDF documents and FHIR data bundles.</div>
-          </label>
-          <label class="radio-card" onclick="selectSaveFormat('pdf')">
-            <input type="radio" name="saveFormat" value="pdf">
-            <div class="radio-card-title">PDF Only</div>
-            <div class="radio-card-desc">Save only PDF documents. FHIR bundles will not be stored.</div>
-          </label>
-          <label class="radio-card" onclick="selectSaveFormat('fhir')">
-            <input type="radio" name="saveFormat" value="fhir">
-            <div class="radio-card-title">FHIR Only</div>
-            <div class="radio-card-desc">Save only FHIR data bundles. PDF documents will not be stored.</div>
-          </label>
+        <div class="card-body">
+          <div class="stat-row">
+            <span class="stat-label">Organization Name</span>
+            <span class="stat-value" id="infoOrgName">—</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Slug</span>
+            <span class="stat-value" id="infoSlug">—</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Kill the Clipboard Scan Page Link</span>
+            <span class="stat-value" id="infoScannerUrl">—</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Version</span>
+            <span class="stat-value" id="infoVersion">—</span>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- ===== APP VALIDATION ===== -->
-    <div class="card">
-      <div class="card-header">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--cms-blue)"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
-        App Validation
+      <!-- ===== SAVE FORMAT ===== -->
+      <div class="card">
+        <div class="card-header">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--cms-blue)">
+            <path
+              d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"
+            />
+          </svg>
+          Save Format
+        </div>
+        <div class="card-body">
+          <p style="font-size: 0.875rem; color: var(--gray-mid); margin-bottom: 16px;">
+            When scanning a patient's QR code, choose which format(s) you want to receive.
+          </p>
+          <div class="radio-group">
+            <label class="radio-card selected" onclick="selectSaveFormat('both')">
+              <input type="radio" name="saveFormat" value="both" checked />
+              <div class="radio-card-title">PDF + FHIR (Both)</div>
+              <div class="radio-card-desc">Save both PDF documents and FHIR data bundles.</div>
+            </label>
+            <label class="radio-card" onclick="selectSaveFormat('pdf')">
+              <input type="radio" name="saveFormat" value="pdf" />
+              <div class="radio-card-title">PDF Only</div>
+              <div class="radio-card-desc">
+                Save only PDF documents. FHIR bundles will not be stored.
+              </div>
+            </label>
+            <label class="radio-card" onclick="selectSaveFormat('fhir')">
+              <input type="radio" name="saveFormat" value="fhir" />
+              <div class="radio-card-title">FHIR Only</div>
+              <div class="radio-card-desc">
+                Save only FHIR data bundles. PDF documents will not be stored.
+              </div>
+            </label>
+          </div>
+        </div>
       </div>
-      <div class="card-body">
-        <p style="font-size: 0.875rem; color: var(--gray-mid); margin-bottom: 16px;">To add extra security, you can require users to first validate the app is on the <a href="https://www.cms.gov/health-tech-ecosystem/early-adopters" target="_blank" style="color: var(--cms-blue); font-weight: 600;">CMS Approved Apps list</a> before scanning a patient's QR code.</p>
-        <div class="radio-group">
-          <label class="radio-card" onclick="selectAppValidation(true)">
-            <input type="radio" name="appValidation" value="yes">
-            <div class="radio-card-title">Yes — Require App Validation</div>
-            <div class="radio-card-desc">Staff must scan the patient's app QR code first to verify it's an approved CMS app.</div>
-          </label>
-          <label class="radio-card selected" onclick="selectAppValidation(false)">
-            <input type="radio" name="appValidation" value="no" checked>
-            <div class="radio-card-title">No — Skip App Validation</div>
-            <div class="radio-card-desc">Staff can scan any health QR code directly without app verification.</div>
-          </label>
+
+      <!-- ===== APP VALIDATION ===== -->
+      <div class="card">
+        <div class="card-header">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--cms-blue)">
+            <path
+              d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"
+            />
+          </svg>
+          App Validation
         </div>
-        <div style="margin-top: 12px; font-size: 0.8rem; color: var(--gray-mid);">
-          <a href="/test-qr-codes" target="_blank" style="color: var(--cms-blue); font-weight: 600; text-decoration: none;">View test QR codes →</a> for demo purposes.
+        <div class="card-body">
+          <p style="font-size: 0.875rem; color: var(--gray-mid); margin-bottom: 16px;">
+            To add extra security, you can require users to first validate the app is on the
+            <a
+              href="https://www.cms.gov/health-tech-ecosystem/early-adopters"
+              target="_blank"
+              style="color: var(--cms-blue); font-weight: 600;"
+              >CMS Approved Apps list</a
+            >
+            before scanning a patient's QR code.
+          </p>
+          <div class="radio-group">
+            <label class="radio-card" onclick="selectAppValidation(true)">
+              <input type="radio" name="appValidation" value="yes" />
+              <div class="radio-card-title">Yes — Require App Validation</div>
+              <div class="radio-card-desc">
+                Staff must scan the patient's app QR code first to verify it's an approved CMS app.
+              </div>
+            </label>
+            <label class="radio-card selected" onclick="selectAppValidation(false)">
+              <input type="radio" name="appValidation" value="no" checked />
+              <div class="radio-card-title">No — Skip App Validation</div>
+              <div class="radio-card-desc">
+                Staff can scan any health QR code directly without app verification.
+              </div>
+            </label>
+          </div>
+          <div style="margin-top: 12px; font-size: 0.8rem; color: var(--gray-mid);">
+            <a
+              href="/test-qr-codes"
+              target="_blank"
+              style="color: var(--cms-blue); font-weight: 600; text-decoration: none;"
+              >View test QR codes →</a
+            >
+            for demo purposes.
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- ===== STORAGE DESTINATION ===== -->
-    <div class="card">
-      <div class="card-header">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--cms-blue)"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
-        Storage Destination
-      </div>
-      <div class="card-body">
-        <div class="radio-group">
-          <label class="radio-card selected" onclick="selectStorage('download')">
-            <input type="radio" name="storageType" value="download" checked>
-            <div class="radio-card-title">Direct Download</div>
-            <div class="radio-card-desc">No setup needed. Files download in the browser after scanning.</div>
-          </label>
-          <label class="radio-card" onclick="selectStorage('drive')">
-            <input type="radio" name="storageType" value="drive">
-            <div class="radio-card-title">Google Drive</div>
-            <div class="radio-card-desc">Upload scan results to a Google Drive folder.</div>
-          </label>
-          <label class="radio-card" onclick="selectStorage('onedrive')">
-            <input type="radio" name="storageType" value="onedrive">
-            <div class="radio-card-title">Microsoft OneDrive</div>
-            <div class="radio-card-desc">Upload scan results to a OneDrive folder.</div>
-          </label>
-          <label class="radio-card" onclick="selectStorage('box')">
-            <input type="radio" name="storageType" value="box">
-            <div class="radio-card-title">Box</div>
-            <div class="radio-card-desc">Upload scan results to a Box folder.</div>
-          </label>
-          <label class="radio-card" onclick="selectStorage('api')">
-            <input type="radio" name="storageType" value="api">
-            <div class="radio-card-title">API / Webhook</div>
-            <div class="radio-card-desc">POST scan results to a URL endpoint.</div>
-          </label>
-          <label class="radio-card" onclick="selectStorage('gmail')">
-            <input type="radio" name="storageType" value="gmail">
-            <div class="radio-card-title">Gmail</div>
-            <div class="radio-card-desc">Send via your Gmail account (OAuth).</div>
-          </label>
-          <label class="radio-card" onclick="selectStorage('outlook')">
-            <input type="radio" name="storageType" value="outlook">
-            <div class="radio-card-title">Outlook / M365</div>
-            <div class="radio-card-desc">Send via your Microsoft account (OAuth).</div>
-          </label>
+      <!-- ===== STORAGE DESTINATION ===== -->
+      <div class="card">
+        <div class="card-header">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--cms-blue)">
+            <path
+              d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"
+            />
+          </svg>
+          Storage Destination
         </div>
+        <div class="card-body">
+          <div class="radio-group">
+            <label class="radio-card selected" onclick="selectStorage('download')">
+              <input type="radio" name="storageType" value="download" checked />
+              <div class="radio-card-title">Direct Download</div>
+              <div class="radio-card-desc">
+                No setup needed. Files download in the browser after scanning.
+              </div>
+            </label>
+            <label class="radio-card" onclick="selectStorage('drive')">
+              <input type="radio" name="storageType" value="drive" />
+              <div class="radio-card-title">Google Drive</div>
+              <div class="radio-card-desc">Upload scan results to a Google Drive folder.</div>
+            </label>
+            <label class="radio-card" onclick="selectStorage('onedrive')">
+              <input type="radio" name="storageType" value="onedrive" />
+              <div class="radio-card-title">Microsoft OneDrive</div>
+              <div class="radio-card-desc">Upload scan results to a OneDrive folder.</div>
+            </label>
+            <label class="radio-card" onclick="selectStorage('box')">
+              <input type="radio" name="storageType" value="box" />
+              <div class="radio-card-title">Box</div>
+              <div class="radio-card-desc">Upload scan results to a Box folder.</div>
+            </label>
+            <label class="radio-card" onclick="selectStorage('api')">
+              <input type="radio" name="storageType" value="api" />
+              <div class="radio-card-title">API / Webhook</div>
+              <div class="radio-card-desc">POST scan results to a URL endpoint.</div>
+            </label>
+            <label class="radio-card" onclick="selectStorage('gmail')">
+              <input type="radio" name="storageType" value="gmail" />
+              <div class="radio-card-title">Gmail</div>
+              <div class="radio-card-desc">Send via your Gmail account (OAuth).</div>
+            </label>
+            <label class="radio-card" onclick="selectStorage('outlook')">
+              <input type="radio" name="storageType" value="outlook" />
+              <div class="radio-card-title">Outlook / M365</div>
+              <div class="radio-card-desc">Send via your Microsoft account (OAuth).</div>
+            </label>
+          </div>
 
-        <!-- Google Drive Config Panel -->
-        <div id="panel-drive" class="config-panel">
-          <div class="config-panel-title">Google Drive Configuration</div>
-          <div class="drive-status">
-            <a href="#" id="driveConnectBtn" class="btn-connect" onclick="connectDrive(event)">
-              <button type="button">Connect Google Drive</button>
-            </a>
-            <span id="driveStatusBadge" class="badge not-connected">Not connected</span>
-          </div>
-          <div class="form-group">
-            <label for="driveFolderUrl">Drive Folder URL</label>
-            <input type="url" id="driveFolderUrl" placeholder="https://drive.google.com/drive/folders/...">
-            <div class="help-text">Paste the URL of the Google Drive folder where scans should be saved.</div>
-          </div>
-        </div>
-
-        <!-- OneDrive Config Panel -->
-        <div id="panel-onedrive" class="config-panel">
-          <div class="config-panel-title">Microsoft OneDrive Configuration</div>
-          <div class="drive-status">
-            <a href="#" id="onedriveConnectBtn" onclick="connectOnedrive(event)">
-              <button type="button">Connect OneDrive</button>
-            </a>
-            <span id="onedriveStatusBadge" class="badge not-connected">Not connected</span>
-          </div>
-          <div class="form-group">
-            <label for="onedriveFolderPath">Folder Path</label>
-            <input type="text" id="onedriveFolderPath" placeholder="/KillTheClipboard">
-            <div class="help-text">Path in your OneDrive where scans will be saved. Defaults to /KillTheClipboard.</div>
-          </div>
-        </div>
-
-        <!-- Box Config Panel -->
-        <div id="panel-box" class="config-panel">
-          <div class="config-panel-title">Box Configuration</div>
-          <div class="drive-status">
-            <a href="#" id="boxConnectBtn" onclick="connectBox(event)">
-              <button type="button">Connect Box</button>
-            </a>
-            <span id="boxStatusBadge" class="badge not-connected">Not connected</span>
-          </div>
-          <div class="form-group">
-            <label for="boxFolderId">Box Folder ID</label>
-            <input type="text" id="boxFolderId" placeholder="123456789">
-            <div class="help-text">The numeric ID of your Box folder. Find it in the folder URL: app.box.com/folder/<strong>ID</strong></div>
-          </div>
-        </div>
-
-        <!-- API / Webhook Config Panel -->
-        <div id="panel-api" class="config-panel">
-          <div class="config-panel-title">API / Webhook Configuration</div>
-          <div class="form-group">
-            <label for="apiUrl">Webhook URL</label>
-            <input type="url" id="apiUrl" placeholder="https://your-api.example.com/webhook" required>
-          </div>
-          <div class="form-group">
-            <label for="apiHeaders">Headers (JSON, optional)</label>
-            <textarea id="apiHeaders" placeholder='{"Authorization": "Bearer your-token"}'></textarea>
-            <div class="help-text">Optional HTTP headers sent with each request, in JSON format.</div>
-          </div>
-          <div class="form-group">
-            <button type="button" onclick="testWebhook()">Test Connection</button>
-            <span id="testStatus" style="margin-left: 12px; font-size: 0.85rem;"></span>
-          </div>
-        </div>
-
-
-        <!-- Gmail Config Panel -->
-        <div id="panel-gmail" class="config-panel">
-          <div class="config-panel-title">Gmail Configuration</div>
-
-          <!-- Gmail connection area -->
-          <div id="gmailConnectedArea">
+          <!-- Google Drive Config Panel -->
+          <div id="panel-drive" class="config-panel">
+            <div class="config-panel-title">Google Drive Configuration</div>
             <div class="drive-status">
-              <a href="#" id="gmailConnectBtn" onclick="connectGmail(event)">
-                <button type="button">Connect Gmail</button>
+              <a href="#" id="driveConnectBtn" class="btn-connect" onclick="connectDrive(event)">
+                <button type="button">Connect Google Drive</button>
               </a>
-              <span id="gmailStatusBadge" class="badge not-connected">Not connected</span>
-              <span id="gmailAccountEmail" style="font-size: 0.85rem; color: var(--gray-mid); margin-left: 8px;"></span>
+              <span id="driveStatusBadge" class="badge not-connected">Not connected</span>
             </div>
             <div class="form-group">
-              <label for="gmailEmailTo">Recipient Email</label>
-              <input type="email" id="gmailEmailTo" placeholder="records@clinic.example.com" required>
-              <div class="help-text">Scan results will be sent FROM your connected Gmail account TO this address.</div>
+              <label for="driveFolderUrl">Drive Folder URL</label>
+              <input
+                type="url"
+                id="driveFolderUrl"
+                placeholder="https://drive.google.com/drive/folders/..."
+              />
+              <div class="help-text">
+                Paste the URL of the Google Drive folder where scans should be saved.
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- Outlook Config Panel -->
-        <div id="panel-outlook" class="config-panel">
-          <div class="config-panel-title">Outlook / Microsoft 365 Configuration</div>
-
-          <!-- Outlook connection area -->
-          <div id="outlookConnectedArea">
+          <!-- OneDrive Config Panel -->
+          <div id="panel-onedrive" class="config-panel">
+            <div class="config-panel-title">Microsoft OneDrive Configuration</div>
             <div class="drive-status">
-              <a href="#" id="outlookConnectBtn" onclick="connectOutlook(event)">
-                <button type="button">Connect Microsoft Account</button>
+              <a href="#" id="onedriveConnectBtn" onclick="connectOnedrive(event)">
+                <button type="button">Connect OneDrive</button>
               </a>
-              <span id="outlookStatusBadge" class="badge not-connected">Not connected</span>
-              <span id="outlookAccountEmail" style="font-size: 0.85rem; color: var(--gray-mid); margin-left: 8px;"></span>
+              <span id="onedriveStatusBadge" class="badge not-connected">Not connected</span>
             </div>
             <div class="form-group">
-              <label for="outlookEmailTo">Recipient Email</label>
-              <input type="email" id="outlookEmailTo" placeholder="records@clinic.example.com" required>
-              <div class="help-text">Scan results will be sent FROM your connected Microsoft account TO this address.</div>
+              <label for="onedriveFolderPath">Folder Path</label>
+              <input type="text" id="onedriveFolderPath" placeholder="/KillTheClipboard" />
+              <div class="help-text">
+                Path in your OneDrive where scans will be saved. Defaults to /KillTheClipboard.
+              </div>
+            </div>
+          </div>
+
+          <!-- Box Config Panel -->
+          <div id="panel-box" class="config-panel">
+            <div class="config-panel-title">Box Configuration</div>
+            <div class="drive-status">
+              <a href="#" id="boxConnectBtn" onclick="connectBox(event)">
+                <button type="button">Connect Box</button>
+              </a>
+              <span id="boxStatusBadge" class="badge not-connected">Not connected</span>
+            </div>
+            <div class="form-group">
+              <label for="boxFolderId">Box Folder ID</label>
+              <input type="text" id="boxFolderId" placeholder="123456789" />
+              <div class="help-text">
+                The numeric ID of your Box folder. Find it in the folder URL:
+                app.box.com/folder/<strong>ID</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- API / Webhook Config Panel -->
+          <div id="panel-api" class="config-panel">
+            <div class="config-panel-title">API / Webhook Configuration</div>
+            <div class="form-group">
+              <label for="apiUrl">Webhook URL</label>
+              <input
+                type="url"
+                id="apiUrl"
+                placeholder="https://your-api.example.com/webhook"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="apiHeaders">Headers (JSON, optional)</label>
+              <textarea
+                id="apiHeaders"
+                placeholder='{"Authorization": "Bearer your-token"}'
+              ></textarea>
+              <div class="help-text">
+                Optional HTTP headers sent with each request, in JSON format.
+              </div>
+            </div>
+            <div class="form-group">
+              <button type="button" onclick="testWebhook()">Test Connection</button>
+              <span id="testStatus" style="margin-left: 12px; font-size: 0.85rem;"></span>
+            </div>
+          </div>
+
+          <!-- Gmail Config Panel -->
+          <div id="panel-gmail" class="config-panel">
+            <div class="config-panel-title">Gmail Configuration</div>
+
+            <!-- Gmail connection area -->
+            <div id="gmailConnectedArea">
+              <div class="drive-status">
+                <a href="#" id="gmailConnectBtn" onclick="connectGmail(event)">
+                  <button type="button">Connect Gmail</button>
+                </a>
+                <span id="gmailStatusBadge" class="badge not-connected">Not connected</span>
+                <span
+                  id="gmailAccountEmail"
+                  style="font-size: 0.85rem; color: var(--gray-mid); margin-left: 8px;"
+                ></span>
+              </div>
+              <div class="form-group">
+                <label for="gmailEmailTo">Recipient Email</label>
+                <input
+                  type="email"
+                  id="gmailEmailTo"
+                  placeholder="records@clinic.example.com"
+                  required
+                />
+                <div class="help-text">
+                  Scan results will be sent FROM your connected Gmail account TO this address.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Outlook Config Panel -->
+          <div id="panel-outlook" class="config-panel">
+            <div class="config-panel-title">Outlook / Microsoft 365 Configuration</div>
+
+            <!-- Outlook connection area -->
+            <div id="outlookConnectedArea">
+              <div class="drive-status">
+                <a href="#" id="outlookConnectBtn" onclick="connectOutlook(event)">
+                  <button type="button">Connect Microsoft Account</button>
+                </a>
+                <span id="outlookStatusBadge" class="badge not-connected">Not connected</span>
+                <span
+                  id="outlookAccountEmail"
+                  style="font-size: 0.85rem; color: var(--gray-mid); margin-left: 8px;"
+                ></span>
+              </div>
+              <div class="form-group">
+                <label for="outlookEmailTo">Recipient Email</label>
+                <input
+                  type="email"
+                  id="outlookEmailTo"
+                  placeholder="records@clinic.example.com"
+                  required
+                />
+                <div class="help-text">
+                  Scan results will be sent FROM your connected Microsoft account TO this address.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="save-area">
+            <button class="primary" onclick="saveSettings()">Save Settings</button>
+            <button onclick="testConnection()">Test Connection</button>
+            <span id="saveStatus"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== SESSION TIMEOUT ===== -->
+      <div class="card">
+        <div class="card-header">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--cms-blue)">
+            <path
+              d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"
+            />
+          </svg>
+          Session Timeout
+        </div>
+        <div class="card-body">
+          <p style="font-size: 0.875rem; color: var(--gray-mid); margin-bottom: 16px;">
+            How long staff and admin sessions stay active before requiring a password again.
+          </p>
+          <select
+            id="sessionTimeout"
+            onchange="selectSessionTimeout(this.value)"
+            style="width: 100%; padding: 10px 12px; border: 2px solid var(--gray-lighter); border-radius: 4px; font-size: 0.95rem; font-family: 'Inter', sans-serif; color: var(--gray-dark); background: var(--white); cursor: pointer;"
+          >
+            <option value="60">1 hour</option>
+            <option value="240">4 hours</option>
+            <option value="480">8 hours (one shift)</option>
+            <option value="720" selected>12 hours (default)</option>
+            <option value="1440">24 hours</option>
+          </select>
+          <p style="font-size: 0.78rem; color: var(--gray-light); margin-top: 8px;">
+            Shorter timeouts are more secure. Staff will need to re-enter their password after this
+            period.
+          </p>
+        </div>
+      </div>
+
+      <!-- ===== PASSWORD MANAGEMENT ===== -->
+      <div class="card">
+        <div class="card-header">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--cms-blue)">
+            <path
+              d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"
+            />
+          </svg>
+          Password Management
+        </div>
+        <div class="card-body">
+          <p style="font-size: 0.875rem; color: var(--gray-mid); margin-bottom: 16px;">
+            Your organization has two separate passwords. The
+            <strong style="color: var(--cms-blue-darkest);">admin password</strong> is for managing
+            these settings and is typically held by an IT administrator or office manager. The
+            <strong style="color: var(--cms-blue-darkest);">staff password</strong> is shared with
+            front-desk staff who will use the scanner to process patient QR codes.
+          </p>
+          <div id="passwordStatus" class="status"></div>
+
+          <div class="password-group">
+            <div class="password-group-title">Change Admin Password</div>
+            <p style="font-size: 0.8rem; color: var(--gray-mid); margin-bottom: 12px;">
+              Used to access this settings page and manage your organization's configuration.
+            </p>
+            <div class="password-fields">
+              <div class="form-group">
+                <label for="adminCurrentPw">Current Admin Password</label>
+                <input
+                  type="password"
+                  id="adminCurrentPw"
+                  placeholder="Current password"
+                  autocomplete="off"
+                />
+              </div>
+              <div class="form-group">
+                <label for="adminNewPw">New Admin Password</label>
+                <input
+                  type="password"
+                  id="adminNewPw"
+                  placeholder="New password"
+                  autocomplete="new-password"
+                />
+              </div>
+              <div class="form-group">
+                <label for="adminConfirmPw">Confirm New Admin Password</label>
+                <input
+                  type="password"
+                  id="adminConfirmPw"
+                  placeholder="Confirm new password"
+                  autocomplete="new-password"
+                />
+              </div>
+              <div>
+                <button class="primary" onclick="changePassword('admin')">
+                  Update Admin Password
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="password-group">
+            <div class="password-group-title">Change Staff Password</div>
+            <p style="font-size: 0.8rem; color: var(--gray-mid); margin-bottom: 12px;">
+              Shared with staff members who use the scanner page. Changing this will require all
+              staff to sign in again with the new password.
+            </p>
+            <div class="password-fields">
+              <div class="form-group">
+                <label for="staffAdminPw">Current Admin Password</label>
+                <input
+                  type="password"
+                  id="staffAdminPw"
+                  placeholder="Admin password"
+                  autocomplete="off"
+                />
+              </div>
+              <div class="form-group">
+                <label for="staffNewPw">New Staff Password</label>
+                <input
+                  type="password"
+                  id="staffNewPw"
+                  placeholder="New staff password"
+                  autocomplete="new-password"
+                />
+              </div>
+              <div class="form-group">
+                <label for="staffConfirmPw">Confirm New Staff Password</label>
+                <input
+                  type="password"
+                  id="staffConfirmPw"
+                  placeholder="Confirm new staff password"
+                  autocomplete="new-password"
+                />
+              </div>
+              <div>
+                <button class="primary" onclick="changePassword('staff')">
+                  Update Staff Password
+                </button>
+              </div>
             </div>
           </div>
         </div>
-
-        <div class="save-area">
-          <button class="primary" onclick="saveSettings()">Save Settings</button>
-          <button onclick="testConnection()">Test Connection</button>
-          <span id="saveStatus"></span>
-        </div>
       </div>
     </div>
 
-    <!-- ===== SESSION TIMEOUT ===== -->
-    <div class="card">
-      <div class="card-header">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--cms-blue)"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
-        Session Timeout
-      </div>
-      <div class="card-body">
-        <p style="font-size: 0.875rem; color: var(--gray-mid); margin-bottom: 16px;">How long staff and admin sessions stay active before requiring a password again.</p>
-        <select id="sessionTimeout" onchange="selectSessionTimeout(this.value)" style="width: 100%; padding: 10px 12px; border: 2px solid var(--gray-lighter); border-radius: 4px; font-size: 0.95rem; font-family: 'Inter', sans-serif; color: var(--gray-dark); background: var(--white); cursor: pointer;">
-          <option value="60">1 hour</option>
-          <option value="240">4 hours</option>
-          <option value="480">8 hours (one shift)</option>
-          <option value="720" selected>12 hours (default)</option>
-          <option value="1440">24 hours</option>
-        </select>
-        <p style="font-size: 0.78rem; color: var(--gray-light); margin-top: 8px;">Shorter timeouts are more secure. Staff will need to re-enter their password after this period.</p>
+    <!-- ==================== FOOTER ==================== -->
+    <div class="site-footer">
+      <div class="footer-inner">
+        <p id="orgFooter"></p>
+        <p>Powered by SMART Health Links</p>
+        <p style="margin-top:8px">
+          <a href="/privacy" style="color:#fff;opacity:0.6;margin:0 12px">Privacy Policy</a
+          ><a href="/terms" style="color:#fff;opacity:0.6;margin:0 12px">Terms of Service</a>
+        </p>
       </div>
     </div>
 
-    <!-- ===== PASSWORD MANAGEMENT ===== -->
-    <div class="card">
-      <div class="card-header">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--cms-blue)"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
-        Password Management
-      </div>
-      <div class="card-body">
-        <p style="font-size: 0.875rem; color: var(--gray-mid); margin-bottom: 16px;">Your organization has two separate passwords. The <strong style="color: var(--cms-blue-darkest);">admin password</strong> is for managing these settings and is typically held by an IT administrator or office manager. The <strong style="color: var(--cms-blue-darkest);">staff password</strong> is shared with front-desk staff who will use the scanner to process patient QR codes.</p>
-        <div id="passwordStatus" class="status"></div>
+    <script>
+      // ============================
+      // Slug + token management
+      // ============================
+      const slug = window.location.pathname.split('/')[1];
+      const tokenKey = 'ktc_token_' + slug;
+      let token = sessionStorage.getItem(tokenKey);
 
-        <div class="password-group">
-          <div class="password-group-title">Change Admin Password</div>
-          <p style="font-size: 0.8rem; color: var(--gray-mid); margin-bottom: 12px;">Used to access this settings page and manage your organization's configuration.</p>
-          <div class="password-fields">
-            <div class="form-group">
-              <label for="adminCurrentPw">Current Admin Password</label>
-              <input type="password" id="adminCurrentPw" placeholder="Current password" autocomplete="off">
-            </div>
-            <div class="form-group">
-              <label for="adminNewPw">New Admin Password</label>
-              <input type="password" id="adminNewPw" placeholder="New password" autocomplete="new-password">
-            </div>
-            <div class="form-group">
-              <label for="adminConfirmPw">Confirm New Admin Password</label>
-              <input type="password" id="adminConfirmPw" placeholder="Confirm new password" autocomplete="new-password">
-            </div>
-            <div>
-              <button class="primary" onclick="changePassword('admin')">Update Admin Password</button>
-            </div>
-          </div>
-        </div>
+      // Set staff link
+      document.getElementById('staffLink').href = '/' + slug;
 
-        <div class="password-group">
-          <div class="password-group-title">Change Staff Password</div>
-          <p style="font-size: 0.8rem; color: var(--gray-mid); margin-bottom: 12px;">Shared with staff members who use the scanner page. Changing this will require all staff to sign in again with the new password.</p>
-          <div class="password-fields">
-            <div class="form-group">
-              <label for="staffAdminPw">Current Admin Password</label>
-              <input type="password" id="staffAdminPw" placeholder="Admin password" autocomplete="off">
-            </div>
-            <div class="form-group">
-              <label for="staffNewPw">New Staff Password</label>
-              <input type="password" id="staffNewPw" placeholder="New staff password" autocomplete="new-password">
-            </div>
-            <div class="form-group">
-              <label for="staffConfirmPw">Confirm New Staff Password</label>
-              <input type="password" id="staffConfirmPw" placeholder="Confirm new staff password" autocomplete="new-password">
-            </div>
-            <div>
-              <button class="primary" onclick="changePassword('staff')">Update Staff Password</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+      // ============================
+      // Init: check auth state
+      // ============================
+      (function init() {
+        if (token) {
+          showSettings();
+          loadSettings();
+        } else {
+          showLogin();
+        }
+      })();
 
-  <!-- ==================== FOOTER ==================== -->
-  <div class="site-footer">
-    <div class="footer-inner">
-      <p id="orgFooter"></p>
-      <p>Powered by SMART Health Links</p>
-      <p style="margin-top:8px"><a href="/privacy" style="color:#fff;opacity:0.6;margin:0 12px">Privacy Policy</a><a href="/terms" style="color:#fff;opacity:0.6;margin:0 12px">Terms of Service</a></p>
-    </div>
-  </div>
-
-  <script>
-    // ============================
-    // Slug + token management
-    // ============================
-    const slug = window.location.pathname.split('/')[1];
-    const tokenKey = 'ktc_token_' + slug;
-    let token = sessionStorage.getItem(tokenKey);
-
-    // Set staff link
-    document.getElementById('staffLink').href = '/' + slug;
-
-    // ============================
-    // Init: check auth state
-    // ============================
-    (function init() {
-      if (token) {
-        showSettings();
-        loadSettings();
-      } else {
-        showLogin();
+      function showLogin() {
+        document.getElementById('loginSection').style.display = '';
+        document.getElementById('settingsSection').style.display = 'none';
       }
-    })();
 
-    function showLogin() {
-      document.getElementById('loginSection').style.display = '';
-      document.getElementById('settingsSection').style.display = 'none';
-    }
+      function showSettings() {
+        document.getElementById('loginSection').style.display = 'none';
+        document.getElementById('settingsSection').style.display = '';
+      }
 
-    function showSettings() {
-      document.getElementById('loginSection').style.display = 'none';
-      document.getElementById('settingsSection').style.display = '';
-    }
+      // ============================
+      // Login
+      // ============================
+      async function handleLogin() {
+        const password = document.getElementById('loginPassword').value.trim();
+        if (!password) return;
 
-    // ============================
-    // Login
-    // ============================
-    async function handleLogin() {
-      const password = document.getElementById('loginPassword').value.trim();
-      if (!password) return;
+        const btn = document.getElementById('loginBtn');
+        btn.disabled = true;
+        btn.textContent = 'Signing in...';
 
-      const btn = document.getElementById('loginBtn');
-      btn.disabled = true;
-      btn.textContent = 'Signing in...';
+        try {
+          const resp = await fetch('/api/orgs/' + slug + '/auth', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password, role: 'admin' })
+          });
 
-      try {
-        const resp = await fetch('/api/orgs/' + slug + '/auth', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ password, role: 'admin' })
-        });
+          const data = await resp.json();
 
-        const data = await resp.json();
+          if (!resp.ok) {
+            setLoginError(data.error || 'Invalid password');
+            btn.disabled = false;
+            btn.textContent = 'Sign In';
+            return;
+          }
 
-        if (!resp.ok) {
-          setLoginError(data.error || 'Invalid password');
+          token = data.token;
+          sessionStorage.setItem(tokenKey, token);
+          showSettings();
+          loadSettings();
+        } catch (err) {
+          setLoginError('Connection error. Please try again.');
           btn.disabled = false;
           btn.textContent = 'Sign In';
-          return;
         }
-
-        token = data.token;
-        sessionStorage.setItem(tokenKey, token);
-        showSettings();
-        loadSettings();
-      } catch (err) {
-        setLoginError('Connection error. Please try again.');
-        btn.disabled = false;
-        btn.textContent = 'Sign In';
       }
-    }
 
-    // Enter key on password field
-    document.getElementById('loginPassword').addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') handleLogin();
-    });
+      // Enter key on password field
+      document.getElementById('loginPassword').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') handleLogin();
+      });
 
-    function setLoginError(msg) {
-      const el = document.getElementById('loginError');
-      el.className = 'status error';
-      el.textContent = msg;
-    }
+      function setLoginError(msg) {
+        const el = document.getElementById('loginError');
+        el.className = 'status error';
+        el.textContent = msg;
+      }
 
-    // ============================
-    // Load settings
-    // ============================
-    async function loadSettings() {
-      try {
-        const resp = await fetch('/api/orgs/' + slug + '/settings', {
-          headers: { 'Authorization': 'Bearer ' + token }
-        });
-
-        if (resp.status === 401) {
-          sessionStorage.removeItem(tokenKey);
-          token = null;
-          showLogin();
-          setLoginError('Session expired. Please sign in again.');
-          return;
-        }
-
-        const data = await resp.json();
-
-        // Org info
-        document.getElementById('infoOrgName').textContent = data.orgName || slug;
-        document.getElementById('infoSlug').textContent = slug;
-
-        const scannerUrl = window.location.origin + '/' + slug;
-        const scannerLink = document.getElementById('infoScannerUrl');
-        scannerLink.innerHTML = '<a href="' + scannerUrl + '" target="_blank">' + scannerUrl + '</a>';
-
-        // Branding
-        const orgDisplay = data.orgName || slug;
-        document.getElementById('orgHeader').textContent = orgDisplay;
-        document.getElementById('orgTopbar').textContent = orgDisplay;
-        document.getElementById('orgFooter').textContent = orgDisplay;
-        document.title = 'Admin Settings — ' + orgDisplay + ' — Kill the Clipboard';
-
-        // Save format
-        const saveFormat = data.saveFormat || 'both';
-        selectSaveFormat(saveFormat);
-
-        // App validation
-        selectAppValidation(!!data.requireAppValidation);
-
-        // Session timeout
-        selectSessionTimeout(data.sessionTimeoutMinutes || 720);
-
-        // Storage type
-        const storageType = data.storageType || 'download';
-        selectStorage(storageType);
-        const radio = document.querySelector('input[name="storageType"][value="' + storageType + '"]');
-        if (radio) radio.checked = true;
-
-        // Google Drive status
-        if (data.hasDriveToken) {
-          document.getElementById('driveStatusBadge').className = 'badge connected';
-          document.getElementById('driveStatusBadge').textContent = 'Connected';
-        } else {
-          document.getElementById('driveStatusBadge').className = 'badge not-connected';
-          document.getElementById('driveStatusBadge').textContent = 'Not connected';
-        }
-
-        // OneDrive status
-        if (data.hasOnedriveToken) {
-          document.getElementById('onedriveStatusBadge').className = 'badge connected';
-          document.getElementById('onedriveStatusBadge').textContent = 'Connected';
-        }
-
-        // Box status
-        if (data.hasBoxToken) {
-          document.getElementById('boxStatusBadge').className = 'badge connected';
-          document.getElementById('boxStatusBadge').textContent = 'Connected';
-        }
-
-        // Gmail status
-        if (data.hasGmailToken) {
-          document.getElementById('gmailStatusBadge').className = 'badge connected';
-          document.getElementById('gmailStatusBadge').textContent = 'Connected';
-          if (data.gmailEmail) {
-            document.getElementById('gmailAccountEmail').textContent = '(' + data.gmailEmail + ')';
-          }
-        }
-
-        // Outlook status
-        if (data.hasOutlookToken) {
-          document.getElementById('outlookStatusBadge').className = 'badge connected';
-          document.getElementById('outlookStatusBadge').textContent = 'Connected';
-          if (data.outlookEmail) {
-            document.getElementById('outlookAccountEmail').textContent = '(' + data.outlookEmail + ')';
-          }
-        }
-
-        // Field values
-        if (data.driveFolderUrl) document.getElementById('driveFolderUrl').value = data.driveFolderUrl;
-        if (data.onedriveFolderPath) document.getElementById('onedriveFolderPath').value = data.onedriveFolderPath;
-        if (data.boxFolderId) document.getElementById('boxFolderId').value = data.boxFolderId;
-        if (data.apiUrl) document.getElementById('apiUrl').value = data.apiUrl;
-        if (data.apiHeaders) document.getElementById('apiHeaders').value = typeof data.apiHeaders === 'string' ? data.apiHeaders : JSON.stringify(data.apiHeaders, null, 2);
-        if (data.emailTo) {
-          document.getElementById('gmailEmailTo').value = data.emailTo;
-          document.getElementById('outlookEmailTo').value = data.emailTo;
-        }
-
-        // Load version info
+      // ============================
+      // Load settings
+      // ============================
+      async function loadSettings() {
         try {
-          const vResp = await fetch('/api/version');
-          const vData = await vResp.json();
-          document.getElementById('infoVersion').textContent = vData.version || '—';
-        } catch {}
+          const resp = await fetch('/api/orgs/' + slug + '/settings', {
+            headers: { 'Authorization': 'Bearer ' + token }
+          });
 
-      } catch (err) {
-        setSettingsStatus('error', 'Failed to load settings: ' + err.message);
-      }
-    }
+          if (resp.status === 401) {
+            sessionStorage.removeItem(tokenKey);
+            token = null;
+            showLogin();
+            setLoginError('Session expired. Please sign in again.');
+            return;
+          }
 
-    // ============================
-    // Storage type selection
-    // ============================
-    function selectStorage(type) {
-      // Update radio card visual states
-      document.querySelectorAll('.radio-card').forEach(function(card) {
-        const radio = card.querySelector('input[type="radio"]');
-        if (radio.value === type) {
-          card.classList.add('selected');
-          radio.checked = true;
-        } else {
-          card.classList.remove('selected');
+          const data = await resp.json();
+
+          // Org info
+          document.getElementById('infoOrgName').textContent = data.orgName || slug;
+          document.getElementById('infoSlug').textContent = slug;
+
+          const scannerUrl = window.location.origin + '/' + slug;
+          const scannerLink = document.getElementById('infoScannerUrl');
+          scannerLink.innerHTML = '<a href="' + scannerUrl + '" target="_blank">' + scannerUrl + '</a>';
+
+          // Branding
+          const orgDisplay = data.orgName || slug;
+          document.getElementById('orgHeader').textContent = orgDisplay;
+          document.getElementById('orgTopbar').textContent = orgDisplay;
+          document.getElementById('orgFooter').textContent = orgDisplay;
+          document.title = 'Admin Settings — ' + orgDisplay + ' — Kill the Clipboard';
+
+          // Save format
+          const saveFormat = data.saveFormat || 'both';
+          selectSaveFormat(saveFormat);
+
+          // App validation
+          selectAppValidation(!!data.requireAppValidation);
+
+          // Session timeout
+          selectSessionTimeout(data.sessionTimeoutMinutes || 720);
+
+          // Storage type
+          const storageType = data.storageType || 'download';
+          selectStorage(storageType);
+          const radio = document.querySelector('input[name="storageType"][value="' + storageType + '"]');
+          if (radio) radio.checked = true;
+
+          // Google Drive status
+          if (data.hasDriveToken) {
+            document.getElementById('driveStatusBadge').className = 'badge connected';
+            document.getElementById('driveStatusBadge').textContent = 'Connected';
+          } else {
+            document.getElementById('driveStatusBadge').className = 'badge not-connected';
+            document.getElementById('driveStatusBadge').textContent = 'Not connected';
+          }
+
+          // OneDrive status
+          if (data.hasOnedriveToken) {
+            document.getElementById('onedriveStatusBadge').className = 'badge connected';
+            document.getElementById('onedriveStatusBadge').textContent = 'Connected';
+          }
+
+          // Box status
+          if (data.hasBoxToken) {
+            document.getElementById('boxStatusBadge').className = 'badge connected';
+            document.getElementById('boxStatusBadge').textContent = 'Connected';
+          }
+
+          // Gmail status
+          if (data.hasGmailToken) {
+            document.getElementById('gmailStatusBadge').className = 'badge connected';
+            document.getElementById('gmailStatusBadge').textContent = 'Connected';
+            if (data.gmailEmail) {
+              document.getElementById('gmailAccountEmail').textContent = '(' + data.gmailEmail + ')';
+            }
+          }
+
+          // Outlook status
+          if (data.hasOutlookToken) {
+            document.getElementById('outlookStatusBadge').className = 'badge connected';
+            document.getElementById('outlookStatusBadge').textContent = 'Connected';
+            if (data.outlookEmail) {
+              document.getElementById('outlookAccountEmail').textContent = '(' + data.outlookEmail + ')';
+            }
+          }
+
+          // Field values
+          if (data.driveFolderUrl) document.getElementById('driveFolderUrl').value = data.driveFolderUrl;
+          if (data.onedriveFolderPath) document.getElementById('onedriveFolderPath').value = data.onedriveFolderPath;
+          if (data.boxFolderId) document.getElementById('boxFolderId').value = data.boxFolderId;
+          if (data.apiUrl) document.getElementById('apiUrl').value = data.apiUrl;
+          if (data.apiHeaders) document.getElementById('apiHeaders').value = typeof data.apiHeaders === 'string' ? data.apiHeaders : JSON.stringify(data.apiHeaders, null, 2);
+          if (data.emailTo) {
+            document.getElementById('gmailEmailTo').value = data.emailTo;
+            document.getElementById('outlookEmailTo').value = data.emailTo;
+          }
+
+          // Load version info
+          try {
+            const vResp = await fetch('/api/version');
+            const vData = await vResp.json();
+            document.getElementById('infoVersion').textContent = vData.version || '—';
+          } catch {}
+
+        } catch (err) {
+          setSettingsStatus('error', 'Failed to load settings: ' + err.message);
         }
-      });
-
-      // Show/hide config panels
-      document.querySelectorAll('.config-panel').forEach(function(panel) {
-        panel.classList.remove('visible');
-      });
-
-      const panel = document.getElementById('panel-' + type);
-      if (panel) {
-        panel.classList.add('visible');
-      }
-    }
-
-    // ============================
-    // Save format selection
-    // ============================
-    function selectSaveFormat(format) {
-      document.querySelectorAll('input[name="saveFormat"]').forEach(function(radio) {
-        const card = radio.closest('.radio-card');
-        if (radio.value === format) {
-          card.classList.add('selected');
-          radio.checked = true;
-        } else {
-          card.classList.remove('selected');
-        }
-      });
-    }
-
-    // ============================
-    // App validation selection
-    // ============================
-    function selectAppValidation(enabled) {
-      document.querySelectorAll('input[name="appValidation"]').forEach(function(radio) {
-        const card = radio.closest('.radio-card');
-        if ((radio.value === 'yes') === enabled) {
-          card.classList.add('selected');
-          radio.checked = true;
-        } else {
-          card.classList.remove('selected');
-        }
-      });
-    }
-
-    function selectSessionTimeout(value) {
-      document.getElementById('sessionTimeout').value = value;
-    }
-
-    // ============================
-    // Google Drive connect
-    // ============================
-    function connectDrive(e) {
-      e.preventDefault();
-      window.location.href = '/api/orgs/' + slug + '/drive-connect';
-    }
-
-    // ============================
-    // OneDrive connect
-    // ============================
-    function connectOnedrive(e) {
-      e.preventDefault();
-      window.location.href = '/api/orgs/' + slug + '/onedrive-connect';
-    }
-
-    // ============================
-    // Box connect
-    // ============================
-    function connectBox(e) {
-      e.preventDefault();
-      window.location.href = '/api/orgs/' + slug + '/box-connect';
-    }
-
-    // ============================
-    // Gmail connect
-    // ============================
-    function connectGmail(e) {
-      e.preventDefault();
-      window.location.href = '/api/orgs/' + slug + '/gmail-connect';
-    }
-
-    // ============================
-    // Outlook connect
-    // ============================
-    function connectOutlook(e) {
-      e.preventDefault();
-      window.location.href = '/api/orgs/' + slug + '/outlook-connect';
-    }
-
-    // ============================
-    // Save settings
-    // ============================
-    async function saveSettings() {
-      const storageType = document.querySelector('input[name="storageType"]:checked').value;
-      const saveFormat = document.querySelector('input[name="saveFormat"]:checked').value;
-
-      // Read emailTo from the active panel
-      let emailTo = '';
-      if (storageType === 'gmail') {
-        emailTo = document.getElementById('gmailEmailTo').value.trim();
-      } else if (storageType === 'outlook') {
-        emailTo = document.getElementById('outlookEmailTo').value.trim();
       }
 
-      const appValidation = document.querySelector('input[name="appValidation"]:checked').value === 'yes';
-      const sessionTimeout = parseInt(document.getElementById('sessionTimeout').value);
-
-      const body = {
-        storageType: storageType,
-        saveFormat: saveFormat,
-        requireAppValidation: appValidation,
-        sessionTimeoutMinutes: sessionTimeout,
-        driveFolderUrl: document.getElementById('driveFolderUrl').value.trim(),
-        onedriveFolderPath: document.getElementById('onedriveFolderPath').value.trim(),
-        boxFolderId: document.getElementById('boxFolderId').value.trim(),
-        apiUrl: document.getElementById('apiUrl').value.trim(),
-        apiHeaders: document.getElementById('apiHeaders').value.trim(),
-        emailTo: emailTo
-      };
-
-      // Parse driveFolderId from URL if present
-      const folderMatch = body.driveFolderUrl.match(/\/folders\/([a-zA-Z0-9_-]+)/);
-      body.driveFolderId = folderMatch ? folderMatch[1] : '';
-
-      const saveBtn = document.querySelector('.save-area button');
-      saveBtn.disabled = true;
-      saveBtn.textContent = 'Saving...';
-
-      try {
-        const resp = await fetch('/api/orgs/' + slug + '/settings', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + token
-          },
-          body: JSON.stringify(body)
+      // ============================
+      // Storage type selection
+      // ============================
+      function selectStorage(type) {
+        // Update radio card visual states
+        document.querySelectorAll('.radio-card').forEach(function(card) {
+          const radio = card.querySelector('input[type="radio"]');
+          if (radio.value === type) {
+            card.classList.add('selected');
+            radio.checked = true;
+          } else {
+            card.classList.remove('selected');
+          }
         });
 
-        if (resp.status === 401) {
-          sessionStorage.removeItem(tokenKey);
-          token = null;
-          showLogin();
-          setLoginError('Session expired. Please sign in again.');
+        // Show/hide config panels
+        document.querySelectorAll('.config-panel').forEach(function(panel) {
+          panel.classList.remove('visible');
+        });
+
+        const panel = document.getElementById('panel-' + type);
+        if (panel) {
+          panel.classList.add('visible');
+        }
+      }
+
+      // ============================
+      // Save format selection
+      // ============================
+      function selectSaveFormat(format) {
+        document.querySelectorAll('input[name="saveFormat"]').forEach(function(radio) {
+          const card = radio.closest('.radio-card');
+          if (radio.value === format) {
+            card.classList.add('selected');
+            radio.checked = true;
+          } else {
+            card.classList.remove('selected');
+          }
+        });
+      }
+
+      // ============================
+      // App validation selection
+      // ============================
+      function selectAppValidation(enabled) {
+        document.querySelectorAll('input[name="appValidation"]').forEach(function(radio) {
+          const card = radio.closest('.radio-card');
+          if ((radio.value === 'yes') === enabled) {
+            card.classList.add('selected');
+            radio.checked = true;
+          } else {
+            card.classList.remove('selected');
+          }
+        });
+      }
+
+      function selectSessionTimeout(value) {
+        document.getElementById('sessionTimeout').value = value;
+      }
+
+      // ============================
+      // Google Drive connect
+      // ============================
+      function connectDrive(e) {
+        e.preventDefault();
+        window.location.href = '/api/orgs/' + slug + '/drive-connect';
+      }
+
+      // ============================
+      // OneDrive connect
+      // ============================
+      function connectOnedrive(e) {
+        e.preventDefault();
+        window.location.href = '/api/orgs/' + slug + '/onedrive-connect';
+      }
+
+      // ============================
+      // Box connect
+      // ============================
+      function connectBox(e) {
+        e.preventDefault();
+        window.location.href = '/api/orgs/' + slug + '/box-connect';
+      }
+
+      // ============================
+      // Gmail connect
+      // ============================
+      function connectGmail(e) {
+        e.preventDefault();
+        window.location.href = '/api/orgs/' + slug + '/gmail-connect';
+      }
+
+      // ============================
+      // Outlook connect
+      // ============================
+      function connectOutlook(e) {
+        e.preventDefault();
+        window.location.href = '/api/orgs/' + slug + '/outlook-connect';
+      }
+
+      // ============================
+      // Save settings
+      // ============================
+      async function saveSettings() {
+        const storageType = document.querySelector('input[name="storageType"]:checked').value;
+        const saveFormat = document.querySelector('input[name="saveFormat"]:checked').value;
+
+        // Read emailTo from the active panel
+        let emailTo = '';
+        if (storageType === 'gmail') {
+          emailTo = document.getElementById('gmailEmailTo').value.trim();
+        } else if (storageType === 'outlook') {
+          emailTo = document.getElementById('outlookEmailTo').value.trim();
+        }
+
+        const appValidation = document.querySelector('input[name="appValidation"]:checked').value === 'yes';
+        const sessionTimeout = parseInt(document.getElementById('sessionTimeout').value);
+
+        const body = {
+          storageType: storageType,
+          saveFormat: saveFormat,
+          requireAppValidation: appValidation,
+          sessionTimeoutMinutes: sessionTimeout,
+          driveFolderUrl: document.getElementById('driveFolderUrl').value.trim(),
+          onedriveFolderPath: document.getElementById('onedriveFolderPath').value.trim(),
+          boxFolderId: document.getElementById('boxFolderId').value.trim(),
+          apiUrl: document.getElementById('apiUrl').value.trim(),
+          apiHeaders: document.getElementById('apiHeaders').value.trim(),
+          emailTo: emailTo
+        };
+
+        // Parse driveFolderId from URL if present
+        const folderMatch = body.driveFolderUrl.match(/\/folders\/([a-zA-Z0-9_-]+)/);
+        body.driveFolderId = folderMatch ? folderMatch[1] : '';
+
+        const saveBtn = document.querySelector('.save-area button');
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+
+        try {
+          const resp = await fetch('/api/orgs/' + slug + '/settings', {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify(body)
+          });
+
+          if (resp.status === 401) {
+            sessionStorage.removeItem(tokenKey);
+            token = null;
+            showLogin();
+            setLoginError('Session expired. Please sign in again.');
+            return;
+          }
+
+          const data = await resp.json();
+
+          if (!resp.ok) {
+            setSaveStatus('fail', data.error || 'Failed to save settings');
+          } else {
+            setSaveStatus('ok', 'Settings saved. Testing connection...');
+            // Auto-test connection after saving
+            setTimeout(testConnection, 500);
+          }
+        } catch (err) {
+          setSaveStatus('fail', 'Connection error: ' + err.message);
+        } finally {
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Save Settings';
+        }
+      }
+
+      function setSaveStatus(type, msg) {
+        const el = document.getElementById('saveStatus');
+        el.className = type;
+        el.textContent = msg;
+        setTimeout(function() { el.textContent = ''; el.className = ''; }, 5000);
+      }
+
+      // ============================
+      // Test connection
+      // ============================
+      async function testConnection() {
+        const storageType = document.querySelector('input[name="storageType"]:checked').value;
+
+        setSaveStatus('', 'Testing connection...');
+
+        try {
+          const resp = await fetch('/api/orgs/' + slug + '/test-connection', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify({ storageType: storageType })
+          });
+
+          if (resp.status === 401) {
+            sessionStorage.removeItem(tokenKey);
+            token = null;
+            showLogin();
+            setLoginError('Session expired. Please sign in again.');
+            return;
+          }
+
+          const data = await resp.json();
+
+          if (data.ok) {
+            setSaveStatus('ok', data.message || 'Connection successful');
+          } else {
+            setSaveStatus('fail', data.error || 'Connection failed');
+          }
+        } catch (err) {
+          setSaveStatus('fail', 'Connection test error: ' + err.message);
+        }
+      }
+
+      // ============================
+      // Test webhook
+      // ============================
+      async function testWebhook() {
+        const url = document.getElementById('apiUrl').value.trim();
+        if (!url) {
+          document.getElementById('testStatus').textContent = 'Please enter a webhook URL.';
+          document.getElementById('testStatus').style.color = 'var(--color-error)';
           return;
         }
 
-        const data = await resp.json();
+        document.getElementById('testStatus').textContent = 'Saving & testing...';
+        document.getElementById('testStatus').style.color = 'var(--gray-mid)';
 
-        if (!resp.ok) {
-          setSaveStatus('fail', data.error || 'Failed to save settings');
-        } else {
-          setSaveStatus('ok', 'Settings saved. Testing connection...');
-          // Auto-test connection after saving
-          setTimeout(testConnection, 500);
-        }
-      } catch (err) {
-        setSaveStatus('fail', 'Connection error: ' + err.message);
-      } finally {
-        saveBtn.disabled = false;
-        saveBtn.textContent = 'Save Settings';
-      }
-    }
-
-    function setSaveStatus(type, msg) {
-      const el = document.getElementById('saveStatus');
-      el.className = type;
-      el.textContent = msg;
-      setTimeout(function() { el.textContent = ''; el.className = ''; }, 5000);
-    }
-
-    // ============================
-    // Test connection
-    // ============================
-    async function testConnection() {
-      const storageType = document.querySelector('input[name="storageType"]:checked').value;
-
-      setSaveStatus('', 'Testing connection...');
-
-      try {
-        const resp = await fetch('/api/orgs/' + slug + '/test-connection', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + token
-          },
-          body: JSON.stringify({ storageType: storageType })
-        });
-
-        if (resp.status === 401) {
-          sessionStorage.removeItem(tokenKey);
-          token = null;
-          showLogin();
-          setLoginError('Session expired. Please sign in again.');
-          return;
-        }
-
-        const data = await resp.json();
-
-        if (data.ok) {
-          setSaveStatus('ok', data.message || 'Connection successful');
-        } else {
-          setSaveStatus('fail', data.error || 'Connection failed');
-        }
-      } catch (err) {
-        setSaveStatus('fail', 'Connection test error: ' + err.message);
-      }
-    }
-
-    // ============================
-    // Test webhook
-    // ============================
-    async function testWebhook() {
-      const url = document.getElementById('apiUrl').value.trim();
-      if (!url) {
-        document.getElementById('testStatus').textContent = 'Please enter a webhook URL.';
-        document.getElementById('testStatus').style.color = 'var(--color-error)';
-        return;
-      }
-
-      document.getElementById('testStatus').textContent = 'Saving & testing...';
-      document.getElementById('testStatus').style.color = 'var(--gray-mid)';
-
-      // Save settings first so the server has the URL, then test via server-side
-      try {
-        await saveSettings();
-        const resp = await fetch('/api/orgs/' + slug + '/test-connection', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + token
-          },
-          body: JSON.stringify({ storageType: 'api' })
-        });
-        const data = await resp.json();
-        if (data.ok) {
-          document.getElementById('testStatus').textContent = data.message || 'Success';
-          document.getElementById('testStatus').style.color = 'var(--color-success)';
-        } else {
-          document.getElementById('testStatus').textContent = data.error || 'Test failed';
+        // Save settings first so the server has the URL, then test via server-side
+        try {
+          await saveSettings();
+          const resp = await fetch('/api/orgs/' + slug + '/test-connection', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify({ storageType: 'api' })
+          });
+          const data = await resp.json();
+          if (data.ok) {
+            document.getElementById('testStatus').textContent = data.message || 'Success';
+            document.getElementById('testStatus').style.color = 'var(--color-success)';
+          } else {
+            document.getElementById('testStatus').textContent = data.error || 'Test failed';
+            document.getElementById('testStatus').style.color = 'var(--color-error)';
+          }
+        } catch (err) {
+          document.getElementById('testStatus').textContent = 'Error: ' + err.message;
           document.getElementById('testStatus').style.color = 'var(--color-error)';
         }
-      } catch (err) {
-        document.getElementById('testStatus').textContent = 'Error: ' + err.message;
-        document.getElementById('testStatus').style.color = 'var(--color-error)';
-      }
-    }
-
-    // ============================
-    // Password management
-    // ============================
-    async function changePassword(type) {
-      let currentPw, newPw, confirmPw;
-
-      if (type === 'admin') {
-        currentPw = document.getElementById('adminCurrentPw').value;
-        newPw = document.getElementById('adminNewPw').value;
-        confirmPw = document.getElementById('adminConfirmPw').value;
-      } else {
-        currentPw = document.getElementById('staffAdminPw').value;
-        newPw = document.getElementById('staffNewPw').value;
-        confirmPw = document.getElementById('staffConfirmPw').value;
       }
 
-      if (!currentPw || !newPw || !confirmPw) {
-        setPasswordStatus('error', 'All password fields are required.');
-        return;
-      }
+      // ============================
+      // Password management
+      // ============================
+      async function changePassword(type) {
+        let currentPw, newPw, confirmPw;
 
-      if (newPw !== confirmPw) {
-        setPasswordStatus('error', 'New passwords do not match.');
-        return;
-      }
-
-      if (newPw.length < 4) {
-        setPasswordStatus('error', 'New password must be at least 4 characters.');
-        return;
-      }
-
-      try {
-        const resp = await fetch('/api/orgs/' + slug + '/passwords', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + token
-          },
-          body: JSON.stringify({
-            role: type,
-            currentPassword: currentPw,
-            newPassword: newPw
-          })
-        });
-
-        if (resp.status === 401) {
-          sessionStorage.removeItem(tokenKey);
-          token = null;
-          showLogin();
-          setLoginError('Session expired. Please sign in again.');
-          return;
-        }
-
-        const data = await resp.json();
-
-        if (!resp.ok) {
-          setPasswordStatus('error', data.error || 'Failed to update password.');
-          return;
-        }
-
-        setPasswordStatus('success', (type === 'admin' ? 'Admin' : 'Staff') + ' password updated successfully.');
-
-        // Clear fields
         if (type === 'admin') {
-          document.getElementById('adminCurrentPw').value = '';
-          document.getElementById('adminNewPw').value = '';
-          document.getElementById('adminConfirmPw').value = '';
+          currentPw = document.getElementById('adminCurrentPw').value;
+          newPw = document.getElementById('adminNewPw').value;
+          confirmPw = document.getElementById('adminConfirmPw').value;
         } else {
-          document.getElementById('staffAdminPw').value = '';
-          document.getElementById('staffNewPw').value = '';
-          document.getElementById('staffConfirmPw').value = '';
+          currentPw = document.getElementById('staffAdminPw').value;
+          newPw = document.getElementById('staffNewPw').value;
+          confirmPw = document.getElementById('staffConfirmPw').value;
         }
-      } catch (err) {
-        setPasswordStatus('error', 'Connection error: ' + err.message);
+
+        if (!currentPw || !newPw || !confirmPw) {
+          setPasswordStatus('error', 'All password fields are required.');
+          return;
+        }
+
+        if (newPw !== confirmPw) {
+          setPasswordStatus('error', 'New passwords do not match.');
+          return;
+        }
+
+        if (newPw.length < 4) {
+          setPasswordStatus('error', 'New password must be at least 4 characters.');
+          return;
+        }
+
+        try {
+          const resp = await fetch('/api/orgs/' + slug + '/passwords', {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify({
+              role: type,
+              currentPassword: currentPw,
+              newPassword: newPw
+            })
+          });
+
+          if (resp.status === 401) {
+            sessionStorage.removeItem(tokenKey);
+            token = null;
+            showLogin();
+            setLoginError('Session expired. Please sign in again.');
+            return;
+          }
+
+          const data = await resp.json();
+
+          if (!resp.ok) {
+            setPasswordStatus('error', data.error || 'Failed to update password.');
+            return;
+          }
+
+          setPasswordStatus('success', (type === 'admin' ? 'Admin' : 'Staff') + ' password updated successfully.');
+
+          // Clear fields
+          if (type === 'admin') {
+            document.getElementById('adminCurrentPw').value = '';
+            document.getElementById('adminNewPw').value = '';
+            document.getElementById('adminConfirmPw').value = '';
+          } else {
+            document.getElementById('staffAdminPw').value = '';
+            document.getElementById('staffNewPw').value = '';
+            document.getElementById('staffConfirmPw').value = '';
+          }
+        } catch (err) {
+          setPasswordStatus('error', 'Connection error: ' + err.message);
+        }
       }
-    }
 
-    function setPasswordStatus(type, msg) {
-      const el = document.getElementById('passwordStatus');
-      el.className = 'status ' + type;
-      el.textContent = msg;
-      setTimeout(function() { el.className = 'status'; el.textContent = ''; }, 6000);
-    }
+      function setPasswordStatus(type, msg) {
+        const el = document.getElementById('passwordStatus');
+        el.className = 'status ' + type;
+        el.textContent = msg;
+        setTimeout(function() { el.className = 'status'; el.textContent = ''; }, 6000);
+      }
 
-    // ============================
-    // Settings status
-    // ============================
-    function setSettingsStatus(type, msg) {
-      const el = document.getElementById('settingsStatus');
-      el.className = 'status ' + type;
-      el.textContent = msg;
-    }
-  </script>
-</body>
+      // ============================
+      // Settings status
+      // ============================
+      function setSettingsStatus(type, msg) {
+        const el = document.getElementById('settingsStatus');
+        el.className = 'status ' + type;
+        el.textContent = msg;
+      }
+    </script>
+  </body>
 </html>

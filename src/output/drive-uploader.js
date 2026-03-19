@@ -50,7 +50,7 @@ function getDriveClient(driveConfig) {
   }
 
   throw new Error(
-    'Google Drive auth not configured. Either set GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET + GOOGLE_REFRESH_TOKEN (OAuth2) or GOOGLE_SERVICE_ACCOUNT_KEY.'
+    'Google Drive auth not configured. Either set GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET + GOOGLE_REFRESH_TOKEN (OAuth2) or GOOGLE_SERVICE_ACCOUNT_KEY.',
   );
 }
 

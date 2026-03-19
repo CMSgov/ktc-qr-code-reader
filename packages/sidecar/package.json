@@ -1,0 +1,19 @@
+{
+  "name": "@ktc/sidecar",
+  "version": "0.2.0-alpha",
+  "description": "Enterprise connector — receives decrypted data from scanner, routes to Drive/OneDrive/Box/Email/API",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "vitest run --passWithNoTests --root ../../ packages/sidecar"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "better-sqlite3": "^12.6.2",
+    "express": "^5.2.1",
+    "googleapis": "^171.4.0",
+    "nodemailer": "^8.0.1",
+    "uuid": "^13.0.0"
+  }
+}

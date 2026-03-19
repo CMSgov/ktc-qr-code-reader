@@ -1,885 +1,907 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kill the Clipboard</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"
-    integrity="sha384-c9d8RFSL+u3exBOJ4Yp3HUJXS4znl9f+z66d1y54ig+ea249SpqR+w1wyvXz/lk+"
-    crossorigin="anonymous"></script>
-  <style>
-    :root {
-      /* CMS Primary */
-      --cms-blue: #0071bc;
-      --cms-blue-dark: #205493;
-      --cms-blue-darkest: #112e51;
-      --cms-blue-light: #4992d6;
-      --cms-blue-lightest: #e6f0f8;
-
-      /* CMS Accent / Alt */
-      --cms-cyan: #02bfe7;
-      --cms-cyan-dark: #0186a2;
-
-      /* CMS Gold */
-      --cms-gold: #f3ce3b;
-      --cms-gold-dark: #c9a616;
-      --cms-gold-light: #fef9e9;
-
-      /* Status */
-      --color-success: #2e8540;
-      --color-success-light: #e7f4e4;
-      --color-error: #e31c3d;
-      --color-error-light: #fce4ec;
-      --color-warn: #f8c41f;
-      --color-warn-light: #fef9e9;
-
-      /* Neutrals */
-      --gray-darkest: #1b1b1b;
-      --gray-dark: #333334;
-      --gray-mid: #5b616b;
-      --gray-light: #aeb0b5;
-      --gray-lighter: #d6d7d9;
-      --gray-lightest: #f1f1f1;
-      --white: #ffffff;
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: var(--white);
-      color: var(--gray-dark);
-      min-height: 100vh;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    /* === TOP BAR === */
-    .topbar {
-      background: var(--cms-blue-darkest);
-      color: var(--white);
-      padding: 8px 24px;
-      font-size: 0.75rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .topbar span { opacity: 0.7; }
-
-    /* === HEADER === */
-    .site-header {
-      background: var(--white);
-      border-bottom: 4px solid var(--cms-gold);
-      padding: 20px 24px;
-    }
-
-    .header-inner {
-      max-width: 800px;
-      margin: 0 auto;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .site-title {
-      font-family: 'Instrument Serif', Georgia, serif;
-      font-size: 1.75rem;
-      color: var(--cms-blue-darkest);
-      letter-spacing: -0.02em;
-    }
-
-    .site-title em {
-      font-style: italic;
-      color: var(--cms-blue);
-    }
-
-    .org-name {
-      font-size: 0.8rem;
-      color: var(--gray-mid);
-      font-weight: 500;
-    }
-
-    /* === HERO === */
-    .hero {
-      background: linear-gradient(135deg, var(--cms-blue-darkest) 0%, var(--cms-blue-dark) 100%);
-      color: var(--white);
-      padding: 40px 24px;
-      text-align: center;
-    }
-
-    .hero h2 {
-      font-family: 'Instrument Serif', Georgia, serif;
-      font-size: 2.25rem;
-      font-weight: 400;
-      letter-spacing: -0.03em;
-      margin-bottom: 8px;
-    }
-
-    .hero p {
-      font-size: 1rem;
-      opacity: 0.8;
-      max-width: 480px;
-      margin: 0 auto;
-    }
-
-    /* === MAIN CONTENT === */
-    .container {
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 32px 24px;
-    }
-
-    /* === SCANNER === */
-    .scanner-section {
-      background: var(--white);
-      border: 1px solid var(--gray-lighter);
-      border-radius: 4px;
-      overflow: hidden;
-      margin-bottom: 24px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-    }
-
-    .scanner-section-header {
-      background: var(--cms-blue-lightest);
-      border-bottom: 1px solid var(--gray-lighter);
-      padding: 12px 20px;
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: var(--cms-blue-darkest);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .scanner-section-header svg {
-      width: 18px;
-      height: 18px;
-      fill: var(--cms-blue);
-    }
-
-    #reader {
-      width: 100%;
-      min-height: 60px;
-    }
-
-    /* === CONTROLS === */
-    .controls {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 24px;
-    }
-
-    button {
-      flex: 1;
-      padding: 12px 20px;
-      border: 2px solid var(--gray-lighter);
-      border-radius: 4px;
-      background: var(--white);
-      color: var(--cms-blue);
-      font-family: 'Inter', sans-serif;
-      font-size: 0.875rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-
-    button:hover {
-      background: var(--cms-blue-lightest);
-      border-color: var(--cms-blue-light);
-    }
-
-    button.primary {
-      background: var(--cms-blue);
-      border-color: var(--cms-blue);
-      color: var(--white);
-    }
-
-    button.primary:hover {
-      background: var(--cms-blue-dark);
-      border-color: var(--cms-blue-dark);
-    }
-
-    button:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-    }
-
-    /* === STATUS ALERTS === */
-    .status {
-      padding: 12px 16px;
-      border-radius: 4px;
-      margin-bottom: 16px;
-      font-size: 0.875rem;
-      display: none;
-      border-left: 4px solid transparent;
-    }
-
-    .status.info {
-      display: block;
-      background: var(--cms-blue-lightest);
-      border-left-color: var(--cms-blue);
-      color: var(--cms-blue-darkest);
-    }
-
-    .status.success {
-      display: block;
-      background: var(--color-success-light);
-      border-left-color: var(--color-success);
-      color: #1a4301;
-    }
-
-    .status.error {
-      display: block;
-      background: var(--color-error-light);
-      border-left-color: var(--color-error);
-      color: #8b0000;
-    }
-
-    .status.warning {
-      display: block;
-      background: var(--color-warn-light);
-      border-left-color: var(--cms-gold-dark);
-      color: #654501;
-    }
-
-    /* === PASSCODE FORM === */
-    .passcode-form {
-      display: none;
-      padding: 20px;
-      background: var(--cms-blue-lightest);
-      border: 1px solid var(--gray-lighter);
-      border-left: 4px solid var(--cms-gold);
-      border-radius: 4px;
-      margin-bottom: 16px;
-    }
-
-    .passcode-form.visible { display: block; }
-
-    .passcode-form label {
-      display: block;
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: var(--cms-blue-darkest);
-      margin-bottom: 8px;
-    }
-
-    .passcode-form input {
-      width: 100%;
-      padding: 10px 12px;
-      background: var(--white);
-      border: 2px solid var(--gray-lighter);
-      border-radius: 4px;
-      color: var(--gray-dark);
-      font-size: 1rem;
-      font-family: 'Inter', sans-serif;
-      margin-bottom: 12px;
-    }
-
-    .passcode-form input:focus {
-      outline: none;
-      border-color: var(--cms-blue);
-      box-shadow: 0 0 0 2px rgba(0,113,188,0.2);
-    }
-
-    /* === RESULTS === */
-    .results { display: none; }
-    .results.visible { display: block; }
-
-    .result-card {
-      background: var(--white);
-      border: 1px solid var(--gray-lighter);
-      border-radius: 4px;
-      overflow: hidden;
-      margin-bottom: 16px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-    }
-
-    .result-card h3 {
-      background: var(--gray-lightest);
-      border-bottom: 1px solid var(--gray-lighter);
-      padding: 10px 16px;
-      font-size: 0.8rem;
-      font-weight: 700;
-      color: var(--gray-mid);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-
-    .result-card-body {
-      padding: 16px;
-    }
-
-    .stat-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 10px 0;
-      border-bottom: 1px solid var(--gray-lightest);
-      font-size: 0.9rem;
-    }
-
-    .stat-row:last-child { border-bottom: none; }
-    .stat-label { color: var(--gray-mid); }
-    .stat-value { color: var(--cms-blue-darkest); font-weight: 600; }
-
-    /* === RESOURCE BADGES === */
-    .resource-badge {
-      display: inline-block;
-      padding: 4px 10px;
-      border-radius: 3px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      margin: 3px 4px 3px 0;
-      letter-spacing: 0.02em;
-    }
-
-    .resource-badge.patient { background: var(--cms-blue-lightest); color: var(--cms-blue-dark); border: 1px solid var(--cms-blue-light); }
-    .resource-badge.condition { background: #fce4ec; color: #880e4f; border: 1px solid #f48fb1; }
-    .resource-badge.observation { background: #e8f5e9; color: #1b5e20; border: 1px solid #81c784; }
-    .resource-badge.medication { background: #ede7f6; color: #4527a0; border: 1px solid #b39ddb; }
-    .resource-badge.immunization { background: var(--cms-gold-light); color: #654501; border: 1px solid var(--cms-gold); }
-    .resource-badge.other { background: var(--gray-lightest); color: var(--gray-mid); border: 1px solid var(--gray-lighter); }
-
-    /* === DATA PREVIEW === */
-    .fhir-preview {
-      background: var(--gray-lightest);
-      border: 1px solid var(--gray-lighter);
-      border-radius: 4px;
-      padding: 16px;
-      max-height: 400px;
-      overflow-y: auto;
-      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-      font-size: 0.75rem;
-      line-height: 1.6;
-      color: var(--gray-dark);
-      white-space: pre-wrap;
-      word-break: break-word;
-    }
-
-    /* === DRIVE SUCCESS BANNER === */
-    .drive-banner {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 16px 20px;
-      background: var(--color-success-light);
-      border: 1px solid #2e8540;
-      border-left: 4px solid #2e8540;
-      border-radius: 4px;
-      margin-bottom: 16px;
-    }
-
-    .drive-banner .drive-msg {
-      font-size: 0.9rem;
-      font-weight: 600;
-      color: #1a4301;
-    }
-
-    .drive-banner .drive-msg small {
-      display: block;
-      font-weight: 400;
-      font-size: 0.8rem;
-      margin-top: 2px;
-      opacity: 0.8;
-    }
-
-    .drive-banner .drive-btn {
-      display: inline-block;
-      padding: 8px 20px;
-      background: #2e8540;
-      color: #fff;
-      font-size: 0.85rem;
-      font-weight: 600;
-      border-radius: 4px;
-      text-decoration: none;
-      white-space: nowrap;
-    }
-
-    .drive-banner .drive-btn:hover {
-      background: #1a4301;
-    }
-
-    .drive-error-banner {
-      padding: 12px 16px;
-      background: var(--color-error-light);
-      border: 1px solid var(--color-error);
-      border-left: 4px solid var(--color-error);
-      border-radius: 4px;
-      margin-bottom: 16px;
-      font-size: 0.85rem;
-      color: #8b0000;
-    }
-
-    /* === PDF PREVIEW === */
-    .pdf-preview-container {
-      margin-top: 8px;
-    }
-
-    .pdf-preview-item {
-      margin-bottom: 12px;
-    }
-
-    .pdf-preview-item .pdf-label {
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--gray-mid);
-      margin-bottom: 6px;
-    }
-
-    .pdf-preview-item embed {
-      width: 100%;
-      height: 500px;
-      border: 1px solid var(--gray-lighter);
-      border-radius: 4px;
-    }
-
-    /* === CONFIG BAR === */
-    .config-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px 16px;
-      background: var(--gray-lightest);
-      border: 1px solid var(--gray-lighter);
-      border-radius: 4px;
-      font-size: 0.8rem;
-      color: var(--gray-mid);
-      margin-bottom: 24px;
-    }
-
-    .config-bar .config-label {
-      font-weight: 600;
-      color: var(--cms-blue-darkest);
-      margin-right: 8px;
-    }
-
-    /* === INFO NOTE === */
-    .info-note {
-      background: var(--cms-blue-lightest);
-      border: 1px solid var(--cms-blue-light);
-      border-left: 4px solid var(--cms-blue);
-      border-radius: 4px;
-      padding: 14px 18px;
-      margin-bottom: 24px;
-      font-size: 0.85rem;
-      color: var(--cms-blue-darkest);
-      line-height: 1.5;
-    }
-
-    /* === FOOTER === */
-    .site-footer {
-      background: var(--cms-blue-darkest);
-      color: var(--white);
-      padding: 32px 24px;
-      text-align: center;
-      font-size: 0.8rem;
-      margin-top: 40px;
-    }
-
-    .site-footer p { opacity: 0.6; margin-bottom: 4px; }
-
-    .footer-inner {
-      max-width: 800px;
-      margin: 0 auto;
-    }
-
-    .gold-rule {
-      height: 3px;
-      background: linear-gradient(90deg, var(--cms-gold) 0%, var(--cms-gold-dark) 100%);
-      border: none;
-      margin: 0;
-    }
-
-    /* === MOBILE === */
-    @media (max-width: 480px) {
-      .hero h2 { font-size: 1.75rem; }
-      .controls { flex-direction: column; }
-      .site-title { font-size: 1.4rem; }
-      .header-inner { flex-direction: column; gap: 4px; align-items: flex-start; }
-    }
-  </style>
-</head>
-<body>
-  <div class="topbar">
-    <span>SMART Health Link Scanner</span>
-    <span id="orgTopbar"></span>
-  </div>
-
-  <div class="site-header">
-    <div class="header-inner">
-      <div class="site-title">Kill <em>the</em> Clipboard</div>
-      <div class="org-name" id="orgHeader"></div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kill the Clipboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script
+      src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"
+      integrity="sha384-c9d8RFSL+u3exBOJ4Yp3HUJXS4znl9f+z66d1y54ig+ea249SpqR+w1wyvXz/lk+"
+      crossorigin="anonymous"
+    ></script>
+    <style>
+      :root {
+        /* CMS Primary */
+        --cms-blue: #0071bc;
+        --cms-blue-dark: #205493;
+        --cms-blue-darkest: #112e51;
+        --cms-blue-light: #4992d6;
+        --cms-blue-lightest: #e6f0f8;
+
+        /* CMS Accent / Alt */
+        --cms-cyan: #02bfe7;
+        --cms-cyan-dark: #0186a2;
+
+        /* CMS Gold */
+        --cms-gold: #f3ce3b;
+        --cms-gold-dark: #c9a616;
+        --cms-gold-light: #fef9e9;
+
+        /* Status */
+        --color-success: #2e8540;
+        --color-success-light: #e7f4e4;
+        --color-error: #e31c3d;
+        --color-error-light: #fce4ec;
+        --color-warn: #f8c41f;
+        --color-warn-light: #fef9e9;
+
+        /* Neutrals */
+        --gray-darkest: #1b1b1b;
+        --gray-dark: #333334;
+        --gray-mid: #5b616b;
+        --gray-light: #aeb0b5;
+        --gray-lighter: #d6d7d9;
+        --gray-lightest: #f1f1f1;
+        --white: #ffffff;
+      }
+
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+
+      body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: var(--white);
+        color: var(--gray-dark);
+        min-height: 100vh;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* === TOP BAR === */
+      .topbar {
+        background: var(--cms-blue-darkest);
+        color: var(--white);
+        padding: 8px 24px;
+        font-size: 0.75rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .topbar span { opacity: 0.7; }
+
+      /* === HEADER === */
+      .site-header {
+        background: var(--white);
+        border-bottom: 4px solid var(--cms-gold);
+        padding: 20px 24px;
+      }
+
+      .header-inner {
+        max-width: 800px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .site-title {
+        font-family: 'Instrument Serif', Georgia, serif;
+        font-size: 1.75rem;
+        color: var(--cms-blue-darkest);
+        letter-spacing: -0.02em;
+      }
+
+      .site-title em {
+        font-style: italic;
+        color: var(--cms-blue);
+      }
+
+      .org-name {
+        font-size: 0.8rem;
+        color: var(--gray-mid);
+        font-weight: 500;
+      }
+
+      /* === HERO === */
+      .hero {
+        background: linear-gradient(135deg, var(--cms-blue-darkest) 0%, var(--cms-blue-dark) 100%);
+        color: var(--white);
+        padding: 40px 24px;
+        text-align: center;
+      }
+
+      .hero h2 {
+        font-family: 'Instrument Serif', Georgia, serif;
+        font-size: 2.25rem;
+        font-weight: 400;
+        letter-spacing: -0.03em;
+        margin-bottom: 8px;
+      }
+
+      .hero p {
+        font-size: 1rem;
+        opacity: 0.8;
+        max-width: 480px;
+        margin: 0 auto;
+      }
+
+      /* === MAIN CONTENT === */
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 32px 24px;
+      }
+
+      /* === SCANNER === */
+      .scanner-section {
+        background: var(--white);
+        border: 1px solid var(--gray-lighter);
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 24px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      }
+
+      .scanner-section-header {
+        background: var(--cms-blue-lightest);
+        border-bottom: 1px solid var(--gray-lighter);
+        padding: 12px 20px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--cms-blue-darkest);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .scanner-section-header svg {
+        width: 18px;
+        height: 18px;
+        fill: var(--cms-blue);
+      }
+
+      #reader {
+        width: 100%;
+        min-height: 60px;
+      }
+
+      /* === CONTROLS === */
+      .controls {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+
+      button {
+        flex: 1;
+        padding: 12px 20px;
+        border: 2px solid var(--gray-lighter);
+        border-radius: 4px;
+        background: var(--white);
+        color: var(--cms-blue);
+        font-family: 'Inter', sans-serif;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+
+      button:hover {
+        background: var(--cms-blue-lightest);
+        border-color: var(--cms-blue-light);
+      }
+
+      button.primary {
+        background: var(--cms-blue);
+        border-color: var(--cms-blue);
+        color: var(--white);
+      }
+
+      button.primary:hover {
+        background: var(--cms-blue-dark);
+        border-color: var(--cms-blue-dark);
+      }
+
+      button:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      /* === STATUS ALERTS === */
+      .status {
+        padding: 12px 16px;
+        border-radius: 4px;
+        margin-bottom: 16px;
+        font-size: 0.875rem;
+        display: none;
+        border-left: 4px solid transparent;
+      }
+
+      .status.info {
+        display: block;
+        background: var(--cms-blue-lightest);
+        border-left-color: var(--cms-blue);
+        color: var(--cms-blue-darkest);
+      }
+
+      .status.success {
+        display: block;
+        background: var(--color-success-light);
+        border-left-color: var(--color-success);
+        color: #1a4301;
+      }
+
+      .status.error {
+        display: block;
+        background: var(--color-error-light);
+        border-left-color: var(--color-error);
+        color: #8b0000;
+      }
+
+      .status.warning {
+        display: block;
+        background: var(--color-warn-light);
+        border-left-color: var(--cms-gold-dark);
+        color: #654501;
+      }
+
+      /* === PASSCODE FORM === */
+      .passcode-form {
+        display: none;
+        padding: 20px;
+        background: var(--cms-blue-lightest);
+        border: 1px solid var(--gray-lighter);
+        border-left: 4px solid var(--cms-gold);
+        border-radius: 4px;
+        margin-bottom: 16px;
+      }
+
+      .passcode-form.visible { display: block; }
+
+      .passcode-form label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--cms-blue-darkest);
+        margin-bottom: 8px;
+      }
+
+      .passcode-form input {
+        width: 100%;
+        padding: 10px 12px;
+        background: var(--white);
+        border: 2px solid var(--gray-lighter);
+        border-radius: 4px;
+        color: var(--gray-dark);
+        font-size: 1rem;
+        font-family: 'Inter', sans-serif;
+        margin-bottom: 12px;
+      }
+
+      .passcode-form input:focus {
+        outline: none;
+        border-color: var(--cms-blue);
+        box-shadow: 0 0 0 2px rgba(0,113,188,0.2);
+      }
+
+      /* === RESULTS === */
+      .results { display: none; }
+      .results.visible { display: block; }
+
+      .result-card {
+        background: var(--white);
+        border: 1px solid var(--gray-lighter);
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 16px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      }
+
+      .result-card h3 {
+        background: var(--gray-lightest);
+        border-bottom: 1px solid var(--gray-lighter);
+        padding: 10px 16px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--gray-mid);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .result-card-body {
+        padding: 16px;
+      }
+
+      .stat-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--gray-lightest);
+        font-size: 0.9rem;
+      }
+
+      .stat-row:last-child { border-bottom: none; }
+      .stat-label { color: var(--gray-mid); }
+      .stat-value { color: var(--cms-blue-darkest); font-weight: 600; }
+
+      /* === RESOURCE BADGES === */
+      .resource-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 3px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin: 3px 4px 3px 0;
+        letter-spacing: 0.02em;
+      }
+
+      .resource-badge.patient { background: var(--cms-blue-lightest); color: var(--cms-blue-dark); border: 1px solid var(--cms-blue-light); }
+      .resource-badge.condition { background: #fce4ec; color: #880e4f; border: 1px solid #f48fb1; }
+      .resource-badge.observation { background: #e8f5e9; color: #1b5e20; border: 1px solid #81c784; }
+      .resource-badge.medication { background: #ede7f6; color: #4527a0; border: 1px solid #b39ddb; }
+      .resource-badge.immunization { background: var(--cms-gold-light); color: #654501; border: 1px solid var(--cms-gold); }
+      .resource-badge.other { background: var(--gray-lightest); color: var(--gray-mid); border: 1px solid var(--gray-lighter); }
+
+      /* === DATA PREVIEW === */
+      .fhir-preview {
+        background: var(--gray-lightest);
+        border: 1px solid var(--gray-lighter);
+        border-radius: 4px;
+        padding: 16px;
+        max-height: 400px;
+        overflow-y: auto;
+        font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+        font-size: 0.75rem;
+        line-height: 1.6;
+        color: var(--gray-dark);
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      /* === DRIVE SUCCESS BANNER === */
+      .drive-banner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 20px;
+        background: var(--color-success-light);
+        border: 1px solid #2e8540;
+        border-left: 4px solid #2e8540;
+        border-radius: 4px;
+        margin-bottom: 16px;
+      }
+
+      .drive-banner .drive-msg {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #1a4301;
+      }
+
+      .drive-banner .drive-msg small {
+        display: block;
+        font-weight: 400;
+        font-size: 0.8rem;
+        margin-top: 2px;
+        opacity: 0.8;
+      }
+
+      .drive-banner .drive-btn {
+        display: inline-block;
+        padding: 8px 20px;
+        background: #2e8540;
+        color: #fff;
+        font-size: 0.85rem;
+        font-weight: 600;
+        border-radius: 4px;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+
+      .drive-banner .drive-btn:hover {
+        background: #1a4301;
+      }
+
+      .drive-error-banner {
+        padding: 12px 16px;
+        background: var(--color-error-light);
+        border: 1px solid var(--color-error);
+        border-left: 4px solid var(--color-error);
+        border-radius: 4px;
+        margin-bottom: 16px;
+        font-size: 0.85rem;
+        color: #8b0000;
+      }
+
+      /* === PDF PREVIEW === */
+      .pdf-preview-container {
+        margin-top: 8px;
+      }
+
+      .pdf-preview-item {
+        margin-bottom: 12px;
+      }
+
+      .pdf-preview-item .pdf-label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--gray-mid);
+        margin-bottom: 6px;
+      }
+
+      .pdf-preview-item embed {
+        width: 100%;
+        height: 500px;
+        border: 1px solid var(--gray-lighter);
+        border-radius: 4px;
+      }
+
+      /* === CONFIG BAR === */
+      .config-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 16px;
+        background: var(--gray-lightest);
+        border: 1px solid var(--gray-lighter);
+        border-radius: 4px;
+        font-size: 0.8rem;
+        color: var(--gray-mid);
+        margin-bottom: 24px;
+      }
+
+      .config-bar .config-label {
+        font-weight: 600;
+        color: var(--cms-blue-darkest);
+        margin-right: 8px;
+      }
+
+      /* === INFO NOTE === */
+      .info-note {
+        background: var(--cms-blue-lightest);
+        border: 1px solid var(--cms-blue-light);
+        border-left: 4px solid var(--cms-blue);
+        border-radius: 4px;
+        padding: 14px 18px;
+        margin-bottom: 24px;
+        font-size: 0.85rem;
+        color: var(--cms-blue-darkest);
+        line-height: 1.5;
+      }
+
+      /* === FOOTER === */
+      .site-footer {
+        background: var(--cms-blue-darkest);
+        color: var(--white);
+        padding: 32px 24px;
+        text-align: center;
+        font-size: 0.8rem;
+        margin-top: 40px;
+      }
+
+      .site-footer p { opacity: 0.6; margin-bottom: 4px; }
+
+      .footer-inner {
+        max-width: 800px;
+        margin: 0 auto;
+      }
+
+      .gold-rule {
+        height: 3px;
+        background: linear-gradient(90deg, var(--cms-gold) 0%, var(--cms-gold-dark) 100%);
+        border: none;
+        margin: 0;
+      }
+
+      /* === MOBILE === */
+      @media (max-width: 480px) {
+        .hero h2 { font-size: 1.75rem; }
+        .controls { flex-direction: column; }
+        .site-title { font-size: 1.4rem; }
+        .header-inner { flex-direction: column; gap: 4px; align-items: flex-start; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="topbar">
+      <span>SMART Health Link Scanner</span>
+      <span id="orgTopbar"></span>
     </div>
-  </div>
 
-  <hr class="gold-rule">
-
-  <div class="hero">
-    <h2>Scan the Patient's QR Code</h2>
-    <p>Point your camera at a SMART Health Link QR code to securely import the patient's health data.</p>
-  </div>
-
-  <div class="container">
-    <div class="config-bar">
-      <div>
-        <span class="config-label">Destination:</span>
-        <span id="configInfo">Loading...</span>
+    <div class="site-header">
+      <div class="header-inner">
+        <div class="site-title">Kill <em>the</em> Clipboard</div>
+        <div class="org-name" id="orgHeader"></div>
       </div>
-      <a id="driveConnectBtn" href="/auth/google" style="display:none; background:#0071bc; color:#fff; padding:6px 14px; border-radius:4px; font-size:0.8rem; font-weight:600; text-decoration:none;">Connect Google Drive</a>
     </div>
 
-    <div class="scanner-section">
-      <div class="scanner-section-header">
-        <svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5zm-6 8h1.5v1.5H13V13zm1.5 1.5H16V16h-1.5v-1.5zM16 13h1.5v1.5H16V13zm-3 3h1.5v1.5H13V16zm1.5 1.5H16V19h-1.5v-1.5zM16 16h1.5v1.5H16V16zm1.5-1.5H19V16h-1.5v-1.5zm0 3H19V19h-1.5v-1.5zM3 3v2H1V1h4v2H3zm18-2v4h-2V3h-2V1h4zM3 19H1v4h4v-2H3v-2zm16 0v2h-2v2h4v-4h-2z"/></svg>
-        QR Scanner
-      </div>
-      <div id="reader"></div>
+    <hr class="gold-rule" />
+
+    <div class="hero">
+      <h2>Scan the Patient's QR Code</h2>
+      <p>
+        Point your camera at a SMART Health Link QR code to securely import the patient's health
+        data.
+      </p>
     </div>
 
-    <div class="controls">
-      <button id="startBtn" class="primary" onclick="startScanner()">Start Scan</button>
-      <button id="stopBtn" onclick="stopScanner()" disabled>Stop Scan</button>
-    </div>
-
-    <div class="info-note">
-      Only valid <strong>SMART Health Link</strong> QR codes will be recognized. Once scanned, the patient's health data will automatically be sent to the destination configured by your administrator.
-    </div>
-
-    <div id="status" class="status"></div>
-
-    <div id="passcodeForm" class="passcode-form">
-      <label>This SMART Health Link requires a passcode:</label>
-      <input type="text" id="passcodeInput" placeholder="Enter passcode" autocomplete="off">
-      <button class="primary" onclick="submitWithPasscode()">Submit</button>
-    </div>
-
-    <div id="results" class="results">
-      <div id="driveBanner"></div>
-
-      <div class="result-card">
-        <h3>Scan Results</h3>
-        <div class="result-card-body" id="resultSummary"></div>
+    <div class="container">
+      <div class="config-bar">
+        <div>
+          <span class="config-label">Destination:</span>
+          <span id="configInfo">Loading...</span>
+        </div>
+        <a
+          id="driveConnectBtn"
+          href="/auth/google"
+          style="display:none; background:#0071bc; color:#fff; padding:6px 14px; border-radius:4px; font-size:0.8rem; font-weight:600; text-decoration:none;"
+          >Connect Google Drive</a
+        >
       </div>
 
-      <div class="result-card" id="pdfCard" style="display:none">
-        <h3>PDF Documents</h3>
-        <div class="result-card-body" id="pdfPreviewArea"></div>
+      <div class="scanner-section">
+        <div class="scanner-section-header">
+          <svg viewBox="0 0 24 24">
+            <path
+              d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5zm-6 8h1.5v1.5H13V13zm1.5 1.5H16V16h-1.5v-1.5zM16 13h1.5v1.5H16V13zm-3 3h1.5v1.5H13V16zm1.5 1.5H16V19h-1.5v-1.5zM16 16h1.5v1.5H16V16zm1.5-1.5H19V16h-1.5v-1.5zm0 3H19V19h-1.5v-1.5zM3 3v2H1V1h4v2H3zm18-2v4h-2V3h-2V1h4zM3 19H1v4h4v-2H3v-2zm16 0v2h-2v2h4v-4h-2z"
+            />
+          </svg>
+          QR Scanner
+        </div>
+        <div id="reader"></div>
       </div>
 
-      <div class="result-card" id="resourceCard" style="display:none">
-        <h3>FHIR Resources Found</h3>
-        <div class="result-card-body" id="resourceBadges"></div>
+      <div class="controls">
+        <button id="startBtn" class="primary" onclick="startScanner()">Start Scan</button>
+        <button id="stopBtn" onclick="stopScanner()" disabled>Stop Scan</button>
       </div>
 
-      <div class="result-card" id="previewCard" style="display:none">
-        <h3>Data Preview</h3>
-        <div class="result-card-body">
-          <div class="fhir-preview" id="fhirPreview"></div>
+      <div class="info-note">
+        Only valid <strong>SMART Health Link</strong> QR codes will be recognized. Once scanned, the
+        patient's health data will automatically be sent to the destination configured by your
+        administrator.
+      </div>
+
+      <div id="status" class="status"></div>
+
+      <div id="passcodeForm" class="passcode-form">
+        <label>This SMART Health Link requires a passcode:</label>
+        <input type="text" id="passcodeInput" placeholder="Enter passcode" autocomplete="off" />
+        <button class="primary" onclick="submitWithPasscode()">Submit</button>
+      </div>
+
+      <div id="results" class="results">
+        <div id="driveBanner"></div>
+
+        <div class="result-card">
+          <h3>Scan Results</h3>
+          <div class="result-card-body" id="resultSummary"></div>
+        </div>
+
+        <div class="result-card" id="pdfCard" style="display:none">
+          <h3>PDF Documents</h3>
+          <div class="result-card-body" id="pdfPreviewArea"></div>
+        </div>
+
+        <div class="result-card" id="resourceCard" style="display:none">
+          <h3>FHIR Resources Found</h3>
+          <div class="result-card-body" id="resourceBadges"></div>
+        </div>
+
+        <div class="result-card" id="previewCard" style="display:none">
+          <h3>Data Preview</h3>
+          <div class="result-card-body">
+            <div class="fhir-preview" id="fhirPreview"></div>
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <div class="site-footer">
-    <div class="footer-inner">
-      <p id="orgFooter"></p>
-      <p>Powered by SMART Health Links</p>
-      <p style="margin-top:8px"><a href="/privacy" style="color:#fff;opacity:0.6;margin:0 12px">Privacy Policy</a><a href="/terms" style="color:#fff;opacity:0.6;margin:0 12px">Terms of Service</a></p>
+    <div class="site-footer">
+      <div class="footer-inner">
+        <p id="orgFooter"></p>
+        <p>Powered by SMART Health Links</p>
+        <p style="margin-top:8px">
+          <a href="/privacy" style="color:#fff;opacity:0.6;margin:0 12px">Privacy Policy</a
+          ><a href="/terms" style="color:#fff;opacity:0.6;margin:0 12px">Terms of Service</a>
+        </p>
+      </div>
     </div>
-  </div>
 
-  <script>
-    let scanner = null;
-    let lastQrText = null;
+    <script>
+      let scanner = null;
+      let lastQrText = null;
 
-    // Load config + org branding on page load
-    fetch('/api/config')
-      .then(r => r.json())
-      .then(cfg => {
-        const parts = [];
-        if (['file', 'both', 'all'].includes(cfg.outputMode)) parts.push(cfg.outputDirectory);
-        if (cfg.hasApiUrl) parts.push('API endpoint');
-        if (cfg.hasFhirServer) parts.push('FHIR server');
-        if (cfg.hasDriveConfig) parts.push('Google Drive');
-        document.getElementById('configInfo').textContent = parts.length ? parts.join(' + ') : 'Local files (default)';
+      // Load config + org branding on page load
+      fetch('/api/config')
+        .then(r => r.json())
+        .then(cfg => {
+          const parts = [];
+          if (['file', 'both', 'all'].includes(cfg.outputMode)) parts.push(cfg.outputDirectory);
+          if (cfg.hasApiUrl) parts.push('API endpoint');
+          if (cfg.hasFhirServer) parts.push('FHIR server');
+          if (cfg.hasDriveConfig) parts.push('Google Drive');
+          document.getElementById('configInfo').textContent = parts.length ? parts.join(' + ') : 'Local files (default)';
 
-        // Provider org branding
-        if (cfg.orgName) {
-          document.getElementById('orgHeader').textContent = cfg.orgName;
-          document.getElementById('orgTopbar').textContent = cfg.orgName;
-          document.getElementById('orgFooter').textContent = cfg.orgName;
-          document.title = `Kill the Clipboard | ${cfg.orgName}`;
-        }
-      })
-      .catch(() => {
-        document.getElementById('configInfo').textContent = 'Local files (default)';
-      });
-
-    // Check Google Drive connection
-    fetch('/api/drive-status')
-      .then(r => r.json())
-      .then(ds => {
-        const btn = document.getElementById('driveConnectBtn');
-        if (ds.needsAuth) {
-          btn.style.display = 'inline-block';
-        } else if (ds.configured) {
-          btn.style.display = 'inline-block';
-          btn.textContent = 'Drive Connected';
-          btn.style.background = '#2e8540';
-          btn.href = '#';
-          btn.onclick = (e) => e.preventDefault();
-        }
-      })
-      .catch(() => {});
-
-    async function startScanner() {
-      clearResults();
-      const startBtn = document.getElementById('startBtn');
-      const stopBtn = document.getElementById('stopBtn');
-
-      scanner = new Html5Qrcode('reader');
-
-      try {
-        await scanner.start(
-          { facingMode: 'environment' },
-          { fps: 10, qrbox: { width: 250, height: 250 } },
-          onScanSuccess,
-          () => {}
-        );
-
-        startBtn.disabled = true;
-        stopBtn.disabled = false;
-        setStatus('info', 'Camera active. Point at a SMART Health Link QR code.');
-      } catch (err) {
-        setStatus('error', `Camera error: ${err.message || err}`);
-      }
-    }
-
-    async function stopScanner() {
-      if (scanner) {
-        try { await scanner.stop(); } catch {}
-        scanner = null;
-      }
-      document.getElementById('startBtn').disabled = false;
-      document.getElementById('stopBtn').disabled = true;
-      setStatus('info', 'Camera stopped.');
-    }
-
-    async function onScanSuccess(decodedText) {
-      if (scanner) {
-        try { await scanner.stop(); } catch {}
-        scanner = null;
-        document.getElementById('startBtn').disabled = false;
-        document.getElementById('stopBtn').disabled = true;
-      }
-
-      lastQrText = decodedText;
-      setStatus('info', 'QR code detected. Processing SMART Health Link...');
-      await processScan(decodedText);
-    }
-
-    async function processScan(qrText, passcode) {
-      try {
-        const body = { qrText };
-        if (passcode) body.passcode = passcode;
-
-        const resp = await fetch('/api/scan', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
+          // Provider org branding
+          if (cfg.orgName) {
+            document.getElementById('orgHeader').textContent = cfg.orgName;
+            document.getElementById('orgTopbar').textContent = cfg.orgName;
+            document.getElementById('orgFooter').textContent = cfg.orgName;
+            document.title = `Kill the Clipboard | ${cfg.orgName}`;
+          }
+        })
+        .catch(() => {
+          document.getElementById('configInfo').textContent = 'Local files (default)';
         });
 
-        const data = await resp.json();
+      // Check Google Drive connection
+      fetch('/api/drive-status')
+        .then(r => r.json())
+        .then(ds => {
+          const btn = document.getElementById('driveConnectBtn');
+          if (ds.needsAuth) {
+            btn.style.display = 'inline-block';
+          } else if (ds.configured) {
+            btn.style.display = 'inline-block';
+            btn.textContent = 'Drive Connected';
+            btn.style.background = '#2e8540';
+            btn.href = '#';
+            btn.onclick = (e) => e.preventDefault();
+          }
+        })
+        .catch(() => {});
 
-        if (!resp.ok) {
-          setStatus('error', data.error || 'Server error');
-          return;
+      async function startScanner() {
+        clearResults();
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+
+        scanner = new Html5Qrcode('reader');
+
+        try {
+          await scanner.start(
+            { facingMode: 'environment' },
+            { fps: 10, qrbox: { width: 250, height: 250 } },
+            onScanSuccess,
+            () => {}
+          );
+
+          startBtn.disabled = true;
+          stopBtn.disabled = false;
+          setStatus('info', 'Camera active. Point at a SMART Health Link QR code.');
+        } catch (err) {
+          setStatus('error', `Camera error: ${err.message || err}`);
         }
-
-        if (data.status === 'not_shl') {
-          setStatus('warning', data.message);
-          return;
-        }
-
-        if (data.status === 'need_passcode') {
-          setStatus('warning', `${data.label || 'This link'} requires a passcode.`);
-          document.getElementById('passcodeForm').classList.add('visible');
-          return;
-        }
-
-        if (data.status === 'success') {
-          document.getElementById('passcodeForm').classList.remove('visible');
-          showResults(data);
-        }
-      } catch (err) {
-        setStatus('error', `Error: ${err.message}`);
-      }
-    }
-
-    function submitWithPasscode() {
-      const passcode = document.getElementById('passcodeInput').value.trim();
-      if (!passcode) return;
-      if (!lastQrText) {
-        setStatus('error', 'No QR code to retry. Please scan again.');
-        return;
-      }
-      setStatus('info', 'Retrying with passcode...');
-      processScan(lastQrText, passcode);
-    }
-
-    function showResults(data) {
-      let statusMsg = `${data.label ? data.label + ' \u2014 ' : ''}Extracted ${data.summary.fhirBundles} FHIR bundle(s), ${data.summary.pdfs} PDF(s)`;
-      if (data.savedTo) statusMsg += ` \u2014 Saved to ${data.savedTo}`;
-      setStatus('success', statusMsg);
-
-      const resultsDiv = document.getElementById('results');
-      resultsDiv.classList.add('visible');
-
-      // Drive upload banner
-      const driveBanner = document.getElementById('driveBanner');
-      if (data.driveLink) {
-        driveBanner.innerHTML = `
-          <div class="drive-banner">
-            <div class="drive-msg">
-              Uploaded to Google Drive
-              <small>${data.summary.fhirBundles} FHIR bundle(s) and ${data.summary.pdfs} PDF(s) saved</small>
-            </div>
-            <a href="${data.driveLink}" target="_blank" class="drive-btn">View in Drive</a>
-          </div>`;
-      } else if (data.driveError) {
-        driveBanner.innerHTML = `
-          <div class="drive-error-banner">
-            Drive upload failed: ${data.driveError}
-          </div>`;
-      } else {
-        driveBanner.innerHTML = '';
       }
 
-      const summaryHtml = `
-        ${data.label ? `<div class="stat-row"><span class="stat-label">Label</span><span class="stat-value">${data.label}</span></div>` : ''}
-        <div class="stat-row"><span class="stat-label">FHIR Bundles</span><span class="stat-value">${data.summary.fhirBundles}</span></div>
-        <div class="stat-row"><span class="stat-label">PDFs</span><span class="stat-value">${data.summary.pdfs}</span></div>
-        <div class="stat-row"><span class="stat-label">Other Entries</span><span class="stat-value">${data.summary.rawEntries}</span></div>
-        ${data.savedTo ? `<div class="stat-row"><span class="stat-label">Saved To</span><span class="stat-value">${data.savedTo}</span></div>` : ''}
-      `;
-      document.getElementById('resultSummary').innerHTML = summaryHtml;
+      async function stopScanner() {
+        if (scanner) {
+          try { await scanner.stop(); } catch {}
+          scanner = null;
+        }
+        document.getElementById('startBtn').disabled = false;
+        document.getElementById('stopBtn').disabled = true;
+        setStatus('info', 'Camera stopped.');
+      }
 
-      // PDF previews
-      if (data.pdfs && data.pdfs.length > 0) {
-        const pdfCard = document.getElementById('pdfCard');
-        const pdfArea = document.getElementById('pdfPreviewArea');
-        let hasPreviews = false;
+      async function onScanSuccess(decodedText) {
+        if (scanner) {
+          try { await scanner.stop(); } catch {}
+          scanner = null;
+          document.getElementById('startBtn').disabled = false;
+          document.getElementById('stopBtn').disabled = true;
+        }
 
-        let pdfHtml = '<div class="pdf-preview-container">';
-        for (const pdf of data.pdfs) {
-          if (pdf.dataBase64) {
-            hasPreviews = true;
-            pdfHtml += `
-              <div class="pdf-preview-item">
-                <div class="pdf-label">${pdf.filename}</div>
-                <embed src="data:application/pdf;base64,${pdf.dataBase64}" type="application/pdf">
-              </div>`;
-          } else if (pdf.url) {
-            hasPreviews = true;
-            pdfHtml += `
-              <div class="pdf-preview-item">
-                <div class="pdf-label">${pdf.filename}</div>
-                <embed src="${pdf.url}" type="application/pdf">
-              </div>`;
-          } else {
-            pdfHtml += `
-              <div class="pdf-preview-item">
-                <div class="pdf-label">${pdf.filename} (no preview available)</div>
-              </div>`;
+        lastQrText = decodedText;
+        setStatus('info', 'QR code detected. Processing SMART Health Link...');
+        await processScan(decodedText);
+      }
+
+      async function processScan(qrText, passcode) {
+        try {
+          const body = { qrText };
+          if (passcode) body.passcode = passcode;
+
+          const resp = await fetch('/api/scan', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          });
+
+          const data = await resp.json();
+
+          if (!resp.ok) {
+            setStatus('error', data.error || 'Server error');
+            return;
+          }
+
+          if (data.status === 'not_shl') {
+            setStatus('warning', data.message);
+            return;
+          }
+
+          if (data.status === 'need_passcode') {
+            setStatus('warning', `${data.label || 'This link'} requires a passcode.`);
+            document.getElementById('passcodeForm').classList.add('visible');
+            return;
+          }
+
+          if (data.status === 'success') {
+            document.getElementById('passcodeForm').classList.remove('visible');
+            showResults(data);
+          }
+        } catch (err) {
+          setStatus('error', `Error: ${err.message}`);
+        }
+      }
+
+      function submitWithPasscode() {
+        const passcode = document.getElementById('passcodeInput').value.trim();
+        if (!passcode) return;
+        if (!lastQrText) {
+          setStatus('error', 'No QR code to retry. Please scan again.');
+          return;
+        }
+        setStatus('info', 'Retrying with passcode...');
+        processScan(lastQrText, passcode);
+      }
+
+      function showResults(data) {
+        let statusMsg = `${data.label ? data.label + ' \u2014 ' : ''}Extracted ${data.summary.fhirBundles} FHIR bundle(s), ${data.summary.pdfs} PDF(s)`;
+        if (data.savedTo) statusMsg += ` \u2014 Saved to ${data.savedTo}`;
+        setStatus('success', statusMsg);
+
+        const resultsDiv = document.getElementById('results');
+        resultsDiv.classList.add('visible');
+
+        // Drive upload banner
+        const driveBanner = document.getElementById('driveBanner');
+        if (data.driveLink) {
+          driveBanner.innerHTML = `
+            <div class="drive-banner">
+              <div class="drive-msg">
+                Uploaded to Google Drive
+                <small>${data.summary.fhirBundles} FHIR bundle(s) and ${data.summary.pdfs} PDF(s) saved</small>
+              </div>
+              <a href="${data.driveLink}" target="_blank" class="drive-btn">View in Drive</a>
+            </div>`;
+        } else if (data.driveError) {
+          driveBanner.innerHTML = `
+            <div class="drive-error-banner">
+              Drive upload failed: ${data.driveError}
+            </div>`;
+        } else {
+          driveBanner.innerHTML = '';
+        }
+
+        const summaryHtml = `
+          ${data.label ? `<div class="stat-row"><span class="stat-label">Label</span><span class="stat-value">${data.label}</span></div>` : ''}
+          <div class="stat-row"><span class="stat-label">FHIR Bundles</span><span class="stat-value">${data.summary.fhirBundles}</span></div>
+          <div class="stat-row"><span class="stat-label">PDFs</span><span class="stat-value">${data.summary.pdfs}</span></div>
+          <div class="stat-row"><span class="stat-label">Other Entries</span><span class="stat-value">${data.summary.rawEntries}</span></div>
+          ${data.savedTo ? `<div class="stat-row"><span class="stat-label">Saved To</span><span class="stat-value">${data.savedTo}</span></div>` : ''}
+        `;
+        document.getElementById('resultSummary').innerHTML = summaryHtml;
+
+        // PDF previews
+        if (data.pdfs && data.pdfs.length > 0) {
+          const pdfCard = document.getElementById('pdfCard');
+          const pdfArea = document.getElementById('pdfPreviewArea');
+          let hasPreviews = false;
+
+          let pdfHtml = '<div class="pdf-preview-container">';
+          for (const pdf of data.pdfs) {
+            if (pdf.dataBase64) {
+              hasPreviews = true;
+              pdfHtml += `
+                <div class="pdf-preview-item">
+                  <div class="pdf-label">${pdf.filename}</div>
+                  <embed src="data:application/pdf;base64,${pdf.dataBase64}" type="application/pdf">
+                </div>`;
+            } else if (pdf.url) {
+              hasPreviews = true;
+              pdfHtml += `
+                <div class="pdf-preview-item">
+                  <div class="pdf-label">${pdf.filename}</div>
+                  <embed src="${pdf.url}" type="application/pdf">
+                </div>`;
+            } else {
+              pdfHtml += `
+                <div class="pdf-preview-item">
+                  <div class="pdf-label">${pdf.filename} (no preview available)</div>
+                </div>`;
+            }
+          }
+          pdfHtml += '</div>';
+
+          if (hasPreviews || data.pdfs.length > 0) {
+            pdfCard.style.display = 'block';
+            pdfArea.innerHTML = pdfHtml;
           }
         }
-        pdfHtml += '</div>';
 
-        if (hasPreviews || data.pdfs.length > 0) {
-          pdfCard.style.display = 'block';
-          pdfArea.innerHTML = pdfHtml;
-        }
-      }
+        // FHIR resources
+        if (data.fhirBundles && data.fhirBundles.length > 0) {
+          const resourceCard = document.getElementById('resourceCard');
+          resourceCard.style.display = 'block';
 
-      // FHIR resources
-      if (data.fhirBundles && data.fhirBundles.length > 0) {
-        const resourceCard = document.getElementById('resourceCard');
-        resourceCard.style.display = 'block';
-
-        const resources = [];
-        for (const bundle of data.fhirBundles) {
-          if (bundle.entry) {
-            for (const entry of bundle.entry) {
-              if (entry.resource?.resourceType) {
-                resources.push(entry.resource.resourceType);
+          const resources = [];
+          for (const bundle of data.fhirBundles) {
+            if (bundle.entry) {
+              for (const entry of bundle.entry) {
+                if (entry.resource?.resourceType) {
+                  resources.push(entry.resource.resourceType);
+                }
               }
             }
           }
-        }
 
-        const counts = {};
-        resources.forEach(r => { counts[r] = (counts[r] || 0) + 1; });
+          const counts = {};
+          resources.forEach(r => { counts[r] = (counts[r] || 0) + 1; });
 
-        const badgeClass = (type) => {
-          const t = type.toLowerCase();
-          if (t === 'patient') return 'patient';
-          if (t.includes('condition')) return 'condition';
-          if (t.includes('observation')) return 'observation';
-          if (t.includes('medication')) return 'medication';
-          if (t.includes('immunization')) return 'immunization';
-          return 'other';
-        };
+          const badgeClass = (type) => {
+            const t = type.toLowerCase();
+            if (t === 'patient') return 'patient';
+            if (t.includes('condition')) return 'condition';
+            if (t.includes('observation')) return 'observation';
+            if (t.includes('medication')) return 'medication';
+            if (t.includes('immunization')) return 'immunization';
+            return 'other';
+          };
 
-        document.getElementById('resourceBadges').innerHTML =
-          Object.entries(counts)
-            .map(([type, count]) => `<span class="resource-badge ${badgeClass(type)}">${type} (${count})</span>`)
-            .join('');
+          document.getElementById('resourceBadges').innerHTML =
+            Object.entries(counts)
+              .map(([type, count]) => `<span class="resource-badge ${badgeClass(type)}">${type} (${count})</span>`)
+              .join('');
 
-        const previewCard = document.getElementById('previewCard');
-        previewCard.style.display = 'block';
+          const previewCard = document.getElementById('previewCard');
+          previewCard.style.display = 'block';
 
-        let preview = '';
-        for (const bundle of data.fhirBundles) {
-          if (bundle.entry) {
-            for (const entry of bundle.entry) {
-              const r = entry.resource;
-              if (!r) continue;
-              if (r.resourceType === 'Patient') {
-                const name = r.name?.[0];
-                const nameStr = name ? [name.given?.join(' '), name.family].filter(Boolean).join(' ') : 'Unknown';
-                preview += `Patient: ${nameStr}\n`;
-                if (r.birthDate) preview += `DOB: ${r.birthDate}\n`;
-                if (r.gender) preview += `Gender: ${r.gender}\n`;
-                preview += '\n';
+          let preview = '';
+          for (const bundle of data.fhirBundles) {
+            if (bundle.entry) {
+              for (const entry of bundle.entry) {
+                const r = entry.resource;
+                if (!r) continue;
+                if (r.resourceType === 'Patient') {
+                  const name = r.name?.[0];
+                  const nameStr = name ? [name.given?.join(' '), name.family].filter(Boolean).join(' ') : 'Unknown';
+                  preview += `Patient: ${nameStr}\n`;
+                  if (r.birthDate) preview += `DOB: ${r.birthDate}\n`;
+                  if (r.gender) preview += `Gender: ${r.gender}\n`;
+                  preview += '\n';
+                }
               }
             }
+            preview += JSON.stringify(bundle, null, 2).slice(0, 3000);
+            if (JSON.stringify(bundle).length > 3000) preview += '\n... (truncated)';
           }
-          preview += JSON.stringify(bundle, null, 2).slice(0, 3000);
-          if (JSON.stringify(bundle).length > 3000) preview += '\n... (truncated)';
+
+          document.getElementById('fhirPreview').textContent = preview;
         }
-
-        document.getElementById('fhirPreview').textContent = preview;
       }
-    }
 
-    function setStatus(type, message) {
-      const el = document.getElementById('status');
-      el.className = `status ${type}`;
-      el.textContent = message;
-    }
+      function setStatus(type, message) {
+        const el = document.getElementById('status');
+        el.className = `status ${type}`;
+        el.textContent = message;
+      }
 
-    function clearResults() {
-      document.getElementById('results').classList.remove('visible');
-      document.getElementById('driveBanner').innerHTML = '';
-      document.getElementById('pdfCard').style.display = 'none';
-      document.getElementById('resourceCard').style.display = 'none';
-      document.getElementById('previewCard').style.display = 'none';
-      document.getElementById('passcodeForm').classList.remove('visible');
-      document.getElementById('passcodeInput').value = '';
-      document.getElementById('status').className = 'status';
-    }
-  </script>
-</body>
+      function clearResults() {
+        document.getElementById('results').classList.remove('visible');
+        document.getElementById('driveBanner').innerHTML = '';
+        document.getElementById('pdfCard').style.display = 'none';
+        document.getElementById('resourceCard').style.display = 'none';
+        document.getElementById('previewCard').style.display = 'none';
+        document.getElementById('passcodeForm').classList.remove('visible');
+        document.getElementById('passcodeInput').value = '';
+        document.getElementById('status').className = 'status';
+      }
+    </script>
+  </body>
 </html>

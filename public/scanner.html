@@ -1,1740 +1,1989 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kill the Clipboard</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"
-    integrity="sha384-c9d8RFSL+u3exBOJ4Yp3HUJXS4znl9f+z66d1y54ig+ea249SpqR+w1wyvXz/lk+"
-    crossorigin="anonymous"></script>
-  <!-- Client-side SHL processing: decryption happens in the browser, not the server -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jose/5.9.6/index.umd.min.js"
-    integrity="sha384-WaQ/HOFuAmf6nqMQqr3QFD5MVVftUXPeHMzX8uzER+kHiGeCylqg4uOBsXVq7sEI"
-    crossorigin="anonymous"></script>
-  <script src="https://unpkg.com/pako@2.1.0/dist/pako.min.js"
-    integrity="sha384-rNlaE5fs9dGIjmxWDALQh/RBAaGRYT5ChrzHo6tRfgrZ36iRFAiquP5g41Jsv+0j"
-    crossorigin="anonymous"></script>
-  <script src="/js/shl-client.js"></script>
-  <style>
-    :root {
-      /* CMS Primary */
-      --cms-blue: #0071bc;
-      --cms-blue-dark: #205493;
-      --cms-blue-darkest: #112e51;
-      --cms-blue-light: #4992d6;
-      --cms-blue-lightest: #e6f0f8;
-
-      /* CMS Accent / Alt */
-      --cms-cyan: #02bfe7;
-      --cms-cyan-dark: #0186a2;
-
-      /* CMS Gold */
-      --cms-gold: #f3ce3b;
-      --cms-gold-dark: #c9a616;
-      --cms-gold-light: #fef9e9;
-
-      /* Status */
-      --color-success: #2e8540;
-      --color-success-light: #e7f4e4;
-      --color-error: #e31c3d;
-      --color-error-light: #fce4ec;
-      --color-warn: #f8c41f;
-      --color-warn-light: #fef9e9;
-
-      /* Neutrals */
-      --gray-darkest: #1b1b1b;
-      --gray-dark: #333334;
-      --gray-mid: #5b616b;
-      --gray-light: #aeb0b5;
-      --gray-lighter: #d6d7d9;
-      --gray-lightest: #f1f1f1;
-      --white: #ffffff;
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: var(--white);
-      color: var(--gray-dark);
-      min-height: 100vh;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    /* === TOP BAR === */
-    .topbar {
-      background: var(--cms-blue-darkest);
-      color: var(--white);
-      padding: 8px 24px;
-      font-size: 0.75rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .topbar span { opacity: 0.7; }
-
-    /* === HEADER === */
-    .site-header {
-      background: var(--white);
-      border-bottom: 4px solid var(--cms-gold);
-      padding: 20px 24px;
-    }
-
-    .header-inner {
-      max-width: 800px;
-      margin: 0 auto;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .site-title {
-      font-family: 'Instrument Serif', Georgia, serif;
-      font-size: 1.75rem;
-      color: var(--cms-blue-darkest);
-      letter-spacing: -0.02em;
-    }
-
-    .site-title em {
-      font-style: italic;
-      color: var(--cms-blue);
-    }
-
-    .org-name {
-      font-size: 0.8rem;
-      color: var(--gray-mid);
-      font-weight: 500;
-    }
-
-    /* === HERO === */
-    .hero {
-      background: linear-gradient(135deg, var(--cms-blue-darkest) 0%, var(--cms-blue-dark) 100%);
-      color: var(--white);
-      padding: 40px 24px;
-      text-align: center;
-    }
-
-    .hero h2 {
-      font-family: 'Instrument Serif', Georgia, serif;
-      font-size: 2.25rem;
-      font-weight: 400;
-      letter-spacing: -0.03em;
-      margin-bottom: 8px;
-    }
-
-    .hero p {
-      font-size: 1rem;
-      opacity: 0.8;
-      max-width: 480px;
-      margin: 0 auto;
-    }
-
-    /* === MAIN CONTENT === */
-    .container {
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 32px 24px;
-    }
-
-    /* === SCANNER === */
-    .scanner-section {
-      background: var(--white);
-      border: 1px solid var(--gray-lighter);
-      border-radius: 4px;
-      overflow: hidden;
-      margin-bottom: 24px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-    }
-
-    .scanner-section-header {
-      background: var(--cms-blue-lightest);
-      border-bottom: 1px solid var(--gray-lighter);
-      padding: 12px 20px;
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: var(--cms-blue-darkest);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .scanner-section-header svg {
-      width: 18px;
-      height: 18px;
-      fill: var(--cms-blue);
-    }
-
-    #reader {
-      width: 100%;
-      min-height: 60px;
-    }
-
-    /* === CONTROLS === */
-    .controls {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 24px;
-    }
-
-    button {
-      flex: 1;
-      padding: 12px 20px;
-      border: 2px solid var(--gray-lighter);
-      border-radius: 4px;
-      background: var(--white);
-      color: var(--cms-blue);
-      font-family: 'Inter', sans-serif;
-      font-size: 0.875rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-
-    button:hover {
-      background: var(--cms-blue-lightest);
-      border-color: var(--cms-blue-light);
-    }
-
-    button.primary {
-      background: var(--cms-blue);
-      border-color: var(--cms-blue);
-      color: var(--white);
-    }
-
-    button.primary:hover {
-      background: var(--cms-blue-dark);
-      border-color: var(--cms-blue-dark);
-    }
-
-    button:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-    }
-
-    /* === STATUS ALERTS === */
-    .status {
-      padding: 12px 16px;
-      border-radius: 4px;
-      margin-bottom: 16px;
-      font-size: 0.875rem;
-      display: none;
-      border-left: 4px solid transparent;
-    }
-
-    .status.info {
-      display: block;
-      background: var(--cms-blue-lightest);
-      border-left-color: var(--cms-blue);
-      color: var(--cms-blue-darkest);
-    }
-
-    .status.success {
-      display: block;
-      background: var(--color-success-light);
-      border-left-color: var(--color-success);
-      color: #1a4301;
-    }
-
-    .status.error {
-      display: block;
-      background: var(--color-error-light);
-      border-left-color: var(--color-error);
-      color: #8b0000;
-    }
-
-    .status.warning {
-      display: block;
-      background: var(--color-warn-light);
-      border-left-color: var(--cms-gold-dark);
-      color: #654501;
-    }
-
-    /* === PASSCODE FORM === */
-    .passcode-form {
-      display: none;
-      padding: 20px;
-      background: var(--cms-blue-lightest);
-      border: 1px solid var(--gray-lighter);
-      border-left: 4px solid var(--cms-gold);
-      border-radius: 4px;
-      margin-bottom: 16px;
-    }
-
-    .passcode-form.visible { display: block; }
-
-    .passcode-form label {
-      display: block;
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: var(--cms-blue-darkest);
-      margin-bottom: 8px;
-    }
-
-    .passcode-form input {
-      width: 100%;
-      padding: 10px 12px;
-      background: var(--white);
-      border: 2px solid var(--gray-lighter);
-      border-radius: 4px;
-      color: var(--gray-dark);
-      font-size: 1rem;
-      font-family: 'Inter', sans-serif;
-      margin-bottom: 12px;
-    }
-
-    .passcode-form input:focus {
-      outline: none;
-      border-color: var(--cms-blue);
-      box-shadow: 0 0 0 2px rgba(0,113,188,0.2);
-    }
-
-    /* === PASSWORD PROMPT === */
-    .password-prompt {
-      display: none;
-      max-width: 420px;
-      margin: 0 auto;
-    }
-
-    .password-prompt.visible { display: block; }
-
-    .password-card {
-      background: var(--white);
-      border: 1px solid var(--gray-lighter);
-      border-radius: 4px;
-      overflow: hidden;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-    }
-
-    .password-card-header {
-      background: var(--cms-blue-lightest);
-      border-bottom: 1px solid var(--gray-lighter);
-      padding: 14px 20px;
-      font-size: 0.925rem;
-      font-weight: 600;
-      color: var(--cms-blue-darkest);
-    }
-
-    .password-card-body {
-      padding: 24px 20px;
-    }
-
-    .password-card-body label {
-      display: block;
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: var(--cms-blue-darkest);
-      margin-bottom: 8px;
-    }
-
-    .password-card-body input {
-      width: 100%;
-      padding: 10px 12px;
-      background: var(--white);
-      border: 2px solid var(--gray-lighter);
-      border-radius: 4px;
-      color: var(--gray-dark);
-      font-size: 1rem;
-      font-family: 'Inter', sans-serif;
-      margin-bottom: 16px;
-    }
-
-    .password-card-body input:focus {
-      outline: none;
-      border-color: var(--cms-blue);
-      box-shadow: 0 0 0 2px rgba(0,113,188,0.2);
-    }
-
-    .password-card-body button {
-      flex: none;
-      width: 100%;
-    }
-
-    .password-error {
-      display: none;
-      padding: 10px 14px;
-      background: var(--color-error-light);
-      border-left: 4px solid var(--color-error);
-      border-radius: 4px;
-      margin-bottom: 16px;
-      font-size: 0.85rem;
-      color: #8b0000;
-    }
-
-    .password-error.visible { display: block; }
-
-    .password-admin-link {
-      text-align: center;
-      margin-top: 16px;
-      font-size: 0.8rem;
-    }
-
-    .password-admin-link a {
-      color: var(--cms-blue);
-      text-decoration: none;
-      font-weight: 500;
-    }
-
-    .password-admin-link a:hover {
-      text-decoration: underline;
-    }
-
-    /* === RESULTS === */
-    .results { display: none; }
-    .results.visible { display: block; }
-
-    .result-card {
-      background: var(--white);
-      border: 1px solid var(--gray-lighter);
-      border-radius: 4px;
-      overflow: hidden;
-      margin-bottom: 16px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-    }
-
-    .result-card h3 {
-      background: var(--gray-lightest);
-      border-bottom: 1px solid var(--gray-lighter);
-      padding: 10px 16px;
-      font-size: 0.8rem;
-      font-weight: 700;
-      color: var(--gray-mid);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-
-    .result-card-body {
-      padding: 16px;
-    }
-
-    .stat-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 10px 0;
-      border-bottom: 1px solid var(--gray-lightest);
-      font-size: 0.9rem;
-    }
-
-    .stat-row:last-child { border-bottom: none; }
-    .stat-label { color: var(--gray-mid); }
-    .stat-value { color: var(--cms-blue-darkest); font-weight: 600; }
-
-    /* === RESOURCE BADGES === */
-    .resource-badge {
-      display: inline-block;
-      padding: 4px 10px;
-      border-radius: 3px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      margin: 3px 4px 3px 0;
-      letter-spacing: 0.02em;
-    }
-
-    .resource-badge.patient { background: var(--cms-blue-lightest); color: var(--cms-blue-dark); border: 1px solid var(--cms-blue-light); }
-    .resource-badge.condition { background: #fce4ec; color: #880e4f; border: 1px solid #f48fb1; }
-    .resource-badge.observation { background: #e8f5e9; color: #1b5e20; border: 1px solid #81c784; }
-    .resource-badge.medication { background: #ede7f6; color: #4527a0; border: 1px solid #b39ddb; }
-    .resource-badge.immunization { background: var(--cms-gold-light); color: #654501; border: 1px solid var(--cms-gold); }
-    .resource-badge.other { background: var(--gray-lightest); color: var(--gray-mid); border: 1px solid var(--gray-lighter); }
-
-    /* === DATA PREVIEW === */
-    .fhir-preview {
-      background: var(--gray-lightest);
-      border: 1px solid var(--gray-lighter);
-      border-radius: 4px;
-      padding: 16px;
-      max-height: 400px;
-      overflow-y: auto;
-      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-      font-size: 0.75rem;
-      line-height: 1.6;
-      color: var(--gray-dark);
-      white-space: pre-wrap;
-      word-break: break-word;
-    }
-
-    /* === SUCCESS SCREEN === */
-    .success-screen {
-      background: var(--color-success-light);
-      border: 2px solid var(--color-success);
-      border-radius: 8px;
-      padding: 32px 24px;
-      text-align: center;
-      margin-bottom: 24px;
-    }
-
-    .success-screen .success-icon {
-      width: 56px;
-      height: 56px;
-      background: var(--color-success);
-      border-radius: 50%;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 16px;
-    }
-
-    .success-screen .success-icon svg {
-      width: 32px;
-      height: 32px;
-      fill: var(--white);
-    }
-
-    .success-screen h3 {
-      font-family: 'Instrument Serif', Georgia, serif;
-      font-size: 1.5rem;
-      color: #1a4301;
-      margin-bottom: 8px;
-      font-weight: 400;
-    }
-
-    .success-screen p {
-      font-size: 0.9rem;
-      color: #1a4301;
-      margin-bottom: 20px;
-      opacity: 0.85;
-    }
-
-    .success-screen .open-folder-btn {
-      display: inline-block;
-      padding: 12px 28px;
-      background: var(--color-success);
-      color: var(--white);
-      font-size: 0.95rem;
-      font-weight: 600;
-      border: none;
-      border-radius: 4px;
-      text-decoration: none;
-      cursor: pointer;
-      transition: background 0.15s;
-    }
-
-    .success-screen .open-folder-btn:hover {
-      background: #1a4301;
-    }
-
-    .success-screen .scan-again-btn {
-      display: inline-block;
-      padding: 10px 24px;
-      background: transparent;
-      color: #1a4301;
-      font-size: 0.85rem;
-      font-weight: 600;
-      border: 2px solid #2e8540;
-      border-radius: 4px;
-      cursor: pointer;
-      margin-left: 12px;
-      text-decoration: none;
-      transition: all 0.15s;
-    }
-
-    .success-screen .scan-again-btn:hover {
-      background: rgba(46,133,64,0.1);
-    }
-
-    /* === DRIVE ERROR BANNER === */
-    .drive-error-banner {
-      padding: 12px 16px;
-      background: var(--color-error-light);
-      border: 1px solid var(--color-error);
-      border-left: 4px solid var(--color-error);
-      border-radius: 4px;
-      margin-bottom: 16px;
-      font-size: 0.85rem;
-      color: #8b0000;
-    }
-
-    /* === SUCCESS BANNERS (email, API) === */
-    .success-banner {
-      display: flex;
-      align-items: center;
-      padding: 14px 20px;
-      background: var(--color-success-light);
-      border: 1px solid #2e8540;
-      border-left: 4px solid #2e8540;
-      border-radius: 4px;
-      margin-bottom: 16px;
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: #1a4301;
-      gap: 8px;
-    }
-
-    .success-banner svg {
-      width: 18px;
-      height: 18px;
-      fill: #2e8540;
-      flex-shrink: 0;
-    }
-
-    /* === DOWNLOAD SECTION === */
-    .download-section {
-      margin-bottom: 16px;
-    }
-
-    .download-section .download-buttons {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 8px;
-    }
-
-    .download-section button.download-btn {
-      flex: none;
-      padding: 10px 18px;
-      background: var(--cms-blue);
-      border-color: var(--cms-blue);
-      color: var(--white);
-      font-size: 0.8rem;
-    }
-
-    .download-section button.download-btn:hover {
-      background: var(--cms-blue-dark);
-      border-color: var(--cms-blue-dark);
-    }
-
-    .download-section button.download-all {
-      flex: none;
-      padding: 10px 18px;
-      background: var(--color-success);
-      border-color: var(--color-success);
-      color: var(--white);
-      font-size: 0.8rem;
-    }
-
-    .download-section button.download-all:hover {
-      background: #1a4301;
-      border-color: #1a4301;
-    }
-
-    /* === PDF PREVIEW === */
-    .pdf-preview-container {
-      margin-top: 8px;
-    }
-
-    .pdf-preview-item {
-      margin-bottom: 12px;
-    }
-
-    .pdf-preview-item .pdf-label {
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--gray-mid);
-      margin-bottom: 6px;
-    }
-
-    .pdf-preview-item embed {
-      width: 100%;
-      height: 500px;
-      border: 1px solid var(--gray-lighter);
-      border-radius: 4px;
-    }
-
-    /* === CONFIG BAR === */
-    .config-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px 16px;
-      background: var(--gray-lightest);
-      border: 1px solid var(--gray-lighter);
-      border-radius: 4px;
-      font-size: 0.8rem;
-      color: var(--gray-mid);
-      margin-bottom: 24px;
-    }
-
-    .config-bar .config-label {
-      font-weight: 600;
-      color: var(--cms-blue-darkest);
-      margin-right: 8px;
-    }
-
-    .config-bar .admin-link {
-      color: var(--cms-blue);
-      text-decoration: none;
-      font-weight: 600;
-      font-size: 0.8rem;
-    }
-
-    .config-bar .admin-link:hover {
-      text-decoration: underline;
-    }
-
-    .file-upload { display: none; }
-
-    /* === APP VERIFICATION BANNERS === */
-    .app-verified-banner {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 14px 20px;
-      background: var(--color-success-light);
-      border: 2px solid var(--color-success);
-      border-radius: 8px;
-      margin-bottom: 16px;
-      font-size: 0.9rem;
-      font-weight: 600;
-      color: #1a4301;
-    }
-
-    .app-verified-banner svg {
-      width: 22px;
-      height: 22px;
-      fill: var(--color-success);
-      flex-shrink: 0;
-    }
-
-    .app-rejected-banner {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 14px 20px;
-      background: var(--color-error-light);
-      border: 2px solid var(--color-error);
-      border-radius: 8px;
-      margin-bottom: 16px;
-      font-size: 0.9rem;
-      font-weight: 600;
-      color: #8b0000;
-    }
-
-    .app-rejected-banner svg {
-      width: 22px;
-      height: 22px;
-      fill: var(--color-error);
-      flex-shrink: 0;
-    }
-
-    .app-pending-banner {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 14px 20px;
-      background: var(--cms-blue-lightest);
-      border: 2px solid var(--cms-blue);
-      border-radius: 8px;
-      margin-bottom: 16px;
-      font-size: 0.9rem;
-      font-weight: 600;
-      color: var(--cms-blue-darkest);
-    }
-
-    .app-pending-banner svg {
-      width: 22px;
-      height: 22px;
-      fill: var(--cms-blue);
-      flex-shrink: 0;
-    }
-
-    .app-banner-reset {
-      margin-left: auto;
-      background: none;
-      border: none;
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: inherit;
-      cursor: pointer;
-      text-decoration: underline;
-      padding: 0;
-    }
-
-    /* === STEP INDICATOR === */
-    .step-indicator {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 12px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--gray-mid);
-    }
-
-    .step-indicator .step {
-      padding: 4px 12px;
-      border-radius: 20px;
-      background: var(--gray-lightest);
-      border: 1px solid var(--gray-lighter);
-    }
-
-    .step-indicator .step.active {
-      background: var(--cms-blue);
-      color: var(--white);
-      border-color: var(--cms-blue);
-    }
-
-    .step-indicator .step.done {
-      background: var(--color-success-light);
-      color: var(--color-success);
-      border-color: var(--color-success);
-    }
-
-    /* === ERROR PAGE === */
-    .error-page {
-      display: none;
-      text-align: center;
-      padding: 60px 24px;
-    }
-
-    .error-page.visible { display: block; }
-
-    .error-page h2 {
-      font-family: 'Instrument Serif', Georgia, serif;
-      font-size: 2rem;
-      color: var(--cms-blue-darkest);
-      margin-bottom: 12px;
-    }
-
-    .error-page p {
-      font-size: 1rem;
-      color: var(--gray-mid);
-      margin-bottom: 24px;
-    }
-
-    .error-page a {
-      color: var(--cms-blue);
-      text-decoration: none;
-      font-weight: 600;
-    }
-
-    .error-page a:hover {
-      text-decoration: underline;
-    }
-
-    /* === FOOTER === */
-    .site-footer {
-      background: var(--cms-blue-darkest);
-      color: var(--white);
-      padding: 32px 24px;
-      text-align: center;
-      font-size: 0.8rem;
-      margin-top: 40px;
-    }
-
-    .site-footer p { opacity: 0.6; margin-bottom: 4px; }
-
-    .footer-inner {
-      max-width: 800px;
-      margin: 0 auto;
-    }
-
-    .gold-rule {
-      height: 3px;
-      background: linear-gradient(90deg, var(--cms-gold) 0%, var(--cms-gold-dark) 100%);
-      border: none;
-      margin: 0;
-    }
-
-    /* === MOBILE === */
-    @media (max-width: 480px) {
-      .hero h2 { font-size: 1.75rem; }
-      .controls { flex-direction: column; }
-      .site-title { font-size: 1.4rem; }
-      .header-inner { flex-direction: column; gap: 4px; align-items: flex-start; }
-      .download-section .download-buttons { flex-direction: column; }
-    }
-  </style>
-</head>
-<body>
-  <div class="topbar">
-    <span>SMART Health Link Scanner</span>
-    <span id="orgTopbar"></span>
-  </div>
-
-  <div class="site-header">
-    <div class="header-inner">
-      <div class="site-title">Kill <em>the</em> Clipboard</div>
-      <div class="org-name" id="orgHeader"></div>
-    </div>
-  </div>
-
-  <hr class="gold-rule">
-
-  <!-- Error page (shown if org not found) -->
-  <div id="errorPage" class="error-page">
-    <h2>Organization Not Found</h2>
-    <p>The organization you are looking for does not exist or the URL is incorrect.</p>
-    <a href="/">Go to Home Page</a>
-  </div>
-
-  <!-- Password prompt (shown before scanner if no token) -->
-  <div class="container">
-    <div id="passwordPrompt" class="password-prompt">
-      <div class="password-card">
-        <div class="password-card-header">Enter Staff Password</div>
-        <div class="password-card-body">
-          <div id="passwordError" class="password-error"></div>
-          <label for="passwordInput">Staff password</label>
-          <input type="password" id="passwordInput" placeholder="Enter password" autocomplete="off">
-          <button class="primary" onclick="submitPassword()">Access Scanner</button>
-        </div>
-      </div>
-      <div class="password-admin-link">
-        Admin? <a id="adminSettingsLink" href="#">Go to settings</a>
-      </div>
-    </div>
-  </div>
-
-  <!-- Scanner UI (shown after auth) -->
-  <div id="scannerUI" style="display:none;">
-    <div class="hero">
-      <h2 id="heroTitle">Scan the Patient's QR Code</h2>
-      <p id="heroSubtitle">Point your camera at a SMART Health Link QR code to import the patient's health data.</p>
-    </div>
-
-    <div class="container">
-      <div class="config-bar">
-        <div>
-          <span class="config-label">Destination:</span>
-          <span id="configInfo">Loading...</span>
-        </div>
-        <div style="display:flex; gap:12px; align-items:center;">
-          <a href="#" id="configAdminLink" onclick="showAdminPasswordPrompt(event)" class="admin-link" style="font-size:0.75rem;">⚙ Admin</a>
-          <a href="/setup-guide" class="admin-link" target="_blank" style="font-size:0.75rem;">Help</a>
-        </div>
-      </div>
-
-      <div class="scanner-section">
-        <div class="scanner-section-header">
-          <svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5zm-6 8h1.5v1.5H13V13zm1.5 1.5H16V16h-1.5v-1.5zM16 13h1.5v1.5H16V13zm-3 3h1.5v1.5H13V16zm1.5 1.5H16V19h-1.5v-1.5zM16 16h1.5v1.5H16V16zm1.5-1.5H19V16h-1.5v-1.5zm0 3H19V19h-1.5v-1.5zM3 3v2H1V1h4v2H3zm18-2v4h-2V3h-2V1h4zM3 19H1v4h4v-2H3v-2zm16 0v2h-2v2h4v-4h-2z"/></svg>
-          QR Scanner
-        </div>
-        <div id="reader"></div>
-      </div>
-
-      <!-- App Verification Banner (shown during two-step flow) -->
-      <div id="appVerificationBanner" style="display:none;"></div>
-
-      <div class="controls">
-        <button id="startBtn" class="primary" onclick="startScanner()">Start Scan</button>
-        <button id="stopBtn" onclick="stopScanner()" disabled>Stop Scan</button>
-      </div>
-
-      <div id="status" class="status"></div>
-
-      <div id="passcodeForm" class="passcode-form">
-        <label>This SMART Health Link requires a passcode:</label>
-        <input type="text" id="passcodeInput" placeholder="Enter passcode" autocomplete="off">
-        <button class="primary" onclick="submitWithPasscode()">Submit</button>
-      </div>
-
-      <div id="results" class="results">
-        <div id="driveBanner"></div>
-        <div id="emailBanner"></div>
-        <div id="apiBanner"></div>
-        <div id="downloadSection"></div>
-
-        <div class="result-card">
-          <h3>Scan Results</h3>
-          <div class="result-card-body" id="resultSummary"></div>
-        </div>
-
-        <div class="result-card" id="pdfCard" style="display:none">
-          <h3>PDF Documents</h3>
-          <div class="result-card-body" id="pdfPreviewArea"></div>
-        </div>
-
-        <div class="result-card" id="resourceCard" style="display:none">
-          <h3>FHIR Resources Found</h3>
-          <div class="result-card-body" id="resourceBadges"></div>
-        </div>
-
-        <div class="result-card" id="previewCard" style="display:none">
-          <h3>Data Preview</h3>
-          <div class="result-card-body">
-            <div class="fhir-preview" id="fhirPreview"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="site-footer">
-    <div class="footer-inner">
-      <p id="orgFooter"></p>
-      <p>Powered by SMART Health Links</p>
-      <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.15);">
-        <a href="#" id="adminFooterLink" onclick="showAdminPasswordPrompt(event)" style="color: rgba(255,255,255,0.5); font-size: 0.75rem; text-decoration: none;">Admin Settings</a>
-      </div>
-      <!-- Admin password modal -->
-      <div id="adminPasswordModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:1000; display:none; align-items:center; justify-content:center;">
-        <div style="background:var(--white); border-radius:8px; padding:28px 24px; max-width:380px; width:90%; box-shadow:0 8px 32px rgba(0,0,0,0.2);">
-          <h3 style="font-family:'Instrument Serif',Georgia,serif; font-size:1.25rem; color:var(--cms-blue-darkest); margin-bottom:4px;">Admin Settings</h3>
-          <p style="font-size:0.85rem; color:var(--gray-mid); margin-bottom:16px;">Enter the admin password to access settings.</p>
-          <div id="adminModalError" style="display:none; padding:8px 12px; background:var(--color-error-light); border-left:3px solid var(--color-error); border-radius:4px; margin-bottom:12px; font-size:0.8rem; color:#8b0000;"></div>
-          <input type="password" id="adminModalPassword" placeholder="Admin password" autocomplete="off" style="width:100%; padding:10px 12px; border:2px solid var(--gray-lighter); border-radius:4px; font-size:1rem; font-family:'Inter',sans-serif; color:var(--gray-dark); margin-bottom:12px; box-sizing:border-box;">
-          <div style="display:flex; gap:8px;">
-            <button onclick="submitAdminPassword()" class="primary" style="flex:1;">Sign In</button>
-            <button onclick="hideAdminPasswordPrompt()" style="flex:none; padding:10px 16px;">Cancel</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    // === HTML Sanitization ===
-    // Prevents XSS from attacker-controlled data (SHL labels, FHIR fields, filenames)
-    function escapeHtml(str) {
-      if (str == null) return '';
-      return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-    }
-
-    // Validate that a string is safe base64 (only A-Za-z0-9+/= characters).
-    // Prevents attribute injection via crafted base64 in <embed src="data:...">.
-    function isSafeBase64(str) {
-      return typeof str === 'string' && /^[A-Za-z0-9+/=\s]+$/.test(str);
-    }
-
-    // Validate that a URL uses https: protocol only.
-    // Prevents javascript: and data: URI injection in href/src attributes.
-    function isSafeUrl(url) {
-      try { return new URL(url).protocol === 'https:'; } catch { return false; }
-    }
-
-    // === Multi-tenant state ===
-    const slug = window.location.pathname.split('/').filter(Boolean)[0];
-    let orgConfig = null;
-    let orgName = 'Killtheclipboard';
-    let token = null;
-    let scanner = null;
-    let lastQrText = null;
-
-    // App validation state
-    let requireAppValidation = false;
-    let appVerified = false;
-    let verifiedAppName = '';
-
-    // === Initialization ===
-    (async function init() {
-      if (!slug) {
-        showError();
-        return;
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kill the Clipboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script
+      src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"
+      integrity="sha384-c9d8RFSL+u3exBOJ4Yp3HUJXS4znl9f+z66d1y54ig+ea249SpqR+w1wyvXz/lk+"
+      crossorigin="anonymous"
+    ></script>
+    <!-- Client-side SHL processing: decryption happens in the browser, not the server -->
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/jose/5.9.6/index.umd.min.js"
+      integrity="sha384-WaQ/HOFuAmf6nqMQqr3QFD5MVVftUXPeHMzX8uzER+kHiGeCylqg4uOBsXVq7sEI"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://unpkg.com/pako@2.1.0/dist/pako.min.js"
+      integrity="sha384-rNlaE5fs9dGIjmxWDALQh/RBAaGRYT5ChrzHo6tRfgrZ36iRFAiquP5g41Jsv+0j"
+      crossorigin="anonymous"
+    ></script>
+    <script src="/js/sanitize.js"></script>
+    <script src="/js/shl-client.js"></script>
+    <script src="/js/approved-apps.js"></script>
+    <style>
+      :root {
+        /* CMS Primary */
+        --cms-blue: #0071bc;
+        --cms-blue-dark: #205493;
+        --cms-blue-darkest: #112e51;
+        --cms-blue-light: #4992d6;
+        --cms-blue-lightest: #e6f0f8;
+
+        /* CMS Accent / Alt */
+        --cms-cyan: #02bfe7;
+        --cms-cyan-dark: #0186a2;
+
+        /* CMS Gold */
+        --cms-gold: #f3ce3b;
+        --cms-gold-dark: #c9a616;
+        --cms-gold-light: #fef9e9;
+
+        /* Status */
+        --color-success: #2e8540;
+        --color-success-light: #e7f4e4;
+        --color-error: #e31c3d;
+        --color-error-light: #fce4ec;
+        --color-warn: #f8c41f;
+        --color-warn-light: #fef9e9;
+
+        /* Neutrals */
+        --gray-darkest: #1b1b1b;
+        --gray-dark: #333334;
+        --gray-mid: #5b616b;
+        --gray-light: #aeb0b5;
+        --gray-lighter: #d6d7d9;
+        --gray-lightest: #f1f1f1;
+        --white: #ffffff;
       }
 
-      try {
-        const resp = await fetch(`/api/orgs/${slug}/config`);
-        if (!resp.ok) {
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+
+      body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: var(--white);
+        color: var(--gray-dark);
+        min-height: 100vh;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* === TOP BAR === */
+      .topbar {
+        background: var(--cms-blue-darkest);
+        color: var(--white);
+        padding: 8px 24px;
+        font-size: 0.75rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .topbar span { opacity: 0.7; }
+
+      /* === HEADER === */
+      .site-header {
+        background: var(--white);
+        border-bottom: 4px solid var(--cms-gold);
+        padding: 20px 24px;
+      }
+
+      .header-inner {
+        max-width: 800px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .site-title {
+        font-family: 'Instrument Serif', Georgia, serif;
+        font-size: 1.75rem;
+        color: var(--cms-blue-darkest);
+        letter-spacing: -0.02em;
+      }
+
+      .site-title em {
+        font-style: italic;
+        color: var(--cms-blue);
+      }
+
+      .org-name {
+        font-size: 0.8rem;
+        color: var(--gray-mid);
+        font-weight: 500;
+      }
+
+      /* === HERO === */
+      .hero {
+        background: linear-gradient(135deg, var(--cms-blue-darkest) 0%, var(--cms-blue-dark) 100%);
+        color: var(--white);
+        padding: 40px 24px;
+        text-align: center;
+      }
+
+      .hero h2 {
+        font-family: 'Instrument Serif', Georgia, serif;
+        font-size: 2.25rem;
+        font-weight: 400;
+        letter-spacing: -0.03em;
+        margin-bottom: 8px;
+      }
+
+      .hero p {
+        font-size: 1rem;
+        opacity: 0.8;
+        max-width: 480px;
+        margin: 0 auto;
+      }
+
+      /* === MAIN CONTENT === */
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 32px 24px;
+      }
+
+      /* === SCANNER === */
+      .scanner-section {
+        background: var(--white);
+        border: 1px solid var(--gray-lighter);
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 24px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      }
+
+      .scanner-section-header {
+        background: var(--cms-blue-lightest);
+        border-bottom: 1px solid var(--gray-lighter);
+        padding: 12px 20px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--cms-blue-darkest);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .scanner-section-header svg {
+        width: 18px;
+        height: 18px;
+        fill: var(--cms-blue);
+      }
+
+      #reader {
+        width: 100%;
+        min-height: 60px;
+      }
+
+      /* === CONTROLS === */
+      .controls {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+
+      button {
+        flex: 1;
+        padding: 12px 20px;
+        border: 2px solid var(--gray-lighter);
+        border-radius: 4px;
+        background: var(--white);
+        color: var(--cms-blue);
+        font-family: 'Inter', sans-serif;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+
+      button:hover {
+        background: var(--cms-blue-lightest);
+        border-color: var(--cms-blue-light);
+      }
+
+      button.primary {
+        background: var(--cms-blue);
+        border-color: var(--cms-blue);
+        color: var(--white);
+      }
+
+      button.primary:hover {
+        background: var(--cms-blue-dark);
+        border-color: var(--cms-blue-dark);
+      }
+
+      button:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      /* === STATUS ALERTS === */
+      .status {
+        padding: 12px 16px;
+        border-radius: 4px;
+        margin-bottom: 16px;
+        font-size: 0.875rem;
+        display: none;
+        border-left: 4px solid transparent;
+      }
+
+      .status.info {
+        display: block;
+        background: var(--cms-blue-lightest);
+        border-left-color: var(--cms-blue);
+        color: var(--cms-blue-darkest);
+      }
+
+      .status.success {
+        display: block;
+        background: var(--color-success-light);
+        border-left-color: var(--color-success);
+        color: #1a4301;
+      }
+
+      .status.error {
+        display: block;
+        background: var(--color-error-light);
+        border-left-color: var(--color-error);
+        color: #8b0000;
+      }
+
+      .status.warning {
+        display: block;
+        background: var(--color-warn-light);
+        border-left-color: var(--cms-gold-dark);
+        color: #654501;
+      }
+
+      /* === PASSCODE FORM === */
+      .confirm-fetch-box {
+        padding: 16px 20px;
+        background: var(--cms-blue-lightest);
+        border: 1px solid var(--cms-blue-light);
+        border-left: 4px solid var(--cms-cyan);
+        border-radius: 4px;
+        margin-bottom: 16px;
+      }
+      .confirm-fetch-box p {
+        margin: 0 0 12px 0;
+        font-size: 0.9rem;
+        color: var(--gray-dark);
+      }
+      .confirm-fetch-actions {
+        display: flex;
+        gap: 8px;
+      }
+      .confirm-fetch-actions button { flex: 0 0 auto; }
+      .confirm-fetch-box.unknown-issuer {
+        background: var(--cms-gold-light);
+        border-left-color: var(--cms-gold-dark);
+        color: var(--gray-darkest);
+      }
+      .confirm-fetch-box.unknown-issuer .confirm-fetch-note {
+        font-size: 0.85rem;
+        margin-top: 8px;
+        color: #654501;
+      }
+
+      .passcode-form {
+        display: none;
+        padding: 20px;
+        background: var(--cms-blue-lightest);
+        border: 1px solid var(--gray-lighter);
+        border-left: 4px solid var(--cms-gold);
+        border-radius: 4px;
+        margin-bottom: 16px;
+      }
+
+      .passcode-form.visible { display: block; }
+
+      .passcode-form label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--cms-blue-darkest);
+        margin-bottom: 8px;
+      }
+
+      .passcode-form input {
+        width: 100%;
+        padding: 10px 12px;
+        background: var(--white);
+        border: 2px solid var(--gray-lighter);
+        border-radius: 4px;
+        color: var(--gray-dark);
+        font-size: 1rem;
+        font-family: 'Inter', sans-serif;
+        margin-bottom: 12px;
+      }
+
+      .passcode-form input:focus {
+        outline: none;
+        border-color: var(--cms-blue);
+        box-shadow: 0 0 0 2px rgba(0,113,188,0.2);
+      }
+
+      /* === PASSWORD PROMPT === */
+      .password-prompt {
+        display: none;
+        max-width: 420px;
+        margin: 0 auto;
+      }
+
+      .password-prompt.visible { display: block; }
+
+      .password-card {
+        background: var(--white);
+        border: 1px solid var(--gray-lighter);
+        border-radius: 4px;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      }
+
+      .password-card-header {
+        background: var(--cms-blue-lightest);
+        border-bottom: 1px solid var(--gray-lighter);
+        padding: 14px 20px;
+        font-size: 0.925rem;
+        font-weight: 600;
+        color: var(--cms-blue-darkest);
+      }
+
+      .password-card-body {
+        padding: 24px 20px;
+      }
+
+      .password-card-body label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--cms-blue-darkest);
+        margin-bottom: 8px;
+      }
+
+      .password-card-body input {
+        width: 100%;
+        padding: 10px 12px;
+        background: var(--white);
+        border: 2px solid var(--gray-lighter);
+        border-radius: 4px;
+        color: var(--gray-dark);
+        font-size: 1rem;
+        font-family: 'Inter', sans-serif;
+        margin-bottom: 16px;
+      }
+
+      .password-card-body input:focus {
+        outline: none;
+        border-color: var(--cms-blue);
+        box-shadow: 0 0 0 2px rgba(0,113,188,0.2);
+      }
+
+      .password-card-body button {
+        flex: none;
+        width: 100%;
+      }
+
+      .password-error {
+        display: none;
+        padding: 10px 14px;
+        background: var(--color-error-light);
+        border-left: 4px solid var(--color-error);
+        border-radius: 4px;
+        margin-bottom: 16px;
+        font-size: 0.85rem;
+        color: #8b0000;
+      }
+
+      .password-error.visible { display: block; }
+
+      .password-admin-link {
+        text-align: center;
+        margin-top: 16px;
+        font-size: 0.8rem;
+      }
+
+      .password-admin-link a {
+        color: var(--cms-blue);
+        text-decoration: none;
+        font-weight: 500;
+      }
+
+      .password-admin-link a:hover {
+        text-decoration: underline;
+      }
+
+      /* === RESULTS === */
+      .results { display: none; }
+      .results.visible { display: block; }
+
+      .result-card {
+        background: var(--white);
+        border: 1px solid var(--gray-lighter);
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 16px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      }
+
+      .result-card h3 {
+        background: var(--gray-lightest);
+        border-bottom: 1px solid var(--gray-lighter);
+        padding: 10px 16px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--gray-mid);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .result-card-body {
+        padding: 16px;
+      }
+
+      .stat-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--gray-lightest);
+        font-size: 0.9rem;
+      }
+
+      .stat-row:last-child { border-bottom: none; }
+      .stat-label { color: var(--gray-mid); }
+      .stat-value { color: var(--cms-blue-darkest); font-weight: 600; }
+
+      /* === RESOURCE BADGES === */
+      .resource-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 3px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin: 3px 4px 3px 0;
+        letter-spacing: 0.02em;
+      }
+
+      .resource-badge.patient { background: var(--cms-blue-lightest); color: var(--cms-blue-dark); border: 1px solid var(--cms-blue-light); }
+      .resource-badge.condition { background: #fce4ec; color: #880e4f; border: 1px solid #f48fb1; }
+      .resource-badge.observation { background: #e8f5e9; color: #1b5e20; border: 1px solid #81c784; }
+      .resource-badge.medication { background: #ede7f6; color: #4527a0; border: 1px solid #b39ddb; }
+      .resource-badge.immunization { background: var(--cms-gold-light); color: #654501; border: 1px solid var(--cms-gold); }
+      .resource-badge.other { background: var(--gray-lightest); color: var(--gray-mid); border: 1px solid var(--gray-lighter); }
+
+      /* === DATA PREVIEW === */
+      .fhir-preview {
+        background: var(--gray-lightest);
+        border: 1px solid var(--gray-lighter);
+        border-radius: 4px;
+        padding: 16px;
+        max-height: 400px;
+        overflow-y: auto;
+        font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+        font-size: 0.75rem;
+        line-height: 1.6;
+        color: var(--gray-dark);
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      /* === SUCCESS SCREEN === */
+      .success-screen {
+        background: var(--color-success-light);
+        border: 2px solid var(--color-success);
+        border-radius: 8px;
+        padding: 32px 24px;
+        text-align: center;
+        margin-bottom: 24px;
+      }
+
+      .success-screen .success-icon {
+        width: 56px;
+        height: 56px;
+        background: var(--color-success);
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 16px;
+      }
+
+      .success-screen .success-icon svg {
+        width: 32px;
+        height: 32px;
+        fill: var(--white);
+      }
+
+      .success-screen h3 {
+        font-family: 'Instrument Serif', Georgia, serif;
+        font-size: 1.5rem;
+        color: #1a4301;
+        margin-bottom: 8px;
+        font-weight: 400;
+      }
+
+      .success-screen p {
+        font-size: 0.9rem;
+        color: #1a4301;
+        margin-bottom: 20px;
+        opacity: 0.85;
+      }
+
+      .success-screen .open-folder-btn {
+        display: inline-block;
+        padding: 12px 28px;
+        background: var(--color-success);
+        color: var(--white);
+        font-size: 0.95rem;
+        font-weight: 600;
+        border: none;
+        border-radius: 4px;
+        text-decoration: none;
+        cursor: pointer;
+        transition: background 0.15s;
+      }
+
+      .success-screen .open-folder-btn:hover {
+        background: #1a4301;
+      }
+
+      .success-screen .scan-again-btn {
+        display: inline-block;
+        padding: 10px 24px;
+        background: transparent;
+        color: #1a4301;
+        font-size: 0.85rem;
+        font-weight: 600;
+        border: 2px solid #2e8540;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-left: 12px;
+        text-decoration: none;
+        transition: all 0.15s;
+      }
+
+      .success-screen .scan-again-btn:hover {
+        background: rgba(46,133,64,0.1);
+      }
+
+      /* === DRIVE ERROR BANNER === */
+      .drive-error-banner {
+        padding: 12px 16px;
+        background: var(--color-error-light);
+        border: 1px solid var(--color-error);
+        border-left: 4px solid var(--color-error);
+        border-radius: 4px;
+        margin-bottom: 16px;
+        font-size: 0.85rem;
+        color: #8b0000;
+      }
+
+      /* === SUCCESS BANNERS (email, API) === */
+      .success-banner {
+        display: flex;
+        align-items: center;
+        padding: 14px 20px;
+        background: var(--color-success-light);
+        border: 1px solid #2e8540;
+        border-left: 4px solid #2e8540;
+        border-radius: 4px;
+        margin-bottom: 16px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #1a4301;
+        gap: 8px;
+      }
+
+      .success-banner svg {
+        width: 18px;
+        height: 18px;
+        fill: #2e8540;
+        flex-shrink: 0;
+      }
+
+      /* === DOWNLOAD SECTION === */
+      .download-section {
+        margin-bottom: 16px;
+      }
+
+      .download-section .download-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 8px;
+      }
+
+      .download-section button.download-btn {
+        flex: none;
+        padding: 10px 18px;
+        background: var(--cms-blue);
+        border-color: var(--cms-blue);
+        color: var(--white);
+        font-size: 0.8rem;
+      }
+
+      .download-section button.download-btn:hover {
+        background: var(--cms-blue-dark);
+        border-color: var(--cms-blue-dark);
+      }
+
+      .download-section button.download-all {
+        flex: none;
+        padding: 10px 18px;
+        background: var(--color-success);
+        border-color: var(--color-success);
+        color: var(--white);
+        font-size: 0.8rem;
+      }
+
+      .download-section button.download-all:hover {
+        background: #1a4301;
+        border-color: #1a4301;
+      }
+
+      /* === PDF PREVIEW === */
+      .pdf-preview-container {
+        margin-top: 8px;
+      }
+
+      .pdf-preview-item {
+        margin-bottom: 12px;
+      }
+
+      .pdf-preview-item .pdf-label {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--gray-mid);
+        margin-bottom: 6px;
+      }
+
+      .pdf-preview-item embed {
+        width: 100%;
+        height: 500px;
+        border: 1px solid var(--gray-lighter);
+        border-radius: 4px;
+      }
+
+      /* === CONFIG BAR === */
+      .config-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 16px;
+        background: var(--gray-lightest);
+        border: 1px solid var(--gray-lighter);
+        border-radius: 4px;
+        font-size: 0.8rem;
+        color: var(--gray-mid);
+        margin-bottom: 24px;
+      }
+
+      .config-bar .config-label {
+        font-weight: 600;
+        color: var(--cms-blue-darkest);
+        margin-right: 8px;
+      }
+
+      .config-bar .admin-link {
+        color: var(--cms-blue);
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.8rem;
+      }
+
+      .config-bar .admin-link:hover {
+        text-decoration: underline;
+      }
+
+      .file-upload { display: none; }
+
+      /* === APP VERIFICATION BANNERS === */
+      .app-verified-banner {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 14px 20px;
+        background: var(--color-success-light);
+        border: 2px solid var(--color-success);
+        border-radius: 8px;
+        margin-bottom: 16px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #1a4301;
+      }
+
+      .app-verified-banner svg {
+        width: 22px;
+        height: 22px;
+        fill: var(--color-success);
+        flex-shrink: 0;
+      }
+
+      .app-rejected-banner {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 14px 20px;
+        background: var(--color-error-light);
+        border: 2px solid var(--color-error);
+        border-radius: 8px;
+        margin-bottom: 16px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #8b0000;
+      }
+
+      .app-rejected-banner svg {
+        width: 22px;
+        height: 22px;
+        fill: var(--color-error);
+        flex-shrink: 0;
+      }
+
+      .app-pending-banner {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 14px 20px;
+        background: var(--cms-blue-lightest);
+        border: 2px solid var(--cms-blue);
+        border-radius: 8px;
+        margin-bottom: 16px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--cms-blue-darkest);
+      }
+
+      .app-pending-banner svg {
+        width: 22px;
+        height: 22px;
+        fill: var(--cms-blue);
+        flex-shrink: 0;
+      }
+
+      .app-banner-reset {
+        margin-left: auto;
+        background: none;
+        border: none;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: inherit;
+        cursor: pointer;
+        text-decoration: underline;
+        padding: 0;
+      }
+
+      /* === STEP INDICATOR === */
+      .step-indicator {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 12px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--gray-mid);
+      }
+
+      .step-indicator .step {
+        padding: 4px 12px;
+        border-radius: 20px;
+        background: var(--gray-lightest);
+        border: 1px solid var(--gray-lighter);
+      }
+
+      .step-indicator .step.active {
+        background: var(--cms-blue);
+        color: var(--white);
+        border-color: var(--cms-blue);
+      }
+
+      .step-indicator .step.done {
+        background: var(--color-success-light);
+        color: var(--color-success);
+        border-color: var(--color-success);
+      }
+
+      /* === ERROR PAGE === */
+      .error-page {
+        display: none;
+        text-align: center;
+        padding: 60px 24px;
+      }
+
+      .error-page.visible { display: block; }
+
+      .error-page h2 {
+        font-family: 'Instrument Serif', Georgia, serif;
+        font-size: 2rem;
+        color: var(--cms-blue-darkest);
+        margin-bottom: 12px;
+      }
+
+      .error-page p {
+        font-size: 1rem;
+        color: var(--gray-mid);
+        margin-bottom: 24px;
+      }
+
+      .error-page a {
+        color: var(--cms-blue);
+        text-decoration: none;
+        font-weight: 600;
+      }
+
+      .error-page a:hover {
+        text-decoration: underline;
+      }
+
+      /* === FOOTER === */
+      .site-footer {
+        background: var(--cms-blue-darkest);
+        color: var(--white);
+        padding: 32px 24px;
+        text-align: center;
+        font-size: 0.8rem;
+        margin-top: 40px;
+      }
+
+      .site-footer p { opacity: 0.6; margin-bottom: 4px; }
+
+      .footer-inner {
+        max-width: 800px;
+        margin: 0 auto;
+      }
+
+      .gold-rule {
+        height: 3px;
+        background: linear-gradient(90deg, var(--cms-gold) 0%, var(--cms-gold-dark) 100%);
+        border: none;
+        margin: 0;
+      }
+
+      /* === MOBILE === */
+      @media (max-width: 480px) {
+        .hero h2 { font-size: 1.75rem; }
+        .controls { flex-direction: column; }
+        .site-title { font-size: 1.4rem; }
+        .header-inner { flex-direction: column; gap: 4px; align-items: flex-start; }
+        .download-section .download-buttons { flex-direction: column; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="topbar">
+      <span>SMART Health Link Scanner</span>
+      <span id="orgTopbar"></span>
+    </div>
+
+    <div class="site-header">
+      <div class="header-inner">
+        <div class="site-title">Kill <em>the</em> Clipboard</div>
+        <div class="org-name" id="orgHeader"></div>
+      </div>
+    </div>
+
+    <hr class="gold-rule" />
+
+    <!-- Error page (shown if org not found) -->
+    <div id="errorPage" class="error-page">
+      <h2>Organization Not Found</h2>
+      <p>The organization you are looking for does not exist or the URL is incorrect.</p>
+      <a href="/">Go to Home Page</a>
+    </div>
+
+    <!-- Password prompt (shown before scanner if no token) -->
+    <div class="container">
+      <div id="passwordPrompt" class="password-prompt">
+        <div class="password-card">
+          <div class="password-card-header">Enter Staff Password</div>
+          <div class="password-card-body">
+            <div id="passwordError" class="password-error"></div>
+            <label for="passwordInput">Staff password</label>
+            <input
+              type="password"
+              id="passwordInput"
+              placeholder="Enter password"
+              autocomplete="off"
+            />
+            <button class="primary" onclick="submitPassword()">Access Scanner</button>
+          </div>
+        </div>
+        <div class="password-admin-link">
+          Admin? <a id="adminSettingsLink" href="#">Go to settings</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scanner UI (shown after auth) -->
+    <div id="scannerUI" style="display:none;">
+      <div class="hero">
+        <h2 id="heroTitle">Scan the Patient's QR Code</h2>
+        <p id="heroSubtitle">
+          Point your camera at a SMART Health Link QR code to import the patient's health data.
+        </p>
+      </div>
+
+      <div class="container">
+        <div class="config-bar">
+          <div>
+            <span class="config-label">Destination:</span>
+            <span id="configInfo">Loading...</span>
+          </div>
+          <div style="display:flex; gap:12px; align-items:center;">
+            <a
+              href="#"
+              id="configAdminLink"
+              onclick="showAdminPasswordPrompt(event)"
+              class="admin-link"
+              style="font-size:0.75rem;"
+              >⚙ Admin</a
+            >
+            <a href="/setup-guide" class="admin-link" target="_blank" style="font-size:0.75rem;"
+              >Help</a
+            >
+          </div>
+        </div>
+
+        <div class="scanner-section">
+          <div class="scanner-section-header">
+            <svg viewBox="0 0 24 24">
+              <path
+                d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5zm-6 8h1.5v1.5H13V13zm1.5 1.5H16V16h-1.5v-1.5zM16 13h1.5v1.5H16V13zm-3 3h1.5v1.5H13V16zm1.5 1.5H16V19h-1.5v-1.5zM16 16h1.5v1.5H16V16zm1.5-1.5H19V16h-1.5v-1.5zm0 3H19V19h-1.5v-1.5zM3 3v2H1V1h4v2H3zm18-2v4h-2V3h-2V1h4zM3 19H1v4h4v-2H3v-2zm16 0v2h-2v2h4v-4h-2z"
+              />
+            </svg>
+            QR Scanner
+          </div>
+          <div id="reader"></div>
+        </div>
+
+        <!-- App Verification Banner (shown during two-step flow) -->
+        <div id="appVerificationBanner" style="display:none;"></div>
+
+        <div class="controls">
+          <button id="startBtn" class="primary" onclick="startScanner()">Start Scan</button>
+          <button id="stopBtn" onclick="stopScanner()" disabled>Stop Scan</button>
+        </div>
+
+        <div id="status" class="status"></div>
+
+        <!-- Confirm before fetch (security: show SHL source before fetching) -->
+        <div id="confirmFetchBox" class="confirm-fetch-box" style="display:none;">
+          <p id="confirmFetchMessage"></p>
+          <p id="confirmFetchNote" class="confirm-fetch-note" style="display:none;"></p>
+          <div class="confirm-fetch-actions">
+            <button
+              type="button"
+              class="primary"
+              id="confirmFetchContinue"
+              onclick="confirmFetchContinue()"
+            >
+              Continue
+            </button>
+            <button type="button" id="confirmFetchCancel" onclick="confirmFetchCancel()">
+              Cancel
+            </button>
+          </div>
+        </div>
+
+        <div id="passcodeForm" class="passcode-form">
+          <label>This SMART Health Link requires a passcode:</label>
+          <input type="text" id="passcodeInput" placeholder="Enter passcode" autocomplete="off" />
+          <button class="primary" onclick="submitWithPasscode()">Submit</button>
+        </div>
+
+        <div id="results" class="results">
+          <div id="driveBanner"></div>
+          <div id="emailBanner"></div>
+          <div id="apiBanner"></div>
+          <div id="downloadSection"></div>
+
+          <div class="result-card">
+            <h3>Scan Results</h3>
+            <div class="result-card-body" id="resultSummary"></div>
+          </div>
+
+          <div class="result-card" id="pdfCard" style="display:none">
+            <h3>PDF Documents</h3>
+            <div class="result-card-body" id="pdfPreviewArea"></div>
+          </div>
+
+          <div class="result-card" id="resourceCard" style="display:none">
+            <h3>FHIR Resources Found</h3>
+            <div class="result-card-body" id="resourceBadges"></div>
+          </div>
+
+          <div class="result-card" id="previewCard" style="display:none">
+            <h3>Data Preview</h3>
+            <div class="result-card-body">
+              <div class="fhir-preview" id="fhirPreview"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="site-footer">
+      <div class="footer-inner">
+        <p id="orgFooter"></p>
+        <p>Powered by SMART Health Links</p>
+        <div
+          id="adminFooterBlock"
+          style="margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.15);"
+        >
+          <a
+            href="#"
+            id="adminFooterLink"
+            onclick="showAdminPasswordPrompt(event)"
+            style="color: rgba(255,255,255,0.5); font-size: 0.75rem; text-decoration: none;"
+            >Admin Settings</a
+          >
+        </div>
+        <!-- Admin password modal -->
+        <div
+          id="adminPasswordModal"
+          style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:1000; display:none; align-items:center; justify-content:center;"
+        >
+          <div
+            style="background:var(--white); border-radius:8px; padding:28px 24px; max-width:380px; width:90%; box-shadow:0 8px 32px rgba(0,0,0,0.2);"
+          >
+            <h3
+              style="font-family:'Instrument Serif',Georgia,serif; font-size:1.25rem; color:var(--cms-blue-darkest); margin-bottom:4px;"
+            >
+              Admin Settings
+            </h3>
+            <p style="font-size:0.85rem; color:var(--gray-mid); margin-bottom:16px;">
+              Enter the admin password to access settings.
+            </p>
+            <div
+              id="adminModalError"
+              style="display:none; padding:8px 12px; background:var(--color-error-light); border-left:3px solid var(--color-error); border-radius:4px; margin-bottom:12px; font-size:0.8rem; color:#8b0000;"
+            ></div>
+            <input
+              type="password"
+              id="adminModalPassword"
+              placeholder="Admin password"
+              autocomplete="off"
+              style="width:100%; padding:10px 12px; border:2px solid var(--gray-lighter); border-radius:4px; font-size:1rem; font-family:'Inter',sans-serif; color:var(--gray-dark); margin-bottom:12px; box-sizing:border-box;"
+            />
+            <div style="display:flex; gap:8px;">
+              <button onclick="submitAdminPassword()" class="primary" style="flex:1;">
+                Sign In
+              </button>
+              <button onclick="hideAdminPasswordPrompt()" style="flex:none; padding:10px 16px;">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // escapeHtml, isSafeBase64, isSafeUrl from /js/sanitize.js (generated from src/util/sanitize.js)
+
+      // === Multi-tenant state ===
+      const slug = window.location.pathname.split('/').filter(Boolean)[0];
+      let orgConfig = null;
+      let orgName = 'Killtheclipboard';
+      let token = null;
+      let scanner = null;
+      let lastQrText = null;
+
+      // App validation state
+      let requireAppValidation = false;
+      let appVerified = false;
+      let verifiedAppName = '';
+
+      // === Core mode (client-only, no server auth) ===
+      const isCore = !!(typeof window !== 'undefined' && window.__CORE_ONLY__);
+
+      // === Known SHL issuer hosts (spoofed-content mitigation) ===
+      function isKnownShlManifestHost(hostname) {
+        if (!hostname || typeof hostname !== 'string') return false;
+        const list = (typeof window !== 'undefined' && window.KNOWN_SHL_MANIFEST_HOSTS) || [];
+        const host = hostname.toLowerCase();
+        for (let i = 0; i < list.length; i++) {
+          const allowed = String(list[i]).toLowerCase();
+          if (host === allowed || host.endsWith('.' + allowed)) return true;
+        }
+        return false;
+      }
+
+      // === Initialization ===
+      (async function init() {
+        if (isCore) {
+          orgConfig = { name: 'Kill the Clipboard', storageType: 'download' };
+          orgName = orgConfig.name;
+          applyBranding(orgConfig);
+          // Core: no admin or login — hide all admin-related UI
+          const passwordAdminDiv = document.querySelector('.password-admin-link');
+          if (passwordAdminDiv) passwordAdminDiv.style.display = 'none';
+          const configAdminLink = document.getElementById('configAdminLink');
+          if (configAdminLink) configAdminLink.style.display = 'none';
+          const adminFooterBlock = document.getElementById('adminFooterBlock');
+          if (adminFooterBlock) adminFooterBlock.style.display = 'none';
+          showScanner();
+          return;
+        }
+
+        if (!slug) {
           showError();
           return;
         }
 
-        orgConfig = await resp.json();
-        orgName = orgConfig.name || orgConfig.slug || 'Killtheclipboard';
-        applyBranding(orgConfig);
+        try {
+          const resp = await fetch(`/api/orgs/${slug}/config`);
+          if (!resp.ok) {
+            showError();
+            return;
+          }
 
-        // Set up admin links
-        document.getElementById('adminSettingsLink').href = `/${slug}/admin`;
+          orgConfig = await resp.json();
+          orgName = orgConfig.name || orgConfig.slug || 'Killtheclipboard';
+          applyBranding(orgConfig);
 
-        // Check for existing token
-        token = sessionStorage.getItem('ktc_token_' + slug);
-        if (token) {
-          showScanner();
-        } else {
-          showPasswordPrompt();
+          // Set up admin links
+          document.getElementById('adminSettingsLink').href = `/${slug}/admin`;
+
+          // Check for existing token
+          token = sessionStorage.getItem('ktc_token_' + slug);
+          if (token) {
+            showScanner();
+          } else {
+            showPasswordPrompt();
+          }
+        } catch (err) {
+          showError();
         }
-      } catch (err) {
-        showError();
+      })();
+
+      function applyBranding(cfg) {
+        const name = cfg.name || cfg.slug;
+        document.getElementById('orgHeader').textContent = name;
+        document.getElementById('orgTopbar').textContent = name;
+        document.getElementById('orgFooter').textContent = name;
+        document.title = `Kill the Clipboard | ${name}`;
       }
-    })();
 
-    function applyBranding(cfg) {
-      const name = cfg.name || cfg.slug;
-      document.getElementById('orgHeader').textContent = name;
-      document.getElementById('orgTopbar').textContent = name;
-      document.getElementById('orgFooter').textContent = name;
-      document.title = `Kill the Clipboard | ${name}`;
-    }
-
-    function showError() {
-      document.getElementById('errorPage').classList.add('visible');
-      document.getElementById('passwordPrompt').style.display = 'none';
-      document.getElementById('scannerUI').style.display = 'none';
-    }
-
-    function showPasswordPrompt() {
-      document.getElementById('errorPage').classList.remove('visible');
-      document.getElementById('passwordPrompt').classList.add('visible');
-      document.getElementById('scannerUI').style.display = 'none';
-
-      // Allow Enter key to submit
-      document.getElementById('passwordInput').addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') submitPassword();
-      });
-    }
-
-    function showScanner() {
-      document.getElementById('errorPage').classList.remove('visible');
-      document.getElementById('passwordPrompt').classList.remove('visible');
-      document.getElementById('scannerUI').style.display = 'block';
-
-      // Update config bar destination
-      if (orgConfig) {
-        const storageLabel = orgConfig.storageType || 'local';
-        const parts = [storageLabel.charAt(0).toUpperCase() + storageLabel.slice(1)];
-        if (orgConfig.hasDrive) parts.push('Google Drive');
-        if (orgConfig.hasEmail) parts.push('Email');
-        if (orgConfig.hasApi) parts.push('API');
-        document.getElementById('configInfo').textContent = parts.join(' + ');
-
-        // Set up app validation
-        requireAppValidation = !!orgConfig.requireAppValidation;
-        if (requireAppValidation) {
-          updateAppValidationUI();
-        }
+      function showError() {
+        document.getElementById('errorPage').classList.add('visible');
+        document.getElementById('passwordPrompt').style.display = 'none';
+        document.getElementById('scannerUI').style.display = 'none';
       }
-    }
 
-    async function submitPassword() {
-      const password = document.getElementById('passwordInput').value.trim();
-      if (!password) return;
+      function showPasswordPrompt() {
+        document.getElementById('errorPage').classList.remove('visible');
+        document.getElementById('passwordPrompt').classList.add('visible');
+        document.getElementById('scannerUI').style.display = 'none';
 
-      const errorEl = document.getElementById('passwordError');
-      errorEl.classList.remove('visible');
-
-      try {
-        const resp = await fetch(`/api/orgs/${slug}/auth`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ password, role: 'staff' }),
+        // Allow Enter key to submit
+        document.getElementById('passwordInput').addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') submitPassword();
         });
+      }
 
-        const data = await resp.json();
+      function showScanner() {
+        document.getElementById('errorPage').classList.remove('visible');
+        document.getElementById('passwordPrompt').classList.remove('visible');
+        document.getElementById('scannerUI').style.display = 'block';
 
-        if (!resp.ok) {
-          errorEl.textContent = data.error || 'Invalid password';
+        // Update config bar destination
+        if (orgConfig) {
+          const storageLabel = orgConfig.storageType || 'local';
+          const parts = [storageLabel.charAt(0).toUpperCase() + storageLabel.slice(1)];
+          if (orgConfig.hasDrive) parts.push('Google Drive');
+          if (orgConfig.hasEmail) parts.push('Email');
+          if (orgConfig.hasApi) parts.push('API');
+          document.getElementById('configInfo').textContent = parts.join(' + ');
+
+          // Set up app validation
+          requireAppValidation = !!orgConfig.requireAppValidation;
+          if (requireAppValidation) {
+            updateAppValidationUI();
+          }
+        }
+      }
+
+      async function submitPassword() {
+        const password = document.getElementById('passwordInput').value.trim();
+        if (!password) return;
+
+        const errorEl = document.getElementById('passwordError');
+        errorEl.classList.remove('visible');
+
+        try {
+          const resp = await fetch(`/api/orgs/${slug}/auth`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password, role: 'staff' }),
+          });
+
+          const data = await resp.json();
+
+          if (!resp.ok) {
+            errorEl.textContent = data.error || 'Invalid password';
+            errorEl.classList.add('visible');
+            return;
+          }
+
+          token = data.token;
+          sessionStorage.setItem('ktc_token_' + slug, token);
+          showScanner();
+        } catch (err) {
+          errorEl.textContent = 'Connection error. Please try again.';
           errorEl.classList.add('visible');
+        }
+      }
+
+      // === QR Scanner ===
+      async function startScanner() {
+        clearResults();
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+
+        const scanConfig = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+        // Request camera permission upfront so we get a clear error if denied
+        try {
+          const testStream = await navigator.mediaDevices.getUserMedia({ video: true });
+          testStream.getTracks().forEach(t => t.stop()); // release immediately
+        } catch (permErr) {
+          setStatus('error', `Camera permission denied. Please allow camera access in your browser settings.`);
           return;
         }
 
-        token = data.token;
-        sessionStorage.setItem('ktc_token_' + slug, token);
-        showScanner();
-      } catch (err) {
-        errorEl.textContent = 'Connection error. Please try again.';
-        errorEl.classList.add('visible');
-      }
-    }
+        // Enumerate available cameras and use the first one by device ID.
+        // This avoids facingMode constraints that fail on many laptops/desktops.
+        try {
+          const cameras = await Html5Qrcode.getCameras();
+          if (!cameras || cameras.length === 0) {
+            setStatus('error', 'No cameras found on this device.');
+            return;
+          }
 
-    // === QR Scanner ===
-    async function startScanner() {
-      clearResults();
-      const startBtn = document.getElementById('startBtn');
-      const stopBtn = document.getElementById('stopBtn');
+          // Prefer a rear/environment camera if available, otherwise use the first one
+          const rearCamera = cameras.find(c => /back|rear|environment/i.test(c.label));
+          const cameraId = rearCamera ? rearCamera.id : cameras[0].id;
 
-      const scanConfig = { fps: 10, qrbox: { width: 250, height: 250 } };
+          scanner = new Html5Qrcode('reader');
+          await scanner.start(cameraId, scanConfig, onScanSuccess, () => {});
 
-      // Request camera permission upfront so we get a clear error if denied
-      try {
-        const testStream = await navigator.mediaDevices.getUserMedia({ video: true });
-        testStream.getTracks().forEach(t => t.stop()); // release immediately
-      } catch (permErr) {
-        setStatus('error', `Camera permission denied. Please allow camera access in your browser settings.`);
-        return;
+          startBtn.disabled = true;
+          stopBtn.disabled = false;
+          setStatus('info', 'Camera active. Point at a SMART Health Link QR code.');
+        } catch (err) {
+          setStatus('error', `Camera error: ${escapeHtml(err.message || err)}`);
+        }
       }
 
-      // Enumerate available cameras and use the first one by device ID.
-      // This avoids facingMode constraints that fail on many laptops/desktops.
-      try {
-        const cameras = await Html5Qrcode.getCameras();
-        if (!cameras || cameras.length === 0) {
-          setStatus('error', 'No cameras found on this device.');
-          return;
+      async function stopScanner() {
+        if (scanner) {
+          try { await scanner.stop(); } catch {}
+          scanner = null;
+        }
+        document.getElementById('startBtn').disabled = false;
+        document.getElementById('stopBtn').disabled = true;
+        setStatus('info', 'Camera stopped.');
+      }
+
+      async function onScanSuccess(decodedText) {
+        // Step 1: Check if this is an app identity QR code
+        try {
+          const parsed = JSON.parse(decodedText);
+          if (parsed && parsed.type === 'cms-htei') {
+            // This is an app identity QR — handle app verification
+            if (scanner) {
+              try { await scanner.stop(); } catch {}
+              scanner = null;
+              document.getElementById('startBtn').disabled = false;
+              document.getElementById('stopBtn').disabled = true;
+            }
+
+            setStatus('info', `Verifying app: ${escapeHtml(parsed.name || parsed.appId)}...`);
+
+            const banner = document.getElementById('appVerificationBanner');
+            if (isCore && window.APPROVED_APPS_CORE) {
+              const app = window.APPROVED_APPS_CORE.find(function(a) { return a.appId === parsed.appId; });
+              if (app) {
+                appVerified = true;
+                verifiedAppName = app.name;
+                const tierLabel = app.tier === 'early-adopter' ? 'Early Adopter' : 'Pledgee';
+                banner.innerHTML = `
+                  <div class="app-verified-banner">
+                    <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+                    <span>✓ ${escapeHtml(app.name)} — Approved CMS App (${escapeHtml(tierLabel)})</span>
+                    <button class="app-banner-reset" onclick="resetAppValidation()">Reset</button>
+                  </div>`;
+                banner.style.display = 'block';
+                updateAppValidationUI();
+                setStatus('info', 'App verified! Now scan the patient\'s health data QR code.');
+              } else {
+                appVerified = false;
+                banner.innerHTML = `
+                  <div class="app-rejected-banner">
+                    <svg viewBox="0 0 24 24"><path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"/></svg>
+                    <span>✗ "${escapeHtml(parsed.name || parsed.appId)}" is not a recognized CMS-approved app</span>
+                    <button class="app-banner-reset" onclick="resetAppValidation()">Try Again</button>
+                  </div>`;
+                banner.style.display = 'block';
+                setStatus('warning', 'App not recognized. Please scan a QR code from an approved CMS app.');
+              }
+            } else {
+              try {
+                const resp = await fetch(`/api/verify-app?appId=${encodeURIComponent(parsed.appId)}`);
+                const data = await resp.json();
+
+                if (data.approved) {
+                  appVerified = true;
+                  verifiedAppName = data.app.name;
+                  const tierLabel = data.app.tier === 'early-adopter' ? 'Early Adopter' : 'Pledgee';
+                  banner.innerHTML = `
+                    <div class="app-verified-banner">
+                      <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+                      <span>✓ ${escapeHtml(data.app.name)} — Approved CMS App (${escapeHtml(tierLabel)})</span>
+                      <button class="app-banner-reset" onclick="resetAppValidation()">Reset</button>
+                    </div>`;
+                  banner.style.display = 'block';
+                  updateAppValidationUI();
+                  setStatus('info', 'App verified! Now scan the patient\'s health data QR code.');
+                } else {
+                  appVerified = false;
+                  banner.innerHTML = `
+                    <div class="app-rejected-banner">
+                      <svg viewBox="0 0 24 24"><path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"/></svg>
+                      <span>✗ "${escapeHtml(parsed.name || parsed.appId)}" is not a recognized CMS-approved app</span>
+                      <button class="app-banner-reset" onclick="resetAppValidation()">Try Again</button>
+                    </div>`;
+                  banner.style.display = 'block';
+                  setStatus('warning', 'App not recognized. Please scan a QR code from an approved CMS app.');
+                }
+              } catch (err) {
+                setStatus('error', 'Error verifying app: ' + escapeHtml(err.message));
+              }
+            }
+            return;
+          }
+        } catch {
+          // Not JSON — treat as health data QR
         }
 
-        // Prefer a rear/environment camera if available, otherwise use the first one
-        const rearCamera = cameras.find(c => /back|rear|environment/i.test(c.label));
-        const cameraId = rearCamera ? rearCamera.id : cameras[0].id;
-
-        scanner = new Html5Qrcode('reader');
-        await scanner.start(cameraId, scanConfig, onScanSuccess, () => {});
-
-        startBtn.disabled = true;
-        stopBtn.disabled = false;
-        setStatus('info', 'Camera active. Point at a SMART Health Link QR code.');
-      } catch (err) {
-        setStatus('error', `Camera error: ${escapeHtml(err.message || err)}`);
-      }
-    }
-
-    async function stopScanner() {
-      if (scanner) {
-        try { await scanner.stop(); } catch {}
-        scanner = null;
-      }
-      document.getElementById('startBtn').disabled = false;
-      document.getElementById('stopBtn').disabled = true;
-      setStatus('info', 'Camera stopped.');
-    }
-
-    async function onScanSuccess(decodedText) {
-      // Step 1: Check if this is an app identity QR code
-      try {
-        const parsed = JSON.parse(decodedText);
-        if (parsed && parsed.type === 'cms-htei') {
-          // This is an app identity QR — handle app verification
+        // Step 2: If app validation is required but not completed, block health QR scan
+        if (requireAppValidation && !appVerified) {
           if (scanner) {
             try { await scanner.stop(); } catch {}
             scanner = null;
             document.getElementById('startBtn').disabled = false;
             document.getElementById('stopBtn').disabled = true;
           }
-
-          setStatus('info', `Verifying app: ${escapeHtml(parsed.name || parsed.appId)}...`);
-
-          try {
-            const resp = await fetch(`/api/verify-app?appId=${encodeURIComponent(parsed.appId)}`);
-            const data = await resp.json();
-
-            const banner = document.getElementById('appVerificationBanner');
-            if (data.approved) {
-              appVerified = true;
-              verifiedAppName = data.app.name;
-              const tierLabel = data.app.tier === 'early-adopter' ? 'Early Adopter' : 'Pledgee';
-              banner.innerHTML = `
-                <div class="app-verified-banner">
-                  <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
-                  <span>✓ ${escapeHtml(data.app.name)} — Approved CMS App (${escapeHtml(tierLabel)})</span>
-                  <button class="app-banner-reset" onclick="resetAppValidation()">Reset</button>
-                </div>`;
-              banner.style.display = 'block';
-              updateAppValidationUI();
-              setStatus('info', 'App verified! Now scan the patient\'s health data QR code.');
-            } else {
-              appVerified = false;
-              banner.innerHTML = `
-                <div class="app-rejected-banner">
-                  <svg viewBox="0 0 24 24"><path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"/></svg>
-                  <span>✗ "${escapeHtml(parsed.name || parsed.appId)}" is not a recognized CMS-approved app</span>
-                  <button class="app-banner-reset" onclick="resetAppValidation()">Try Again</button>
-                </div>`;
-              banner.style.display = 'block';
-              setStatus('warning', 'App not recognized. Please scan a QR code from an approved CMS app.');
-            }
-          } catch (err) {
-            setStatus('error', 'Error verifying app: ' + escapeHtml(err.message));
-          }
+          const banner = document.getElementById('appVerificationBanner');
+          banner.innerHTML = `
+            <div class="app-pending-banner">
+              <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm1 15h-2v-2h2v2zm0-4h-2V7h2v5z"/></svg>
+              <span>Please scan the patient's app QR code first to verify it is a CMS-approved app.</span>
+            </div>`;
+          banner.style.display = 'block';
+          setStatus('warning', 'App verification required. Scan the app QR code first.');
           return;
         }
-      } catch {
-        // Not JSON — treat as health data QR
-      }
 
-      // Step 2: If app validation is required but not completed, block health QR scan
-      if (requireAppValidation && !appVerified) {
+        // Normal health data QR flow — confirm before fetch (security)
         if (scanner) {
           try { await scanner.stop(); } catch {}
           scanner = null;
           document.getElementById('startBtn').disabled = false;
           document.getElementById('stopBtn').disabled = true;
         }
-        const banner = document.getElementById('appVerificationBanner');
-        banner.innerHTML = `
-          <div class="app-pending-banner">
-            <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm1 15h-2v-2h2v2zm0-4h-2V7h2v5z"/></svg>
-            <span>Please scan the patient's app QR code first to verify it is a CMS-approved app.</span>
-          </div>`;
-        banner.style.display = 'block';
-        setStatus('warning', 'App verification required. Scan the app QR code first.');
-        return;
-      }
 
-      // Normal health data QR flow
-      if (scanner) {
-        try { await scanner.stop(); } catch {}
-        scanner = null;
-        document.getElementById('startBtn').disabled = false;
-        document.getElementById('stopBtn').disabled = true;
-      }
+        lastQrText = decodedText;
 
-      lastQrText = decodedText;
-      setStatus('info', 'QR code detected. Processing SMART Health Link...');
-      await processScan(decodedText);
-    }
+        let shlPayload = null;
+        try {
+          shlPayload = parseShlUri(decodedText);
+        } catch (_) {}
 
-    async function processScan(qrText, passcode) {
-      try {
-        // ── Client-side SHL processing ──
-        // All decryption happens in the browser. The server never sees decrypted PHI.
-        // Server is only used as a CORS proxy (for encrypted blobs) and for routing
-        // the decrypted data to the configured storage destination.
-
-        setStatus('info', 'Parsing SMART Health Link...');
-
-        const data = await processScanClientSide(qrText, slug, token, {
-          passcode,
-          orgName: orgName,
-        });
-
-        if (data.status === 'not_shl') {
-          setStatus('warning', data.message);
-          return;
-        }
-
-        if (data.status === 'need_passcode') {
-          setStatus('warning', `${data.label || 'This link'} requires a passcode.`);
-          document.getElementById('passcodeForm').classList.add('visible');
-          return;
-        }
-
-        if (data.status === 'validation_failed') {
-          setStatus('error', data.error || 'FHIR validation failed. The scanned data is not valid.');
-          return;
-        }
-
-        if (data.status === 'success') {
-          setStatus('info', 'Saving...');
-          document.getElementById('passcodeForm').classList.remove('visible');
-          await new Promise(r => setTimeout(r, 300));
-          showResults(data);
-        }
-      } catch (err) {
-        if (err.message === 'SESSION_EXPIRED') {
-          sessionStorage.removeItem('ktc_token_' + slug);
-          token = null;
-          setStatus('error', 'Session expired. Please log in again.');
-          setTimeout(() => {
-            showPasswordPrompt();
-          }, 1500);
-          return;
-        }
-        setStatus('error', `Error: ${escapeHtml(err.message)}`);
-      }
-    }
-
-    function submitWithPasscode() {
-      const passcode = document.getElementById('passcodeInput').value.trim();
-      if (!passcode) return;
-      if (!lastQrText) {
-        setStatus('error', 'No QR code to retry. Please scan again.');
-        return;
-      }
-      setStatus('info', 'Retrying with passcode...');
-      processScan(lastQrText, passcode);
-    }
-
-    // === Helper: base64 to ArrayBuffer ===
-    function base64ToArrayBuffer(base64) {
-      const binaryString = atob(base64);
-      const len = binaryString.length;
-      const bytes = new Uint8Array(len);
-      for (let i = 0; i < len; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-      return bytes.buffer;
-    }
-
-    // === Results display ===
-    function showResults(data) {
-      setStatus('success', 'Scan complete!');
-
-      const resultsDiv = document.getElementById('results');
-      resultsDiv.classList.add('visible');
-
-      // Success screen with Open Folder button
-      const driveBanner = document.getElementById('driveBanner');
-
-      // Determine folder link from any cloud storage
-      const folderLink = data.driveLink || data.onedriveLink || data.boxLink;
-      const storageLabel = data.storageType === 'drive' ? 'Google Drive'
-        : data.storageType === 'onedrive' ? 'OneDrive'
-        : data.storageType === 'box' ? 'Box'
-        : data.storageType === 'gmail' ? 'Gmail'
-        : data.storageType === 'outlook' ? 'Outlook'
-        : data.storageType;
-      const storageError = data.driveError || data.onedriveError || data.boxError;
-
-      if (folderLink) {
-        driveBanner.innerHTML = `
-          <div class="success-screen">
-            <div class="success-icon">
-              <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-            </div>
-            <h3>Saved to ${escapeHtml(storageLabel)}</h3>
-            <p>${parseInt(data.summary.fhirBundles) || 0} FHIR bundle(s) and ${parseInt(data.summary.pdfs) || 0} PDF(s) uploaded successfully.</p>
-            ${isSafeUrl(folderLink) ? `<a href="${escapeHtml(folderLink)}" target="_blank" class="open-folder-btn">Open Folder</a>` : ''}
-            <button class="scan-again-btn" onclick="resetForNewScan()">Scan Another</button>
-          </div>`;
-      } else if (storageError) {
-        driveBanner.innerHTML = `
-          <div class="drive-error-banner">
-            ${escapeHtml(storageLabel)} upload failed: ${escapeHtml(storageError)}
-          </div>`;
-      } else if (data.emailSent) {
-        driveBanner.innerHTML = `
-          <div class="success-screen">
-            <div class="success-icon">
-              <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
-            </div>
-            <h3>Emailed Successfully</h3>
-            <p>${parseInt(data.summary.fhirBundles) || 0} FHIR bundle(s) and ${parseInt(data.summary.pdfs) || 0} PDF(s) sent.</p>
-            <button class="scan-again-btn" onclick="resetForNewScan()" style="border-color: var(--color-success); color: #1a4301;">Scan Another</button>
-          </div>`;
-      } else if (data.apiPosted) {
-        driveBanner.innerHTML = `
-          <div class="success-screen">
-            <div class="success-icon">
-              <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-            </div>
-            <h3>Sent to API</h3>
-            <p>${parseInt(data.summary.fhirBundles) || 0} FHIR bundle(s) and ${parseInt(data.summary.pdfs) || 0} PDF(s) posted to API endpoint.</p>
-            <button class="scan-again-btn" onclick="resetForNewScan()" style="border-color: var(--color-success); color: #1a4301;">Scan Another</button>
-          </div>`;
-      } else {
-        driveBanner.innerHTML = '';
-      }
-
-      // Show error banners only (success already shown above)
-      const emailBanner = document.getElementById('emailBanner');
-      if (data.emailError) {
-        emailBanner.innerHTML = `
-          <div class="drive-error-banner">
-            Email send failed: ${escapeHtml(data.emailError)}
-          </div>`;
-      } else {
-        emailBanner.innerHTML = '';
-      }
-
-      const apiBanner = document.getElementById('apiBanner');
-      if (data.apiError) {
-        apiBanner.innerHTML = `
-          <div class="drive-error-banner">
-            API post failed: ${escapeHtml(data.apiError)}
-          </div>`;
-      } else {
-        apiBanner.innerHTML = '';
-      }
-
-      // Download mode — uses data attributes instead of inline onclick to prevent XSS
-      const downloadSection = document.getElementById('downloadSection');
-      if (data.storageType === 'download') {
-        let downloadHtml = '<div class="result-card"><h3>Download Files</h3><div class="result-card-body"><div class="download-section"><div class="download-buttons">';
-
-        const downloadItems = [];
-
-        // PDF download buttons (use data-index, not inline filename)
-        if (data.pdfs && data.pdfs.length > 0) {
-          for (let pi = 0; pi < data.pdfs.length; pi++) {
-            const pdf = data.pdfs[pi];
-            if (pdf.dataBase64 && isSafeBase64(pdf.dataBase64)) {
-              downloadItems.push({ name: pdf.filename, base64: pdf.dataBase64, type: 'application/pdf' });
-              downloadHtml += `<button class="download-btn" data-download-index="${downloadItems.length - 1}">Download ${escapeHtml(pdf.filename)}</button>`;
-            }
-          }
-        }
-
-        // FHIR bundle download buttons
-        if (data.fhirBundles && data.fhirBundles.length > 0) {
-          data.fhirBundles.forEach((bundle, i) => {
-            const filename = `bundle-${i + 1}.json`;
-            const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(bundle, null, 2))));
-            downloadItems.push({ name: filename, base64: b64, type: 'application/json' });
-            downloadHtml += `<button class="download-btn" data-download-index="${downloadItems.length - 1}">Download ${escapeHtml(filename)}</button>`;
-          });
-        }
-
-        if (downloadItems.length > 1) {
-          downloadHtml += `<button class="download-all">Download All</button>`;
-        }
-
-        downloadHtml += '</div></div></div></div>';
-        downloadSection.innerHTML = downloadHtml;
-
-        // Store items globally for download; attach click handlers via delegation (no inline JS)
-        window._downloadItems = downloadItems;
-        window._downloadBundles = data.fhirBundles || [];
-
-        downloadSection.querySelectorAll('.download-btn[data-download-index]').forEach(btn => {
-          btn.addEventListener('click', function() {
-            const idx = parseInt(this.getAttribute('data-download-index'), 10);
-            const item = window._downloadItems[idx];
-            if (item) downloadFile(item.name, item.base64, item.type);
-          });
-        });
-
-        const dlAllBtn = downloadSection.querySelector('.download-all');
-        if (dlAllBtn) {
-          dlAllBtn.addEventListener('click', downloadAllFiles);
-        }
-      } else {
-        downloadSection.innerHTML = '';
-      }
-
-      // Summary — all external data is escaped to prevent XSS (especially data.label from SHL payload)
-      const summaryHtml = `
-        ${data.label ? `<div class="stat-row"><span class="stat-label">Label</span><span class="stat-value">${escapeHtml(data.label)}</span></div>` : ''}
-        <div class="stat-row"><span class="stat-label">FHIR Bundles</span><span class="stat-value">${parseInt(data.summary.fhirBundles) || 0}</span></div>
-        <div class="stat-row"><span class="stat-label">PDFs</span><span class="stat-value">${parseInt(data.summary.pdfs) || 0}</span></div>
-        <div class="stat-row"><span class="stat-label">Other Entries</span><span class="stat-value">${parseInt(data.summary.rawEntries) || 0}</span></div>
-        ${data.savedTo ? `<div class="stat-row"><span class="stat-label">Saved To</span><span class="stat-value">${escapeHtml(data.savedTo)}</span></div>` : ''}
-      `;
-      document.getElementById('resultSummary').innerHTML = summaryHtml;
-
-      // PDF previews
-      if (data.pdfs && data.pdfs.length > 0) {
-        const pdfCard = document.getElementById('pdfCard');
-        const pdfArea = document.getElementById('pdfPreviewArea');
-        let hasPreviews = false;
-
-        let pdfHtml = '<div class="pdf-preview-container">';
-        for (const pdf of data.pdfs) {
-          const safeName = escapeHtml(pdf.filename);
-          if (pdf.dataBase64 && isSafeBase64(pdf.dataBase64)) {
-            hasPreviews = true;
-            pdfHtml += `
-              <div class="pdf-preview-item">
-                <div class="pdf-label">${safeName}</div>
-                <embed src="data:application/pdf;base64,${pdf.dataBase64}" type="application/pdf">
-              </div>`;
-          } else if (pdf.url && isSafeUrl(pdf.url)) {
-            hasPreviews = true;
-            pdfHtml += `
-              <div class="pdf-preview-item">
-                <div class="pdf-label">${safeName}</div>
-                <embed src="${escapeHtml(pdf.url)}" type="application/pdf">
-              </div>`;
+        if (shlPayload) {
+          let hostLabel = 'unknown';
+          try {
+            hostLabel = new URL(shlPayload.url).hostname;
+          } catch (_) {}
+          const fileCount = (shlPayload.label && shlPayload.label.length > 0) ? '' : ' (content will load after fetch)';
+          const knownIssuer = isKnownShlManifestHost(hostLabel);
+          const box = document.getElementById('confirmFetchBox');
+          const msgEl = document.getElementById('confirmFetchMessage');
+          const noteEl = document.getElementById('confirmFetchNote');
+          box.classList.toggle('unknown-issuer', !knownIssuer);
+          if (knownIssuer) {
+            msgEl.textContent = 'SMART Health Link from ' + hostLabel + fileCount + ' (known issuer). Click Continue to fetch and decrypt, or Cancel to abort.';
+            noteEl.style.display = 'none';
+            noteEl.textContent = '';
           } else {
-            pdfHtml += `
-              <div class="pdf-preview-item">
-                <div class="pdf-label">${safeName} (no preview available)</div>
-              </div>`;
+            msgEl.textContent = 'SMART Health Link from ' + hostLabel + fileCount + '.';
+            noteEl.textContent = 'This domain is not in your list of known SHL issuers. Data could be spoofed. Only continue if you trust this source.';
+            noteEl.style.display = 'block';
           }
+          box.style.display = 'block';
+          window._pendingConfirmQrText = decodedText;
+          setStatus('info', knownIssuer ? 'Confirm to fetch this SMART Health Link.' : 'Unverified issuer — confirm only if you trust this source.');
+          return;
         }
-        pdfHtml += '</div>';
 
-        if (hasPreviews || data.pdfs.length > 0) {
-          pdfCard.style.display = 'block';
-          pdfArea.innerHTML = pdfHtml;
+        setStatus('info', 'QR code detected. Processing SMART Health Link...');
+        await processScan(decodedText);
+      }
+
+      function confirmFetchContinue() {
+        const qr = window._pendingConfirmQrText;
+        window._pendingConfirmQrText = null;
+        document.getElementById('confirmFetchBox').style.display = 'none';
+        if (qr) {
+          setStatus('info', 'Fetching and decrypting...');
+          processScan(qr);
         }
       }
 
-      // FHIR resources
-      if (data.fhirBundles && data.fhirBundles.length > 0) {
-        const resourceCard = document.getElementById('resourceCard');
-        resourceCard.style.display = 'block';
+      function confirmFetchCancel() {
+        window._pendingConfirmQrText = null;
+        document.getElementById('confirmFetchBox').style.display = 'none';
+        setStatus('info', 'Cancelled. Click Start Scan to try again.');
+      }
 
-        const resources = [];
-        for (const bundle of data.fhirBundles) {
-          if (bundle.entry) {
-            for (const entry of bundle.entry) {
-              if (entry.resource?.resourceType) {
-                resources.push(entry.resource.resourceType);
+      async function processScan(qrText, passcode) {
+        try {
+          setStatus('info', 'Parsing SMART Health Link...');
+
+          let data;
+          if (isCore) {
+            data = await processScanCore(qrText, {
+              passcode,
+              orgName,
+              proxyBaseUrl: typeof window !== 'undefined' && window.__CORE_PROXY_URL__ || null,
+            });
+            if (data.status === 'ok') {
+              data = {
+                status: 'success',
+                summary: {
+                  fhirBundles: (data.fhirBundles && data.fhirBundles.length) || 0,
+                  pdfs: (data.pdfs && data.pdfs.length) || 0,
+                  rawEntries: 0,
+                },
+                fhirBundles: data.fhirBundles,
+                pdfs: data.pdfs,
+                label: data.label,
+                storageType: 'download',
+              };
+            }
+          } else {
+            data = await processScanClientSide(qrText, slug, token, {
+              passcode,
+              orgName: orgName,
+            });
+          }
+
+          if (data.status === 'not_shl') {
+            setStatus('warning', data.message);
+            return;
+          }
+
+          if (data.status === 'need_passcode') {
+            setStatus('warning', `${data.label || 'This link'} requires a passcode.`);
+            document.getElementById('passcodeForm').classList.add('visible');
+            return;
+          }
+
+          if (data.status === 'validation_failed') {
+            setStatus('error', data.error || 'FHIR validation failed. The scanned data is not valid.');
+            return;
+          }
+
+          if (data.status === 'success') {
+            setStatus('info', isCore ? 'Ready to download or share.' : 'Saving...');
+            document.getElementById('passcodeForm').classList.remove('visible');
+            await new Promise(r => setTimeout(r, 300));
+            showResults(data);
+          }
+        } catch (err) {
+          if (!isCore && err.message === 'SESSION_EXPIRED') {
+            sessionStorage.removeItem('ktc_token_' + slug);
+            token = null;
+            setStatus('error', 'Session expired. Please log in again.');
+            setTimeout(() => {
+              showPasswordPrompt();
+            }, 1500);
+            return;
+          }
+          setStatus('error', `Error: ${escapeHtml(err.message)}`);
+        }
+      }
+
+      function submitWithPasscode() {
+        const passcode = document.getElementById('passcodeInput').value.trim();
+        if (!passcode) return;
+        if (!lastQrText) {
+          setStatus('error', 'No QR code to retry. Please scan again.');
+          return;
+        }
+        setStatus('info', 'Retrying with passcode...');
+        processScan(lastQrText, passcode);
+      }
+
+      // === Helper: base64 to ArrayBuffer ===
+      function base64ToArrayBuffer(base64) {
+        const binaryString = atob(base64);
+        const len = binaryString.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        return bytes.buffer;
+      }
+
+      // === Results display ===
+      function showResults(data) {
+        setStatus('success', 'Scan complete!');
+
+        const resultsDiv = document.getElementById('results');
+        resultsDiv.classList.add('visible');
+
+        // Success screen with Open Folder button
+        const driveBanner = document.getElementById('driveBanner');
+
+        // Determine folder link from any cloud storage
+        const folderLink = data.driveLink || data.onedriveLink || data.boxLink;
+        const storageLabel = data.storageType === 'drive' ? 'Google Drive'
+          : data.storageType === 'onedrive' ? 'OneDrive'
+          : data.storageType === 'box' ? 'Box'
+          : data.storageType === 'gmail' ? 'Gmail'
+          : data.storageType === 'outlook' ? 'Outlook'
+          : data.storageType;
+        const storageError = data.driveError || data.onedriveError || data.boxError;
+
+        if (folderLink) {
+          driveBanner.innerHTML = `
+            <div class="success-screen">
+              <div class="success-icon">
+                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+              </div>
+              <h3>Saved to ${escapeHtml(storageLabel)}</h3>
+              <p>${parseInt(data.summary.fhirBundles) || 0} FHIR bundle(s) and ${parseInt(data.summary.pdfs) || 0} PDF(s) uploaded successfully.</p>
+              ${isSafeUrl(folderLink) ? `<a href="${escapeHtml(folderLink)}" target="_blank" class="open-folder-btn">Open Folder</a>` : ''}
+              <button class="scan-again-btn" onclick="resetForNewScan()">Scan Another</button>
+            </div>`;
+        } else if (storageError) {
+          driveBanner.innerHTML = `
+            <div class="drive-error-banner">
+              ${escapeHtml(storageLabel)} upload failed: ${escapeHtml(storageError)}
+            </div>`;
+        } else if (data.emailSent) {
+          driveBanner.innerHTML = `
+            <div class="success-screen">
+              <div class="success-icon">
+                <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+              </div>
+              <h3>Emailed Successfully</h3>
+              <p>${parseInt(data.summary.fhirBundles) || 0} FHIR bundle(s) and ${parseInt(data.summary.pdfs) || 0} PDF(s) sent.</p>
+              <button class="scan-again-btn" onclick="resetForNewScan()" style="border-color: var(--color-success); color: #1a4301;">Scan Another</button>
+            </div>`;
+        } else if (data.apiPosted) {
+          driveBanner.innerHTML = `
+            <div class="success-screen">
+              <div class="success-icon">
+                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+              </div>
+              <h3>Sent to API</h3>
+              <p>${parseInt(data.summary.fhirBundles) || 0} FHIR bundle(s) and ${parseInt(data.summary.pdfs) || 0} PDF(s) posted to API endpoint.</p>
+              <button class="scan-again-btn" onclick="resetForNewScan()" style="border-color: var(--color-success); color: #1a4301;">Scan Another</button>
+            </div>`;
+        } else {
+          driveBanner.innerHTML = '';
+        }
+
+        // Show error banners only (success already shown above)
+        const emailBanner = document.getElementById('emailBanner');
+        if (data.emailError) {
+          emailBanner.innerHTML = `
+            <div class="drive-error-banner">
+              Email send failed: ${escapeHtml(data.emailError)}
+            </div>`;
+        } else {
+          emailBanner.innerHTML = '';
+        }
+
+        const apiBanner = document.getElementById('apiBanner');
+        if (data.apiError) {
+          apiBanner.innerHTML = `
+            <div class="drive-error-banner">
+              API post failed: ${escapeHtml(data.apiError)}
+            </div>`;
+        } else {
+          apiBanner.innerHTML = '';
+        }
+
+        // Download mode — uses data attributes instead of inline onclick to prevent XSS
+        const downloadSection = document.getElementById('downloadSection');
+        if (data.storageType === 'download') {
+          let downloadHtml = '<div class="result-card"><h3>Download Files</h3><div class="result-card-body"><div class="download-section"><div class="download-buttons">';
+
+          const downloadItems = [];
+
+          // PDF download buttons (use data-index, not inline filename)
+          if (data.pdfs && data.pdfs.length > 0) {
+            for (let pi = 0; pi < data.pdfs.length; pi++) {
+              const pdf = data.pdfs[pi];
+              if (pdf.dataBase64 && isSafeBase64(pdf.dataBase64)) {
+                downloadItems.push({ name: pdf.filename, base64: pdf.dataBase64, type: 'application/pdf' });
+                downloadHtml += `<button class="download-btn" data-download-index="${downloadItems.length - 1}">Download ${escapeHtml(pdf.filename)}</button>`;
               }
             }
           }
+
+          // FHIR bundle download buttons
+          if (data.fhirBundles && data.fhirBundles.length > 0) {
+            data.fhirBundles.forEach((bundle, i) => {
+              const filename = `bundle-${i + 1}.json`;
+              const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(bundle, null, 2))));
+              downloadItems.push({ name: filename, base64: b64, type: 'application/json' });
+              downloadHtml += `<button class="download-btn" data-download-index="${downloadItems.length - 1}">Download ${escapeHtml(filename)}</button>`;
+            });
+          }
+
+          if (downloadItems.length > 1) {
+            downloadHtml += `<button class="download-all">Download All</button>`;
+          }
+          if (typeof navigator !== 'undefined' && navigator.share) {
+            downloadHtml += `<button class="share-btn" id="webShareBtn">Share</button>`;
+          }
+
+          downloadHtml += '</div></div></div></div>';
+          downloadSection.innerHTML = downloadHtml;
+
+          // Store items globally for download; attach click handlers via delegation (no inline JS)
+          window._downloadItems = downloadItems;
+          window._downloadBundles = data.fhirBundles || [];
+
+          downloadSection.querySelectorAll('.download-btn[data-download-index]').forEach(btn => {
+            btn.addEventListener('click', function() {
+              const idx = parseInt(this.getAttribute('data-download-index'), 10);
+              const item = window._downloadItems[idx];
+              if (item) downloadFile(item.name, item.base64, item.type);
+            });
+          });
+
+          const dlAllBtn = downloadSection.querySelector('.download-all');
+          if (dlAllBtn) {
+            dlAllBtn.addEventListener('click', downloadAllFiles);
+          }
+          const webShareBtn = document.getElementById('webShareBtn');
+          if (webShareBtn) {
+            webShareBtn.addEventListener('click', shareDownloadFiles);
+          }
+        } else {
+          downloadSection.innerHTML = '';
         }
 
-        const counts = {};
-        resources.forEach(r => { counts[r] = (counts[r] || 0) + 1; });
+        // Summary — all external data is escaped to prevent XSS (especially data.label from SHL payload)
+        const summaryHtml = `
+          ${data.label ? `<div class="stat-row"><span class="stat-label">Label</span><span class="stat-value">${escapeHtml(data.label)}</span></div>` : ''}
+          <div class="stat-row"><span class="stat-label">FHIR Bundles</span><span class="stat-value">${parseInt(data.summary.fhirBundles) || 0}</span></div>
+          <div class="stat-row"><span class="stat-label">PDFs</span><span class="stat-value">${parseInt(data.summary.pdfs) || 0}</span></div>
+          <div class="stat-row"><span class="stat-label">Other Entries</span><span class="stat-value">${parseInt(data.summary.rawEntries) || 0}</span></div>
+          ${data.savedTo ? `<div class="stat-row"><span class="stat-label">Saved To</span><span class="stat-value">${escapeHtml(data.savedTo)}</span></div>` : ''}
+        `;
+        document.getElementById('resultSummary').innerHTML = summaryHtml;
 
-        const badgeClass = (type) => {
-          const t = type.toLowerCase();
-          if (t === 'patient') return 'patient';
-          if (t.includes('condition')) return 'condition';
-          if (t.includes('observation')) return 'observation';
-          if (t.includes('medication')) return 'medication';
-          if (t.includes('immunization')) return 'immunization';
-          return 'other';
-        };
+        // PDF previews
+        if (data.pdfs && data.pdfs.length > 0) {
+          const pdfCard = document.getElementById('pdfCard');
+          const pdfArea = document.getElementById('pdfPreviewArea');
+          let hasPreviews = false;
 
-        document.getElementById('resourceBadges').innerHTML =
-          Object.entries(counts)
-            .map(([type, count]) => `<span class="resource-badge ${badgeClass(type)}">${escapeHtml(type)} (${parseInt(count) || 0})</span>`)
-            .join('');
+          let pdfHtml = '<div class="pdf-preview-container">';
+          for (const pdf of data.pdfs) {
+            const safeName = escapeHtml(pdf.filename);
+            if (pdf.dataBase64 && isSafeBase64(pdf.dataBase64)) {
+              hasPreviews = true;
+              pdfHtml += `
+                <div class="pdf-preview-item">
+                  <div class="pdf-label">${safeName}</div>
+                  <embed src="data:application/pdf;base64,${pdf.dataBase64}" type="application/pdf">
+                </div>`;
+            } else if (pdf.url && isSafeUrl(pdf.url)) {
+              hasPreviews = true;
+              pdfHtml += `
+                <div class="pdf-preview-item">
+                  <div class="pdf-label">${safeName}</div>
+                  <embed src="${escapeHtml(pdf.url)}" type="application/pdf">
+                </div>`;
+            } else {
+              pdfHtml += `
+                <div class="pdf-preview-item">
+                  <div class="pdf-label">${safeName} (no preview available)</div>
+                </div>`;
+            }
+          }
+          pdfHtml += '</div>';
 
-        const previewCard = document.getElementById('previewCard');
-        previewCard.style.display = 'block';
+          if (hasPreviews || data.pdfs.length > 0) {
+            pdfCard.style.display = 'block';
+            pdfArea.innerHTML = pdfHtml;
+          }
+        }
 
-        let preview = '';
-        for (const bundle of data.fhirBundles) {
-          if (bundle.entry) {
-            for (const entry of bundle.entry) {
-              const r = entry.resource;
-              if (!r) continue;
-              if (r.resourceType === 'Patient') {
-                const name = r.name?.[0];
-                const nameStr = name ? [name.given?.join(' '), name.family].filter(Boolean).join(' ') : 'Unknown';
-                preview += `Patient: ${nameStr}\n`;
-                if (r.birthDate) preview += `DOB: ${r.birthDate}\n`;
-                if (r.gender) preview += `Gender: ${r.gender}\n`;
-                preview += '\n';
+        // FHIR resources
+        if (data.fhirBundles && data.fhirBundles.length > 0) {
+          const resourceCard = document.getElementById('resourceCard');
+          resourceCard.style.display = 'block';
+
+          const resources = [];
+          for (const bundle of data.fhirBundles) {
+            if (bundle.entry) {
+              for (const entry of bundle.entry) {
+                if (entry.resource?.resourceType) {
+                  resources.push(entry.resource.resourceType);
+                }
               }
             }
           }
-          preview += JSON.stringify(bundle, null, 2).slice(0, 3000);
-          if (JSON.stringify(bundle).length > 3000) preview += '\n... (truncated)';
+
+          const counts = {};
+          resources.forEach(r => { counts[r] = (counts[r] || 0) + 1; });
+
+          const badgeClass = (type) => {
+            const t = type.toLowerCase();
+            if (t === 'patient') return 'patient';
+            if (t.includes('condition')) return 'condition';
+            if (t.includes('observation')) return 'observation';
+            if (t.includes('medication')) return 'medication';
+            if (t.includes('immunization')) return 'immunization';
+            return 'other';
+          };
+
+          document.getElementById('resourceBadges').innerHTML =
+            Object.entries(counts)
+              .map(([type, count]) => `<span class="resource-badge ${badgeClass(type)}">${escapeHtml(type)} (${parseInt(count) || 0})</span>`)
+              .join('');
+
+          const previewCard = document.getElementById('previewCard');
+          previewCard.style.display = 'block';
+
+          let preview = '';
+          for (const bundle of data.fhirBundles) {
+            if (bundle.entry) {
+              for (const entry of bundle.entry) {
+                const r = entry.resource;
+                if (!r) continue;
+                if (r.resourceType === 'Patient') {
+                  const name = r.name?.[0];
+                  const nameStr = name ? [name.given?.join(' '), name.family].filter(Boolean).join(' ') : 'Unknown';
+                  preview += `Patient: ${nameStr}\n`;
+                  if (r.birthDate) preview += `DOB: ${r.birthDate}\n`;
+                  if (r.gender) preview += `Gender: ${r.gender}\n`;
+                  preview += '\n';
+                }
+              }
+            }
+            preview += JSON.stringify(bundle, null, 2).slice(0, 3000);
+            if (JSON.stringify(bundle).length > 3000) preview += '\n... (truncated)';
+          }
+
+          document.getElementById('fhirPreview').textContent = preview;
+        }
+      }
+
+      // === Download helpers ===
+      function downloadFile(filename, base64Data, mimeType) {
+        const buffer = base64ToArrayBuffer(base64Data);
+        const blob = new Blob([buffer], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+
+      function downloadJsonBundle(index, filename) {
+        const bundle = window._downloadBundles[index];
+        if (!bundle) return;
+        const jsonStr = JSON.stringify(bundle, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+
+      function downloadAllFiles() {
+        // Trigger all download buttons except "Download All"
+        const buttons = document.querySelectorAll('.download-section .download-btn');
+        let delay = 0;
+        buttons.forEach(btn => {
+          setTimeout(() => btn.click(), delay);
+          delay += 300;
+        });
+      }
+
+      async function shareDownloadFiles() {
+        const items = window._downloadItems;
+        if (!items || items.length === 0 || !navigator.share) return;
+        try {
+          const files = items.map(function(item) {
+            const buffer = base64ToArrayBuffer(item.base64);
+            return new File([buffer], item.name, { type: item.type });
+          });
+          if (navigator.canShare && navigator.canShare({ files })) {
+            await navigator.share({
+              title: 'Health records',
+              files: files,
+            });
+          } else {
+            await navigator.share({
+              title: 'Health records',
+              text: items.length + ' file(s) from SMART Health Link scan.',
+            });
+          }
+        } catch (err) {
+          if (err.name !== 'AbortError') {
+            setStatus('error', 'Share failed: ' + escapeHtml(err.message));
+          }
+        }
+      }
+
+      // === Status and clear ===
+      function setStatus(type, message) {
+        const el = document.getElementById('status');
+        el.className = `status ${type}`;
+        el.textContent = message;
+      }
+
+      // === App Validation Helpers ===
+      function updateAppValidationUI() {
+        const heroTitle = document.getElementById('heroTitle');
+        const heroSubtitle = document.getElementById('heroSubtitle');
+
+        if (!requireAppValidation) {
+          heroTitle.textContent = 'Scan the Patient\'s QR Code';
+          heroSubtitle.textContent = 'Point your camera at a SMART Health Link QR code to import the patient\'s health data.';
+          return;
         }
 
-        document.getElementById('fhirPreview').textContent = preview;
-      }
-    }
-
-    // === Download helpers ===
-    function downloadFile(filename, base64Data, mimeType) {
-      const buffer = base64ToArrayBuffer(base64Data);
-      const blob = new Blob([buffer], { type: mimeType });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }
-
-    function downloadJsonBundle(index, filename) {
-      const bundle = window._downloadBundles[index];
-      if (!bundle) return;
-      const jsonStr = JSON.stringify(bundle, null, 2);
-      const blob = new Blob([jsonStr], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }
-
-    function downloadAllFiles() {
-      // Trigger all download buttons except "Download All"
-      const buttons = document.querySelectorAll('.download-section .download-btn');
-      let delay = 0;
-      buttons.forEach(btn => {
-        setTimeout(() => btn.click(), delay);
-        delay += 300;
-      });
-    }
-
-    // === Status and clear ===
-    function setStatus(type, message) {
-      const el = document.getElementById('status');
-      el.className = `status ${type}`;
-      el.textContent = message;
-    }
-
-    // === App Validation Helpers ===
-    function updateAppValidationUI() {
-      const heroTitle = document.getElementById('heroTitle');
-      const heroSubtitle = document.getElementById('heroSubtitle');
-
-      if (!requireAppValidation) {
-        heroTitle.textContent = 'Scan the Patient\'s QR Code';
-        heroSubtitle.textContent = 'Point your camera at a SMART Health Link QR code to import the patient\'s health data.';
-        return;
+        if (!appVerified) {
+          heroTitle.textContent = 'Step 1: Scan the Patient\'s App QR Code';
+          heroSubtitle.textContent = 'Scan the QR code from the patient\'s health app to verify it is a CMS-approved app.';
+        } else {
+          heroTitle.textContent = 'Step 2: Scan the Health Data QR Code';
+          heroSubtitle.textContent = `App verified: ${verifiedAppName}. Now scan the patient's SMART Health Link QR code.`;
+        }
       }
 
-      if (!appVerified) {
-        heroTitle.textContent = 'Step 1: Scan the Patient\'s App QR Code';
-        heroSubtitle.textContent = 'Scan the QR code from the patient\'s health app to verify it is a CMS-approved app.';
-      } else {
-        heroTitle.textContent = 'Step 2: Scan the Health Data QR Code';
-        heroSubtitle.textContent = `App verified: ${verifiedAppName}. Now scan the patient's SMART Health Link QR code.`;
-      }
-    }
-
-    function resetAppValidation() {
-      appVerified = false;
-      verifiedAppName = '';
-      const banner = document.getElementById('appVerificationBanner');
-      banner.innerHTML = '';
-      banner.style.display = 'none';
-      updateAppValidationUI();
-      setStatus('info', 'Reset. Scan the patient\'s app QR code to begin.');
-    }
-
-    function resetForNewScan() {
-      clearResults();
-      // Reset app validation so next scan requires it again
-      if (requireAppValidation) {
+      function resetAppValidation() {
         appVerified = false;
         verifiedAppName = '';
-        document.getElementById('appVerificationBanner').innerHTML = '';
-        document.getElementById('appVerificationBanner').style.display = 'none';
+        const banner = document.getElementById('appVerificationBanner');
+        banner.innerHTML = '';
+        banner.style.display = 'none';
         updateAppValidationUI();
+        setStatus('info', 'Reset. Scan the patient\'s app QR code to begin.');
       }
-      setStatus('info', 'Ready to scan. Point your camera at a SMART Health Link QR code.');
-    }
 
-    function clearResults() {
-      document.getElementById('results').classList.remove('visible');
-      document.getElementById('driveBanner').innerHTML = '';
-      document.getElementById('emailBanner').innerHTML = '';
-      document.getElementById('apiBanner').innerHTML = '';
-      document.getElementById('downloadSection').innerHTML = '';
-      document.getElementById('pdfCard').style.display = 'none';
-      document.getElementById('resourceCard').style.display = 'none';
-      document.getElementById('previewCard').style.display = 'none';
-      document.getElementById('passcodeForm').classList.remove('visible');
-      document.getElementById('passcodeInput').value = '';
-      document.getElementById('status').className = 'status';
-    }
-
-    // === Admin Password Prompt ===
-    function showAdminPasswordPrompt(e) {
-      e.preventDefault();
-      const modal = document.getElementById('adminPasswordModal');
-      modal.style.display = 'flex';
-      document.getElementById('adminModalPassword').value = '';
-      document.getElementById('adminModalError').style.display = 'none';
-      setTimeout(() => document.getElementById('adminModalPassword').focus(), 100);
-
-      // Allow Enter key
-      document.getElementById('adminModalPassword').onkeydown = function(ev) {
-        if (ev.key === 'Enter') submitAdminPassword();
-      };
-
-      // Close on backdrop click
-      modal.onclick = function(ev) {
-        if (ev.target === modal) hideAdminPasswordPrompt();
-      };
-    }
-
-    function hideAdminPasswordPrompt() {
-      document.getElementById('adminPasswordModal').style.display = 'none';
-    }
-
-    async function submitAdminPassword() {
-      const password = document.getElementById('adminModalPassword').value.trim();
-      if (!password) return;
-
-      const errorEl = document.getElementById('adminModalError');
-      errorEl.style.display = 'none';
-
-      try {
-        const resp = await fetch('/api/orgs/' + slug + '/auth', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ password: password, role: 'admin' }),
-        });
-
-        const data = await resp.json();
-
-        if (!resp.ok) {
-          errorEl.textContent = data.error || 'Invalid admin password';
-          errorEl.style.display = 'block';
-          return;
+      function resetForNewScan() {
+        clearResults();
+        // Reset app validation so next scan requires it again
+        if (requireAppValidation) {
+          appVerified = false;
+          verifiedAppName = '';
+          document.getElementById('appVerificationBanner').innerHTML = '';
+          document.getElementById('appVerificationBanner').style.display = 'none';
+          updateAppValidationUI();
         }
-
-        // Store admin token using the admin page's key so it picks it up
-        sessionStorage.setItem('ktc_token_' + slug, data.token);
-        window.location.href = '/' + slug + '/admin';
-      } catch (err) {
-        errorEl.textContent = 'Connection error. Please try again.';
-        errorEl.style.display = 'block';
+        setStatus('info', 'Ready to scan. Point your camera at a SMART Health Link QR code.');
       }
-    }
-  </script>
-</body>
+
+      function clearResults() {
+        document.getElementById('results').classList.remove('visible');
+        document.getElementById('driveBanner').innerHTML = '';
+        document.getElementById('emailBanner').innerHTML = '';
+        document.getElementById('apiBanner').innerHTML = '';
+        document.getElementById('downloadSection').innerHTML = '';
+        document.getElementById('pdfCard').style.display = 'none';
+        document.getElementById('resourceCard').style.display = 'none';
+        document.getElementById('previewCard').style.display = 'none';
+        document.getElementById('passcodeForm').classList.remove('visible');
+        document.getElementById('passcodeInput').value = '';
+        document.getElementById('confirmFetchBox').style.display = 'none';
+        window._pendingConfirmQrText = null;
+        document.getElementById('status').className = 'status';
+      }
+
+      // === Admin Password Prompt ===
+      function showAdminPasswordPrompt(e) {
+        e.preventDefault();
+        const modal = document.getElementById('adminPasswordModal');
+        modal.style.display = 'flex';
+        document.getElementById('adminModalPassword').value = '';
+        document.getElementById('adminModalError').style.display = 'none';
+        setTimeout(() => document.getElementById('adminModalPassword').focus(), 100);
+
+        // Allow Enter key
+        document.getElementById('adminModalPassword').onkeydown = function(ev) {
+          if (ev.key === 'Enter') submitAdminPassword();
+        };
+
+        // Close on backdrop click
+        modal.onclick = function(ev) {
+          if (ev.target === modal) hideAdminPasswordPrompt();
+        };
+      }
+
+      function hideAdminPasswordPrompt() {
+        document.getElementById('adminPasswordModal').style.display = 'none';
+      }
+
+      async function submitAdminPassword() {
+        const password = document.getElementById('adminModalPassword').value.trim();
+        if (!password) return;
+
+        const errorEl = document.getElementById('adminModalError');
+        errorEl.style.display = 'none';
+
+        try {
+          const resp = await fetch('/api/orgs/' + slug + '/auth', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password: password, role: 'admin' }),
+          });
+
+          const data = await resp.json();
+
+          if (!resp.ok) {
+            errorEl.textContent = data.error || 'Invalid admin password';
+            errorEl.style.display = 'block';
+            return;
+          }
+
+          // Store admin token using the admin page's key so it picks it up
+          sessionStorage.setItem('ktc_token_' + slug, data.token);
+          window.location.href = '/' + slug + '/admin';
+        } catch (err) {
+          errorEl.textContent = 'Connection error. Please try again.';
+          errorEl.style.display = 'block';
+        }
+      }
+    </script>
+  </body>
 </html>

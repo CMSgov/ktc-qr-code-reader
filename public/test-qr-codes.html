@@ -1,352 +1,356 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Test QR Codes — Kill the Clipboard</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.4.4/build/qrcode.min.js"
-    integrity="sha384-0RsG1yo/crf/1Qc14sho26SXXOTngNCjgJw7fuvXBt9W/OChF/Ijx+aUuBDqQwEk"
-    crossorigin="anonymous"></script>
-  <style>
-    :root {
-      --cms-blue: #0071bc;
-      --cms-blue-dark: #205493;
-      --cms-blue-darkest: #112e51;
-      --cms-blue-lightest: #e6f0f8;
-      --cms-gold: #f3ce3b;
-      --color-success: #2e8540;
-      --color-success-light: #e7f4e4;
-      --color-error: #e31c3d;
-      --color-error-light: #fce4ec;
-      --gray-dark: #333334;
-      --gray-mid: #5b616b;
-      --gray-light: #aeb0b5;
-      --gray-lighter: #d6d7d9;
-      --gray-lightest: #f1f1f1;
-      --white: #ffffff;
-    }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Test QR Codes — Kill the Clipboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script
+      src="https://cdn.jsdelivr.net/npm/qrcode@1.4.4/build/qrcode.min.js"
+      integrity="sha384-0RsG1yo/crf/1Qc14sho26SXXOTngNCjgJw7fuvXBt9W/OChF/Ijx+aUuBDqQwEk"
+      crossorigin="anonymous"
+    ></script>
+    <style>
+      :root {
+        --cms-blue: #0071bc;
+        --cms-blue-dark: #205493;
+        --cms-blue-darkest: #112e51;
+        --cms-blue-lightest: #e6f0f8;
+        --cms-gold: #f3ce3b;
+        --color-success: #2e8540;
+        --color-success-light: #e7f4e4;
+        --color-error: #e31c3d;
+        --color-error-light: #fce4ec;
+        --gray-dark: #333334;
+        --gray-mid: #5b616b;
+        --gray-light: #aeb0b5;
+        --gray-lighter: #d6d7d9;
+        --gray-lightest: #f1f1f1;
+        --white: #ffffff;
+      }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
 
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: var(--white);
-      color: var(--gray-dark);
-      min-height: 100vh;
-      -webkit-font-smoothing: antialiased;
-    }
+      body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: var(--white);
+        color: var(--gray-dark);
+        min-height: 100vh;
+        -webkit-font-smoothing: antialiased;
+      }
 
-    .topbar {
-      background: var(--cms-blue-darkest);
-      color: var(--white);
-      padding: 6px 24px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      letter-spacing: 0.04em;
-    }
+      .topbar {
+        background: var(--cms-blue-darkest);
+        color: var(--white);
+        padding: 6px 24px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+      }
 
-    .site-header {
-      background: var(--white);
-      border-bottom: 1px solid var(--gray-lighter);
-      padding: 16px 24px;
-    }
+      .site-header {
+        background: var(--white);
+        border-bottom: 1px solid var(--gray-lighter);
+        padding: 16px 24px;
+      }
 
-    .site-title {
-      font-family: 'Instrument Serif', Georgia, serif;
-      font-size: 1.5rem;
-      color: var(--cms-blue-darkest);
-    }
+      .site-title {
+        font-family: 'Instrument Serif', Georgia, serif;
+        font-size: 1.5rem;
+        color: var(--cms-blue-darkest);
+      }
 
-    .site-title em {
-      font-style: italic;
-      color: var(--cms-blue);
-    }
+      .site-title em {
+        font-style: italic;
+        color: var(--cms-blue);
+      }
 
-    .gold-rule {
-      height: 3px;
-      background: linear-gradient(90deg, var(--cms-gold), var(--cms-blue));
-      border: none;
-    }
+      .gold-rule {
+        height: 3px;
+        background: linear-gradient(90deg, var(--cms-gold), var(--cms-blue));
+        border: none;
+      }
 
-    .container {
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 32px 24px;
-    }
+      .container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 32px 24px;
+      }
 
-    h1 {
-      font-family: 'Instrument Serif', Georgia, serif;
-      font-size: 2rem;
-      color: var(--cms-blue-darkest);
-      margin-bottom: 8px;
-    }
+      h1 {
+        font-family: 'Instrument Serif', Georgia, serif;
+        font-size: 2rem;
+        color: var(--cms-blue-darkest);
+        margin-bottom: 8px;
+      }
 
-    .subtitle {
-      font-size: 1rem;
-      color: var(--gray-mid);
-      margin-bottom: 32px;
-      line-height: 1.6;
-    }
+      .subtitle {
+        font-size: 1rem;
+        color: var(--gray-mid);
+        margin-bottom: 32px;
+        line-height: 1.6;
+      }
 
-    .qr-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 24px;
-    }
+      .qr-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 24px;
+      }
 
-    .qr-card {
-      background: var(--white);
-      border: 1px solid var(--gray-lighter);
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-    }
+      .qr-card {
+        background: var(--white);
+        border: 1px solid var(--gray-lighter);
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      }
 
-    .qr-card-header {
-      padding: 16px 20px;
-      border-bottom: 1px solid var(--gray-lightest);
-    }
+      .qr-card-header {
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--gray-lightest);
+      }
 
-    .qr-card-header h3 {
-      font-size: 1rem;
-      font-weight: 700;
-      color: var(--cms-blue-darkest);
-      margin-bottom: 4px;
-    }
+      .qr-card-header h3 {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--cms-blue-darkest);
+        margin-bottom: 4px;
+      }
 
-    .qr-card-header .tier-badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 3px;
-      font-size: 0.7rem;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-    }
+      .qr-card-header .tier-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 3px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
 
-    .tier-badge.early-adopter {
-      background: var(--cms-blue-lightest);
-      color: var(--cms-blue-dark);
-      border: 1px solid var(--cms-blue);
-    }
+      .tier-badge.early-adopter {
+        background: var(--cms-blue-lightest);
+        color: var(--cms-blue-dark);
+        border: 1px solid var(--cms-blue);
+      }
 
-    .tier-badge.pledgee {
-      background: var(--color-success-light);
-      color: var(--color-success);
-      border: 1px solid var(--color-success);
-    }
+      .tier-badge.pledgee {
+        background: var(--color-success-light);
+        color: var(--color-success);
+        border: 1px solid var(--color-success);
+      }
 
-    .tier-badge.not-approved {
-      background: var(--color-error-light);
-      color: var(--color-error);
-      border: 1px solid var(--color-error);
-    }
+      .tier-badge.not-approved {
+        background: var(--color-error-light);
+        color: var(--color-error);
+        border: 1px solid var(--color-error);
+      }
 
-    .qr-card-body {
-      padding: 24px 20px;
-      text-align: center;
-    }
+      .qr-card-body {
+        padding: 24px 20px;
+        text-align: center;
+      }
 
-    .qr-card-body canvas {
-      display: block;
-      margin: 0 auto 16px;
-    }
+      .qr-card-body canvas {
+        display: block;
+        margin: 0 auto 16px;
+      }
 
-    .expected-result {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      padding: 8px 16px;
-      border-radius: 4px;
-    }
+      .expected-result {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        padding: 8px 16px;
+        border-radius: 4px;
+      }
 
-    .expected-result.approved {
-      background: var(--color-success-light);
-      color: var(--color-success);
-    }
+      .expected-result.approved {
+        background: var(--color-success-light);
+        color: var(--color-success);
+      }
 
-    .expected-result.rejected {
-      background: var(--color-error-light);
-      color: var(--color-error);
-    }
+      .expected-result.rejected {
+        background: var(--color-error-light);
+        color: var(--color-error);
+      }
 
-    .qr-data {
-      margin-top: 12px;
-      padding: 8px 12px;
-      background: var(--gray-lightest);
-      border: 1px solid var(--gray-lighter);
-      border-radius: 4px;
-      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-      font-size: 0.7rem;
-      color: var(--gray-mid);
-      word-break: break-all;
-      text-align: left;
-    }
+      .qr-data {
+        margin-top: 12px;
+        padding: 8px 12px;
+        background: var(--gray-lightest);
+        border: 1px solid var(--gray-lighter);
+        border-radius: 4px;
+        font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+        font-size: 0.7rem;
+        color: var(--gray-mid);
+        word-break: break-all;
+        text-align: left;
+      }
 
-    .info-box {
-      background: var(--cms-blue-lightest);
-      border: 1px solid var(--cms-blue);
-      border-left: 4px solid var(--cms-blue);
-      border-radius: 4px;
-      padding: 16px 20px;
-      margin-bottom: 32px;
-      font-size: 0.875rem;
-      color: var(--cms-blue-darkest);
-      line-height: 1.6;
-    }
+      .info-box {
+        background: var(--cms-blue-lightest);
+        border: 1px solid var(--cms-blue);
+        border-left: 4px solid var(--cms-blue);
+        border-radius: 4px;
+        padding: 16px 20px;
+        margin-bottom: 32px;
+        font-size: 0.875rem;
+        color: var(--cms-blue-darkest);
+        line-height: 1.6;
+      }
 
-    .info-box strong {
-      display: block;
-      margin-bottom: 4px;
-    }
+      .info-box strong {
+        display: block;
+        margin-bottom: 4px;
+      }
 
-    .back-link {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      color: var(--cms-blue);
-      text-decoration: none;
-      font-weight: 600;
-      font-size: 0.9rem;
-      margin-bottom: 24px;
-    }
+      .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--cms-blue);
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.9rem;
+        margin-bottom: 24px;
+      }
 
-    .back-link:hover {
-      text-decoration: underline;
-    }
+      .back-link:hover {
+        text-decoration: underline;
+      }
 
-    .site-footer {
-      background: var(--cms-blue-darkest);
-      color: var(--white);
-      padding: 32px 24px;
-      text-align: center;
-      font-size: 0.8rem;
-      margin-top: 40px;
-    }
+      .site-footer {
+        background: var(--cms-blue-darkest);
+        color: var(--white);
+        padding: 32px 24px;
+        text-align: center;
+        font-size: 0.8rem;
+        margin-top: 40px;
+      }
 
-    .site-footer p { opacity: 0.6; margin-bottom: 4px; }
+      .site-footer p { opacity: 0.6; margin-bottom: 4px; }
 
-    @media print {
-      .topbar, .site-footer, .back-link, .info-box { display: none; }
-      .qr-grid { gap: 16px; }
-      .qr-card { break-inside: avoid; box-shadow: none; border: 2px solid #000; }
-    }
-  </style>
-</head>
-<body>
-  <div class="topbar">
-    CMS Health Tech Ecosystem — Kill the Clipboard
-  </div>
+      @media print {
+        .topbar, .site-footer, .back-link, .info-box { display: none; }
+        .qr-grid { gap: 16px; }
+        .qr-card { break-inside: avoid; box-shadow: none; border: 2px solid #000; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="topbar">CMS Health Tech Ecosystem — Kill the Clipboard</div>
 
-  <div class="site-header">
-    <div class="site-title">Kill <em>the</em> Clipboard</div>
-  </div>
-
-  <hr class="gold-rule">
-
-  <div class="container">
-    <a href="/" class="back-link">← Back to Home</a>
-
-    <h1>Test QR Codes</h1>
-    <p class="subtitle">
-      These QR codes simulate app identity codes for testing the app validation feature.
-      Open this page on a second screen or print it, then scan with the Kill the Clipboard scanner.
-    </p>
-
-    <div class="info-box">
-      <strong>How to use these test QR codes:</strong>
-      1. Enable "App Validation" in your organization's Admin Settings.<br>
-      2. Open your scanner page and tap "Start Scan."<br>
-      3. Scan one of the approved app QR codes below — you should see a green verification banner.<br>
-      4. Then scan the "Fake Health App" QR code — it should be rejected with a red banner.
+    <div class="site-header">
+      <div class="site-title">Kill <em>the</em> Clipboard</div>
     </div>
 
-    <div class="qr-grid">
-      <!-- QR 1: Apple (Early Adopter) -->
-      <div class="qr-card">
-        <div class="qr-card-header">
-          <h3>Apple</h3>
-          <span class="tier-badge early-adopter">Early Adopter</span>
-        </div>
-        <div class="qr-card-body">
-          <canvas id="qr-apple"></canvas>
-          <div class="expected-result approved">✓ Expected: Approved</div>
-          <div class="qr-data" id="data-apple"></div>
-        </div>
+    <hr class="gold-rule" />
+
+    <div class="container">
+      <a href="/" class="back-link">← Back to Home</a>
+
+      <h1>Test QR Codes</h1>
+      <p class="subtitle">
+        These QR codes simulate app identity codes for testing the app validation feature. Open this
+        page on a second screen or print it, then scan with the Kill the Clipboard scanner.
+      </p>
+
+      <div class="info-box">
+        <strong>How to use these test QR codes:</strong>
+        1. Enable "App Validation" in your organization's Admin Settings.<br />
+        2. Open your scanner page and tap "Start Scan."<br />
+        3. Scan one of the approved app QR codes below — you should see a green verification
+        banner.<br />
+        4. Then scan the "Fake Health App" QR code — it should be rejected with a red banner.
       </div>
 
-      <!-- QR 2: Fasten Health (Early Adopter) -->
-      <div class="qr-card">
-        <div class="qr-card-header">
-          <h3>Fasten Health</h3>
-          <span class="tier-badge early-adopter">Early Adopter</span>
+      <div class="qr-grid">
+        <!-- QR 1: Apple (Early Adopter) -->
+        <div class="qr-card">
+          <div class="qr-card-header">
+            <h3>Apple</h3>
+            <span class="tier-badge early-adopter">Early Adopter</span>
+          </div>
+          <div class="qr-card-body">
+            <canvas id="qr-apple"></canvas>
+            <div class="expected-result approved">✓ Expected: Approved</div>
+            <div class="qr-data" id="data-apple"></div>
+          </div>
         </div>
-        <div class="qr-card-body">
-          <canvas id="qr-fasten"></canvas>
-          <div class="expected-result approved">✓ Expected: Approved</div>
-          <div class="qr-data" id="data-fasten"></div>
-        </div>
-      </div>
 
-      <!-- QR 3: GoodRx (Pledgee) -->
-      <div class="qr-card">
-        <div class="qr-card-header">
-          <h3>GoodRx</h3>
-          <span class="tier-badge pledgee">Pledgee</span>
+        <!-- QR 2: Fasten Health (Early Adopter) -->
+        <div class="qr-card">
+          <div class="qr-card-header">
+            <h3>Fasten Health</h3>
+            <span class="tier-badge early-adopter">Early Adopter</span>
+          </div>
+          <div class="qr-card-body">
+            <canvas id="qr-fasten"></canvas>
+            <div class="expected-result approved">✓ Expected: Approved</div>
+            <div class="qr-data" id="data-fasten"></div>
+          </div>
         </div>
-        <div class="qr-card-body">
-          <canvas id="qr-goodrx"></canvas>
-          <div class="expected-result approved">✓ Expected: Approved</div>
-          <div class="qr-data" id="data-goodrx"></div>
-        </div>
-      </div>
 
-      <!-- QR 4: Fake Health App (Not Approved) -->
-      <div class="qr-card">
-        <div class="qr-card-header">
-          <h3>Fake Health App</h3>
-          <span class="tier-badge not-approved">Not Approved</span>
+        <!-- QR 3: GoodRx (Pledgee) -->
+        <div class="qr-card">
+          <div class="qr-card-header">
+            <h3>GoodRx</h3>
+            <span class="tier-badge pledgee">Pledgee</span>
+          </div>
+          <div class="qr-card-body">
+            <canvas id="qr-goodrx"></canvas>
+            <div class="expected-result approved">✓ Expected: Approved</div>
+            <div class="qr-data" id="data-goodrx"></div>
+          </div>
         </div>
-        <div class="qr-card-body">
-          <canvas id="qr-fake"></canvas>
-          <div class="expected-result rejected">✗ Expected: Rejected</div>
-          <div class="qr-data" id="data-fake"></div>
+
+        <!-- QR 4: Fake Health App (Not Approved) -->
+        <div class="qr-card">
+          <div class="qr-card-header">
+            <h3>Fake Health App</h3>
+            <span class="tier-badge not-approved">Not Approved</span>
+          </div>
+          <div class="qr-card-body">
+            <canvas id="qr-fake"></canvas>
+            <div class="expected-result rejected">✗ Expected: Rejected</div>
+            <div class="qr-data" id="data-fake"></div>
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <div class="site-footer">
-    <p>Kill the Clipboard — Test QR Codes</p>
-    <p>These are for demo/testing purposes only.</p>
-  </div>
+    <div class="site-footer">
+      <p>Kill the Clipboard — Test QR Codes</p>
+      <p>These are for demo/testing purposes only.</p>
+    </div>
 
-  <script>
-    const testApps = [
-      { id: 'apple', canvasId: 'qr-apple', dataId: 'data-apple', payload: { type: 'cms-htei', name: 'Apple', appId: 'apple' } },
-      { id: 'fasten', canvasId: 'qr-fasten', dataId: 'data-fasten', payload: { type: 'cms-htei', name: 'Fasten Health', appId: 'fasten-health' } },
-      { id: 'goodrx', canvasId: 'qr-goodrx', dataId: 'data-goodrx', payload: { type: 'cms-htei', name: 'GoodRx', appId: 'goodrx' } },
-      { id: 'fake', canvasId: 'qr-fake', dataId: 'data-fake', payload: { type: 'cms-htei', name: 'Fake Health App', appId: 'fake-health-app' } },
-    ];
+    <script>
+      const testApps = [
+        { id: 'apple', canvasId: 'qr-apple', dataId: 'data-apple', payload: { type: 'cms-htei', name: 'Apple', appId: 'apple' } },
+        { id: 'fasten', canvasId: 'qr-fasten', dataId: 'data-fasten', payload: { type: 'cms-htei', name: 'Fasten Health', appId: 'fasten-health' } },
+        { id: 'goodrx', canvasId: 'qr-goodrx', dataId: 'data-goodrx', payload: { type: 'cms-htei', name: 'GoodRx', appId: 'goodrx' } },
+        { id: 'fake', canvasId: 'qr-fake', dataId: 'data-fake', payload: { type: 'cms-htei', name: 'Fake Health App', appId: 'fake-health-app' } },
+      ];
 
-    testApps.forEach(app => {
-      const jsonStr = JSON.stringify(app.payload);
-      document.getElementById(app.dataId).textContent = jsonStr;
+      testApps.forEach(app => {
+        const jsonStr = JSON.stringify(app.payload);
+        document.getElementById(app.dataId).textContent = jsonStr;
 
-      QRCode.toCanvas(document.getElementById(app.canvasId), jsonStr, {
-        width: 250,
-        margin: 2,
-        color: { dark: '#112e51', light: '#ffffff' }
-      }, function(error) {
-        if (error) console.error('QR generation error:', error);
+        QRCode.toCanvas(document.getElementById(app.canvasId), jsonStr, {
+          width: 250,
+          margin: 2,
+          color: { dark: '#112e51', light: '#ffffff' }
+        }, function(error) {
+          if (error) console.error('QR generation error:', error);
+        });
       });
-    });
-  </script>
-</body>
+    </script>
+  </body>
 </html>

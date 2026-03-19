@@ -1,859 +1,874 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Super Admin — Kill the Clipboard</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --cms-blue: #0071bc;
-      --cms-blue-dark: #205493;
-      --cms-blue-darkest: #112e51;
-      --cms-blue-light: #4992d6;
-      --cms-blue-lightest: #e6f0f8;
-      --cms-cyan: #02bfe7;
-      --cms-gold: #f3ce3b;
-      --cms-gold-dark: #c9a616;
-      --cms-gold-light: #fef9e9;
-      --color-success: #2e8540;
-      --color-success-light: #e7f4e4;
-      --color-error: #e31c3d;
-      --color-error-light: #fce4ec;
-      --color-warn: #f8c41f;
-      --color-warn-light: #fef9e9;
-      --gray-darkest: #1b1b1b;
-      --gray-dark: #333334;
-      --gray-mid: #5b616b;
-      --gray-light: #aeb0b5;
-      --gray-lighter: #d6d7d9;
-      --gray-lightest: #f1f1f1;
-      --white: #ffffff;
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: var(--white);
-      color: var(--gray-dark);
-      min-height: 100vh;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    .topbar {
-      background: var(--cms-blue-darkest);
-      color: var(--white);
-      padding: 8px 24px;
-      font-size: 0.75rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .topbar span { opacity: 0.7; }
-
-    .site-header {
-      background: var(--white);
-      border-bottom: 4px solid var(--cms-gold);
-      padding: 20px 24px;
-    }
-
-    .header-inner {
-      max-width: 1000px;
-      margin: 0 auto;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .site-title {
-      font-family: 'Instrument Serif', Georgia, serif;
-      font-size: 1.75rem;
-      color: var(--cms-blue-darkest);
-      letter-spacing: -0.02em;
-      text-decoration: none;
-    }
-    .site-title em { font-style: italic; color: var(--cms-blue); }
-
-    .gold-rule {
-      height: 3px;
-      background: linear-gradient(90deg, var(--cms-gold) 0%, var(--cms-gold-dark) 100%);
-      border: none;
-      margin: 0;
-    }
-
-    /* === MAIN === */
-    .container {
-      max-width: 1000px;
-      margin: 0 auto;
-      padding: 32px 24px;
-    }
-
-    .page-heading {
-      font-family: 'Instrument Serif', Georgia, serif;
-      font-size: 2rem;
-      font-weight: 400;
-      color: var(--cms-blue-darkest);
-      letter-spacing: -0.02em;
-      margin-bottom: 8px;
-    }
-
-    .page-subheading {
-      font-size: 0.95rem;
-      color: var(--gray-mid);
-      margin-bottom: 32px;
-    }
-
-    /* === CARDS === */
-    .card {
-      background: var(--white);
-      border: 1px solid var(--gray-lighter);
-      border-radius: 4px;
-      overflow: hidden;
-      margin-bottom: 24px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-    }
-
-    .card-header {
-      background: var(--cms-blue-lightest);
-      border-bottom: 1px solid var(--gray-lighter);
-      padding: 12px 20px;
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: var(--cms-blue-darkest);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .card-body { padding: 20px; }
-
-    /* === STATUS === */
-    .status {
-      padding: 12px 16px;
-      border-radius: 4px;
-      margin-bottom: 16px;
-      font-size: 0.875rem;
-      display: none;
-      border-left: 4px solid transparent;
-    }
-    .status.info { display: block; background: var(--cms-blue-lightest); border-left-color: var(--cms-blue); color: var(--cms-blue-darkest); }
-    .status.success { display: block; background: var(--color-success-light); border-left-color: var(--color-success); color: #1a4301; }
-    .status.error { display: block; background: var(--color-error-light); border-left-color: var(--color-error); color: #8b0000; }
-
-    /* === FORMS === */
-    label {
-      display: block;
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: var(--cms-blue-darkest);
-      margin-bottom: 6px;
-    }
-
-    input[type="text"],
-    input[type="password"] {
-      width: 100%;
-      padding: 10px 12px;
-      background: var(--white);
-      border: 2px solid var(--gray-lighter);
-      border-radius: 4px;
-      color: var(--gray-dark);
-      font-size: 1rem;
-      font-family: 'Inter', sans-serif;
-      margin-bottom: 4px;
-    }
-
-    input:focus {
-      outline: none;
-      border-color: var(--cms-blue);
-      box-shadow: 0 0 0 2px rgba(0,113,188,0.2);
-    }
-
-    .help-text {
-      font-size: 0.8rem;
-      color: var(--gray-mid);
-      margin-bottom: 16px;
-      margin-top: 2px;
-    }
-
-    .form-group { margin-bottom: 16px; }
-
-    /* === BUTTONS === */
-    button {
-      padding: 10px 18px;
-      border: 2px solid var(--gray-lighter);
-      border-radius: 4px;
-      background: var(--white);
-      color: var(--cms-blue);
-      font-family: 'Inter', sans-serif;
-      font-size: 0.875rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-    button:hover { background: var(--cms-blue-lightest); border-color: var(--cms-blue-light); }
-
-    button.primary { background: var(--cms-blue); border-color: var(--cms-blue); color: var(--white); }
-    button.primary:hover { background: var(--cms-blue-dark); border-color: var(--cms-blue-dark); }
-
-    button.danger { background: var(--white); border-color: var(--color-error); color: var(--color-error); }
-    button.danger:hover { background: var(--color-error-light); }
-
-    button.danger-fill { background: var(--color-error); border-color: var(--color-error); color: var(--white); }
-    button.danger-fill:hover { background: #b71c1c; border-color: #b71c1c; }
-
-    button.success { background: var(--color-success); border-color: var(--color-success); color: var(--white); }
-    button.success:hover { background: #1a4301; border-color: #1a4301; }
-
-    button.full-width { width: 100%; }
-
-    button:disabled { opacity: 0.4; cursor: not-allowed; }
-
-    button.sm { padding: 6px 12px; font-size: 0.8rem; }
-
-    /* === LOGIN SECTION === */
-    .login-section {
-      max-width: 420px;
-      margin: 60px auto;
-    }
-    .login-section .card-body { padding: 28px 24px; }
-    .login-heading {
-      font-family: 'Instrument Serif', Georgia, serif;
-      font-size: 1.5rem;
-      color: var(--cms-blue-darkest);
-      margin-bottom: 20px;
-      text-align: center;
-    }
-
-    /* === STATS ROW === */
-    .stats-row {
-      display: flex;
-      gap: 16px;
-      margin-bottom: 28px;
-    }
-
-    .stat-card {
-      flex: 1;
-      background: var(--cms-blue-lightest);
-      border: 1px solid var(--gray-lighter);
-      border-radius: 4px;
-      padding: 16px 20px;
-      text-align: center;
-    }
-
-    .stat-number {
-      font-family: 'Instrument Serif', Georgia, serif;
-      font-size: 2.2rem;
-      color: var(--cms-blue-darkest);
-      line-height: 1;
-    }
-
-    .stat-label {
-      font-size: 0.8rem;
-      color: var(--gray-mid);
-      margin-top: 4px;
-      font-weight: 500;
-    }
-
-    /* === TABLE === */
-    .data-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.875rem;
-    }
-
-    .data-table th {
-      text-align: left;
-      padding: 10px 12px;
-      background: var(--gray-lightest);
-      border-bottom: 2px solid var(--gray-lighter);
-      color: var(--cms-blue-darkest);
-      font-weight: 600;
-      font-size: 0.8rem;
-      text-transform: uppercase;
-      letter-spacing: 0.03em;
-    }
-
-    .data-table td {
-      padding: 10px 12px;
-      border-bottom: 1px solid var(--gray-lightest);
-      vertical-align: middle;
-    }
-
-    .data-table tr:hover td {
-      background: var(--cms-blue-lightest);
-    }
-
-    .data-table .actions {
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-    }
-
-    .slug-link {
-      color: var(--cms-blue);
-      text-decoration: none;
-      font-weight: 500;
-    }
-    .slug-link:hover { text-decoration: underline; }
-
-    .badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 10px;
-      font-size: 0.7rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.03em;
-    }
-    .badge.drive { background: #e8f5e9; color: #2e7d32; }
-    .badge.gmail { background: #fce4ec; color: #c62828; }
-    .badge.onedrive { background: #e3f2fd; color: #1565c0; }
-    .badge.outlook { background: #e3f2fd; color: #1565c0; }
-    .badge.box { background: #e0f2f1; color: #00695c; }
-    .badge.download { background: var(--gray-lightest); color: var(--gray-mid); }
-    .badge.pending { background: var(--color-warn-light); color: #654501; }
-    .badge.approved { background: var(--color-success-light); color: #1a4301; }
-    .badge.rejected { background: var(--color-error-light); color: #8b0000; }
-
-    .empty-state {
-      text-align: center;
-      padding: 40px 20px;
-      color: var(--gray-mid);
-    }
-    .empty-state .icon { font-size: 2rem; margin-bottom: 8px; }
-
-    /* === MODAL === */
-    .modal-overlay {
-      display: none;
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.5);
-      z-index: 1000;
-      align-items: center;
-      justify-content: center;
-    }
-    .modal-overlay.active { display: flex; }
-
-    .modal {
-      background: var(--white);
-      border-radius: 8px;
-      width: 90%;
-      max-width: 460px;
-      box-shadow: 0 8px 40px rgba(0,0,0,0.2);
-      overflow: hidden;
-    }
-
-    .modal-header {
-      padding: 16px 20px;
-      background: var(--cms-blue-lightest);
-      border-bottom: 1px solid var(--gray-lighter);
-      font-weight: 600;
-      color: var(--cms-blue-darkest);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .modal-close {
-      background: none;
-      border: none;
-      font-size: 1.2rem;
-      cursor: pointer;
-      color: var(--gray-mid);
-      padding: 0;
-    }
-    .modal-close:hover { color: var(--gray-dark); background: none; border: none; }
-
-    .modal-body { padding: 20px; }
-
-    .modal-footer {
-      padding: 12px 20px;
-      border-top: 1px solid var(--gray-lightest);
-      display: flex;
-      justify-content: flex-end;
-      gap: 8px;
-    }
-
-    /* === FOOTER === */
-    .site-footer {
-      background: var(--cms-blue-darkest);
-      color: var(--white);
-      padding: 32px 24px;
-      text-align: center;
-      font-size: 0.8rem;
-      margin-top: 40px;
-    }
-    .site-footer p { opacity: 0.6; margin-bottom: 4px; }
-    .footer-inner { max-width: 1000px; margin: 0 auto; }
-    .footer-links { margin-bottom: 8px; }
-    .footer-links a { color: rgba(255,255,255,0.7); text-decoration: none; margin: 0 12px; }
-    .footer-links a:hover { color: var(--white); }
-
-    /* === MOBILE === */
-    @media (max-width: 640px) {
-      .page-heading { font-size: 1.6rem; }
-      .site-title { font-size: 1.4rem; }
-      .header-inner { flex-direction: column; gap: 4px; align-items: flex-start; }
-      .stats-row { flex-direction: column; }
-      .data-table { font-size: 0.8rem; }
-      .data-table th, .data-table td { padding: 8px 6px; }
-      .data-table .actions { flex-direction: column; }
-      .hide-mobile { display: none; }
-    }
-  </style>
-</head>
-<body>
-  <div class="topbar">
-    <span>Super Admin Dashboard</span>
-    <span id="logoutArea" style="display:none;">
-      <a href="#" onclick="logout(); return false;" style="color: rgba(255,255,255,0.8); text-decoration: none;">Sign out</a>
-    </span>
-  </div>
-
-  <div class="site-header">
-    <div class="header-inner">
-      <a href="/" class="site-title">Kill <em>the</em> Clipboard</a>
-    </div>
-  </div>
-
-  <hr class="gold-rule">
-
-  <!-- ==================== LOGIN ==================== -->
-  <div id="loginSection" class="container login-section">
-    <div class="card">
-      <div class="card-body">
-        <div class="login-heading">Super Admin</div>
-        <div id="loginError" class="status" style="margin-bottom: 16px;"></div>
-        <div class="form-group">
-          <label for="adminKeyInput">Admin Key</label>
-          <input type="password" id="adminKeyInput" placeholder="Enter admin key" onkeydown="if(event.key==='Enter') doLogin()">
-        </div>
-        <button class="primary full-width" onclick="doLogin()">Sign In</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ==================== DASHBOARD ==================== -->
-  <div id="dashboard" class="container" style="display: none;">
-    <h1 class="page-heading">Dashboard</h1>
-    <p class="page-subheading">Manage all Kill the Clipboard organizations</p>
-
-    <!-- Stats -->
-    <div class="stats-row">
-      <div class="stat-card">
-        <div class="stat-number" id="statOrgs">—</div>
-        <div class="stat-label">Organizations</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-number" id="statPending">—</div>
-        <div class="stat-label">Pending Approvals</div>
-      </div>
-    </div>
-
-    <!-- Global status message -->
-    <div id="globalStatus" class="status"></div>
-
-    <!-- Organizations Table -->
-    <div class="card">
-      <div class="card-header">
-        <span>📋</span> Organizations
-      </div>
-      <div class="card-body" style="padding: 0;">
-        <div id="orgsLoading" class="empty-state">Loading…</div>
-        <div id="orgsEmpty" class="empty-state" style="display:none;">
-          <div class="icon">🏥</div>
-          <p>No organizations registered yet.</p>
-        </div>
-        <div id="orgsTableWrap" style="display:none; overflow-x:auto;">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Slug</th>
-                <th>Storage</th>
-                <th>Connections</th>
-                <th class="hide-mobile">Created</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="orgsBody"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- Approval Requests Table -->
-    <div class="card">
-      <div class="card-header">
-        <span>📨</span> Approval Requests
-      </div>
-      <div class="card-body" style="padding: 0;">
-        <div id="approvalsLoading" class="empty-state">Loading…</div>
-        <div id="approvalsEmpty" class="empty-state" style="display:none;">
-          <div class="icon">✅</div>
-          <p>No approval requests.</p>
-        </div>
-        <div id="approvalsTableWrap" style="display:none; overflow-x:auto;">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Organization</th>
-                <th>Email</th>
-                <th>Service</th>
-                <th>Status</th>
-                <th class="hide-mobile">Date</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="approvalsBody"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ==================== RESET PASSWORD MODAL ==================== -->
-  <div id="resetModal" class="modal-overlay">
-    <div class="modal">
-      <div class="modal-header">
-        <span>Reset Passwords — <span id="resetOrgName"></span></span>
-        <button class="modal-close" onclick="closeResetModal()">×</button>
-      </div>
-      <div class="modal-body">
-        <div id="resetError" class="status" style="margin-bottom: 12px;"></div>
-        <div class="form-group">
-          <label for="newAdminPw">New Admin Password</label>
-          <input type="password" id="newAdminPw" placeholder="Leave blank to keep current">
-          <div class="help-text">Minimum 6 characters. Leave blank to keep the current password.</div>
-        </div>
-        <div class="form-group">
-          <label for="newStaffPw">New Staff Password</label>
-          <input type="password" id="newStaffPw" placeholder="Leave blank to keep current">
-          <div class="help-text">Minimum 6 characters. Leave blank to keep the current password.</div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button onclick="closeResetModal()">Cancel</button>
-        <button class="primary" onclick="submitResetPassword()" id="resetSubmitBtn">Reset Passwords</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ==================== FOOTER ==================== -->
-  <div class="site-footer">
-    <div class="footer-inner">
-      <div class="footer-links">
-        <a href="/privacy">Privacy Policy</a>
-        <a href="/terms">Terms of Service</a>
-      </div>
-      <p>Kill the Clipboard — Eliminate the clipboard from healthcare intake.</p>
-      <p>© 2025 Russell Street Ventures. All rights reserved.</p>
-    </div>
-  </div>
-
-  <script>
-    // ── State ──
-    let adminKey = localStorage.getItem('ktc_admin_key') || '';
-    let currentOrgs = [];
-    let resetOrgId = null;
-
-    // ── Auth ──
-    function headers() {
-      return { 'Content-Type': 'application/json', 'x-admin-key': adminKey };
-    }
-
-    function doLogin() {
-      const key = document.getElementById('adminKeyInput').value.trim();
-      if (!key) {
-        showLoginError('Please enter the admin key.');
-        return;
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Super Admin — Kill the Clipboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --cms-blue: #0071bc;
+        --cms-blue-dark: #205493;
+        --cms-blue-darkest: #112e51;
+        --cms-blue-light: #4992d6;
+        --cms-blue-lightest: #e6f0f8;
+        --cms-cyan: #02bfe7;
+        --cms-gold: #f3ce3b;
+        --cms-gold-dark: #c9a616;
+        --cms-gold-light: #fef9e9;
+        --color-success: #2e8540;
+        --color-success-light: #e7f4e4;
+        --color-error: #e31c3d;
+        --color-error-light: #fce4ec;
+        --color-warn: #f8c41f;
+        --color-warn-light: #fef9e9;
+        --gray-darkest: #1b1b1b;
+        --gray-dark: #333334;
+        --gray-mid: #5b616b;
+        --gray-light: #aeb0b5;
+        --gray-lighter: #d6d7d9;
+        --gray-lightest: #f1f1f1;
+        --white: #ffffff;
       }
-      adminKey = key;
-      localStorage.setItem('ktc_admin_key', adminKey);
-      verifyAuth();
-    }
 
-    async function verifyAuth() {
-      try {
-        const resp = await fetch('/api/admin/orgs', { headers: headers() });
-        if (resp.status === 403) {
-          showLoginError('Invalid admin key.');
-          adminKey = '';
-          localStorage.removeItem('ktc_admin_key');
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+
+      body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: var(--white);
+        color: var(--gray-dark);
+        min-height: 100vh;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .topbar {
+        background: var(--cms-blue-darkest);
+        color: var(--white);
+        padding: 8px 24px;
+        font-size: 0.75rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .topbar span { opacity: 0.7; }
+
+      .site-header {
+        background: var(--white);
+        border-bottom: 4px solid var(--cms-gold);
+        padding: 20px 24px;
+      }
+
+      .header-inner {
+        max-width: 1000px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .site-title {
+        font-family: 'Instrument Serif', Georgia, serif;
+        font-size: 1.75rem;
+        color: var(--cms-blue-darkest);
+        letter-spacing: -0.02em;
+        text-decoration: none;
+      }
+      .site-title em { font-style: italic; color: var(--cms-blue); }
+
+      .gold-rule {
+        height: 3px;
+        background: linear-gradient(90deg, var(--cms-gold) 0%, var(--cms-gold-dark) 100%);
+        border: none;
+        margin: 0;
+      }
+
+      /* === MAIN === */
+      .container {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 32px 24px;
+      }
+
+      .page-heading {
+        font-family: 'Instrument Serif', Georgia, serif;
+        font-size: 2rem;
+        font-weight: 400;
+        color: var(--cms-blue-darkest);
+        letter-spacing: -0.02em;
+        margin-bottom: 8px;
+      }
+
+      .page-subheading {
+        font-size: 0.95rem;
+        color: var(--gray-mid);
+        margin-bottom: 32px;
+      }
+
+      /* === CARDS === */
+      .card {
+        background: var(--white);
+        border: 1px solid var(--gray-lighter);
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 24px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      }
+
+      .card-header {
+        background: var(--cms-blue-lightest);
+        border-bottom: 1px solid var(--gray-lighter);
+        padding: 12px 20px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--cms-blue-darkest);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .card-body { padding: 20px; }
+
+      /* === STATUS === */
+      .status {
+        padding: 12px 16px;
+        border-radius: 4px;
+        margin-bottom: 16px;
+        font-size: 0.875rem;
+        display: none;
+        border-left: 4px solid transparent;
+      }
+      .status.info { display: block; background: var(--cms-blue-lightest); border-left-color: var(--cms-blue); color: var(--cms-blue-darkest); }
+      .status.success { display: block; background: var(--color-success-light); border-left-color: var(--color-success); color: #1a4301; }
+      .status.error { display: block; background: var(--color-error-light); border-left-color: var(--color-error); color: #8b0000; }
+
+      /* === FORMS === */
+      label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--cms-blue-darkest);
+        margin-bottom: 6px;
+      }
+
+      input[type="text"],
+      input[type="password"] {
+        width: 100%;
+        padding: 10px 12px;
+        background: var(--white);
+        border: 2px solid var(--gray-lighter);
+        border-radius: 4px;
+        color: var(--gray-dark);
+        font-size: 1rem;
+        font-family: 'Inter', sans-serif;
+        margin-bottom: 4px;
+      }
+
+      input:focus {
+        outline: none;
+        border-color: var(--cms-blue);
+        box-shadow: 0 0 0 2px rgba(0,113,188,0.2);
+      }
+
+      .help-text {
+        font-size: 0.8rem;
+        color: var(--gray-mid);
+        margin-bottom: 16px;
+        margin-top: 2px;
+      }
+
+      .form-group { margin-bottom: 16px; }
+
+      /* === BUTTONS === */
+      button {
+        padding: 10px 18px;
+        border: 2px solid var(--gray-lighter);
+        border-radius: 4px;
+        background: var(--white);
+        color: var(--cms-blue);
+        font-family: 'Inter', sans-serif;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+      button:hover { background: var(--cms-blue-lightest); border-color: var(--cms-blue-light); }
+
+      button.primary { background: var(--cms-blue); border-color: var(--cms-blue); color: var(--white); }
+      button.primary:hover { background: var(--cms-blue-dark); border-color: var(--cms-blue-dark); }
+
+      button.danger { background: var(--white); border-color: var(--color-error); color: var(--color-error); }
+      button.danger:hover { background: var(--color-error-light); }
+
+      button.danger-fill { background: var(--color-error); border-color: var(--color-error); color: var(--white); }
+      button.danger-fill:hover { background: #b71c1c; border-color: #b71c1c; }
+
+      button.success { background: var(--color-success); border-color: var(--color-success); color: var(--white); }
+      button.success:hover { background: #1a4301; border-color: #1a4301; }
+
+      button.full-width { width: 100%; }
+
+      button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+      button.sm { padding: 6px 12px; font-size: 0.8rem; }
+
+      /* === LOGIN SECTION === */
+      .login-section {
+        max-width: 420px;
+        margin: 60px auto;
+      }
+      .login-section .card-body { padding: 28px 24px; }
+      .login-heading {
+        font-family: 'Instrument Serif', Georgia, serif;
+        font-size: 1.5rem;
+        color: var(--cms-blue-darkest);
+        margin-bottom: 20px;
+        text-align: center;
+      }
+
+      /* === STATS ROW === */
+      .stats-row {
+        display: flex;
+        gap: 16px;
+        margin-bottom: 28px;
+      }
+
+      .stat-card {
+        flex: 1;
+        background: var(--cms-blue-lightest);
+        border: 1px solid var(--gray-lighter);
+        border-radius: 4px;
+        padding: 16px 20px;
+        text-align: center;
+      }
+
+      .stat-number {
+        font-family: 'Instrument Serif', Georgia, serif;
+        font-size: 2.2rem;
+        color: var(--cms-blue-darkest);
+        line-height: 1;
+      }
+
+      .stat-label {
+        font-size: 0.8rem;
+        color: var(--gray-mid);
+        margin-top: 4px;
+        font-weight: 500;
+      }
+
+      /* === TABLE === */
+      .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.875rem;
+      }
+
+      .data-table th {
+        text-align: left;
+        padding: 10px 12px;
+        background: var(--gray-lightest);
+        border-bottom: 2px solid var(--gray-lighter);
+        color: var(--cms-blue-darkest);
+        font-weight: 600;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+      }
+
+      .data-table td {
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--gray-lightest);
+        vertical-align: middle;
+      }
+
+      .data-table tr:hover td {
+        background: var(--cms-blue-lightest);
+      }
+
+      .data-table .actions {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+
+      .slug-link {
+        color: var(--cms-blue);
+        text-decoration: none;
+        font-weight: 500;
+      }
+      .slug-link:hover { text-decoration: underline; }
+
+      .badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+      }
+      .badge.drive { background: #e8f5e9; color: #2e7d32; }
+      .badge.gmail { background: #fce4ec; color: #c62828; }
+      .badge.onedrive { background: #e3f2fd; color: #1565c0; }
+      .badge.outlook { background: #e3f2fd; color: #1565c0; }
+      .badge.box { background: #e0f2f1; color: #00695c; }
+      .badge.download { background: var(--gray-lightest); color: var(--gray-mid); }
+      .badge.pending { background: var(--color-warn-light); color: #654501; }
+      .badge.approved { background: var(--color-success-light); color: #1a4301; }
+      .badge.rejected { background: var(--color-error-light); color: #8b0000; }
+
+      .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        color: var(--gray-mid);
+      }
+      .empty-state .icon { font-size: 2rem; margin-bottom: 8px; }
+
+      /* === MODAL === */
+      .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+      }
+      .modal-overlay.active { display: flex; }
+
+      .modal {
+        background: var(--white);
+        border-radius: 8px;
+        width: 90%;
+        max-width: 460px;
+        box-shadow: 0 8px 40px rgba(0,0,0,0.2);
+        overflow: hidden;
+      }
+
+      .modal-header {
+        padding: 16px 20px;
+        background: var(--cms-blue-lightest);
+        border-bottom: 1px solid var(--gray-lighter);
+        font-weight: 600;
+        color: var(--cms-blue-darkest);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .modal-close {
+        background: none;
+        border: none;
+        font-size: 1.2rem;
+        cursor: pointer;
+        color: var(--gray-mid);
+        padding: 0;
+      }
+      .modal-close:hover { color: var(--gray-dark); background: none; border: none; }
+
+      .modal-body { padding: 20px; }
+
+      .modal-footer {
+        padding: 12px 20px;
+        border-top: 1px solid var(--gray-lightest);
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+
+      /* === FOOTER === */
+      .site-footer {
+        background: var(--cms-blue-darkest);
+        color: var(--white);
+        padding: 32px 24px;
+        text-align: center;
+        font-size: 0.8rem;
+        margin-top: 40px;
+      }
+      .site-footer p { opacity: 0.6; margin-bottom: 4px; }
+      .footer-inner { max-width: 1000px; margin: 0 auto; }
+      .footer-links { margin-bottom: 8px; }
+      .footer-links a { color: rgba(255,255,255,0.7); text-decoration: none; margin: 0 12px; }
+      .footer-links a:hover { color: var(--white); }
+
+      /* === MOBILE === */
+      @media (max-width: 640px) {
+        .page-heading { font-size: 1.6rem; }
+        .site-title { font-size: 1.4rem; }
+        .header-inner { flex-direction: column; gap: 4px; align-items: flex-start; }
+        .stats-row { flex-direction: column; }
+        .data-table { font-size: 0.8rem; }
+        .data-table th, .data-table td { padding: 8px 6px; }
+        .data-table .actions { flex-direction: column; }
+        .hide-mobile { display: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="topbar">
+      <span>Super Admin Dashboard</span>
+      <span id="logoutArea" style="display:none;">
+        <a
+          href="#"
+          onclick="logout(); return false;"
+          style="color: rgba(255,255,255,0.8); text-decoration: none;"
+          >Sign out</a
+        >
+      </span>
+    </div>
+
+    <div class="site-header">
+      <div class="header-inner">
+        <a href="/" class="site-title">Kill <em>the</em> Clipboard</a>
+      </div>
+    </div>
+
+    <hr class="gold-rule" />
+
+    <!-- ==================== LOGIN ==================== -->
+    <div id="loginSection" class="container login-section">
+      <div class="card">
+        <div class="card-body">
+          <div class="login-heading">Super Admin</div>
+          <div id="loginError" class="status" style="margin-bottom: 16px;"></div>
+          <div class="form-group">
+            <label for="adminKeyInput">Admin Key</label>
+            <input
+              type="password"
+              id="adminKeyInput"
+              placeholder="Enter admin key"
+              onkeydown="if(event.key==='Enter') doLogin()"
+            />
+          </div>
+          <button class="primary full-width" onclick="doLogin()">Sign In</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== DASHBOARD ==================== -->
+    <div id="dashboard" class="container" style="display: none;">
+      <h1 class="page-heading">Dashboard</h1>
+      <p class="page-subheading">Manage all Kill the Clipboard organizations</p>
+
+      <!-- Stats -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-number" id="statOrgs">—</div>
+          <div class="stat-label">Organizations</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="statPending">—</div>
+          <div class="stat-label">Pending Approvals</div>
+        </div>
+      </div>
+
+      <!-- Global status message -->
+      <div id="globalStatus" class="status"></div>
+
+      <!-- Organizations Table -->
+      <div class="card">
+        <div class="card-header"><span>📋</span> Organizations</div>
+        <div class="card-body" style="padding: 0;">
+          <div id="orgsLoading" class="empty-state">Loading…</div>
+          <div id="orgsEmpty" class="empty-state" style="display:none;">
+            <div class="icon">🏥</div>
+            <p>No organizations registered yet.</p>
+          </div>
+          <div id="orgsTableWrap" style="display:none; overflow-x:auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Slug</th>
+                  <th>Storage</th>
+                  <th>Connections</th>
+                  <th class="hide-mobile">Created</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="orgsBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Approval Requests Table -->
+      <div class="card">
+        <div class="card-header"><span>📨</span> Approval Requests</div>
+        <div class="card-body" style="padding: 0;">
+          <div id="approvalsLoading" class="empty-state">Loading…</div>
+          <div id="approvalsEmpty" class="empty-state" style="display:none;">
+            <div class="icon">✅</div>
+            <p>No approval requests.</p>
+          </div>
+          <div id="approvalsTableWrap" style="display:none; overflow-x:auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Organization</th>
+                  <th>Email</th>
+                  <th>Service</th>
+                  <th>Status</th>
+                  <th class="hide-mobile">Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="approvalsBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== RESET PASSWORD MODAL ==================== -->
+    <div id="resetModal" class="modal-overlay">
+      <div class="modal">
+        <div class="modal-header">
+          <span>Reset Passwords — <span id="resetOrgName"></span></span>
+          <button class="modal-close" onclick="closeResetModal()">×</button>
+        </div>
+        <div class="modal-body">
+          <div id="resetError" class="status" style="margin-bottom: 12px;"></div>
+          <div class="form-group">
+            <label for="newAdminPw">New Admin Password</label>
+            <input type="password" id="newAdminPw" placeholder="Leave blank to keep current" />
+            <div class="help-text">
+              Minimum 6 characters. Leave blank to keep the current password.
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="newStaffPw">New Staff Password</label>
+            <input type="password" id="newStaffPw" placeholder="Leave blank to keep current" />
+            <div class="help-text">
+              Minimum 6 characters. Leave blank to keep the current password.
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button onclick="closeResetModal()">Cancel</button>
+          <button class="primary" onclick="submitResetPassword()" id="resetSubmitBtn">
+            Reset Passwords
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== FOOTER ==================== -->
+    <div class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-links">
+          <a href="/privacy">Privacy Policy</a>
+          <a href="/terms">Terms of Service</a>
+        </div>
+        <p>Kill the Clipboard — Eliminate the clipboard from healthcare intake.</p>
+        <p>© 2025 Russell Street Ventures. All rights reserved.</p>
+      </div>
+    </div>
+
+    <script>
+      // ── State ──
+      let adminKey = localStorage.getItem('ktc_admin_key') || '';
+      let currentOrgs = [];
+      let resetOrgId = null;
+
+      // ── Auth ──
+      function headers() {
+        return { 'Content-Type': 'application/json', 'x-admin-key': adminKey };
+      }
+
+      function doLogin() {
+        const key = document.getElementById('adminKeyInput').value.trim();
+        if (!key) {
+          showLoginError('Please enter the admin key.');
           return;
         }
-        if (!resp.ok) throw new Error('Server error');
-        showDashboard();
-      } catch (e) {
-        showLoginError('Could not connect to server.');
-      }
-    }
-
-    function logout() {
-      adminKey = '';
-      localStorage.removeItem('ktc_admin_key');
-      document.getElementById('dashboard').style.display = 'none';
-      document.getElementById('logoutArea').style.display = 'none';
-      document.getElementById('loginSection').style.display = '';
-      document.getElementById('adminKeyInput').value = '';
-    }
-
-    function showLoginError(msg) {
-      const el = document.getElementById('loginError');
-      el.textContent = msg;
-      el.className = 'status error';
-    }
-
-    // ── Dashboard ──
-    function showDashboard() {
-      document.getElementById('loginSection').style.display = 'none';
-      document.getElementById('dashboard').style.display = '';
-      document.getElementById('logoutArea').style.display = '';
-      loadOrgs();
-      loadApprovals();
-    }
-
-    function showGlobalStatus(msg, type) {
-      const el = document.getElementById('globalStatus');
-      el.textContent = msg;
-      el.className = `status ${type}`;
-      setTimeout(() => { el.className = 'status'; }, 5000);
-    }
-
-    // ── Organizations ──
-    async function loadOrgs() {
-      try {
-        const resp = await fetch('/api/admin/orgs', { headers: headers() });
-        if (!resp.ok) throw new Error('Failed to load');
-        const data = await resp.json();
-        currentOrgs = data.orgs;
-        document.getElementById('statOrgs').textContent = data.orgs.length;
-        renderOrgs(data.orgs);
-      } catch (e) {
-        document.getElementById('orgsLoading').textContent = 'Failed to load organizations.';
-      }
-    }
-
-    function renderOrgs(orgs) {
-      document.getElementById('orgsLoading').style.display = 'none';
-
-      if (orgs.length === 0) {
-        document.getElementById('orgsEmpty').style.display = '';
-        document.getElementById('orgsTableWrap').style.display = 'none';
-        return;
+        adminKey = key;
+        localStorage.setItem('ktc_admin_key', adminKey);
+        verifyAuth();
       }
 
-      document.getElementById('orgsEmpty').style.display = 'none';
-      document.getElementById('orgsTableWrap').style.display = '';
-
-      const tbody = document.getElementById('orgsBody');
-      tbody.innerHTML = orgs.map(org => {
-        const connections = [];
-        if (org.has_drive) connections.push('<span class="badge drive">Drive</span>');
-        if (org.has_gmail) connections.push('<span class="badge gmail">Gmail</span>');
-        if (org.has_onedrive) connections.push('<span class="badge onedrive">OneDrive</span>');
-        if (org.has_outlook) connections.push('<span class="badge outlook">Outlook</span>');
-        if (org.has_box) connections.push('<span class="badge box">Box</span>');
-        if (connections.length === 0) connections.push('<span style="color:var(--gray-light);">None</span>');
-
-        const created = org.created_at ? new Date(org.created_at + 'Z').toLocaleDateString() : '—';
-
-        return `
-          <tr>
-            <td><strong>${esc(org.name)}</strong></td>
-            <td><a class="slug-link" href="/${esc(org.slug)}" target="_blank">${esc(org.slug)}</a></td>
-            <td><span class="badge ${org.storage_type || 'download'}">${esc(org.storage_type || 'download')}</span></td>
-            <td>${connections.join(' ')}</td>
-            <td class="hide-mobile">${created}</td>
-            <td>
-              <div class="actions">
-                <button class="sm" onclick="openResetModal('${esc(org.id)}', '${esc(org.name)}')">🔑 Reset PW</button>
-                <button class="sm danger" onclick="deleteOrg('${esc(org.id)}', '${esc(org.name)}')">🗑 Delete</button>
-              </div>
-            </td>
-          </tr>
-        `;
-      }).join('');
-    }
-
-    async function deleteOrg(id, name) {
-      if (!confirm(`Are you sure you want to delete "${name}"?\n\nThis will permanently remove the organization and all its data. This cannot be undone.`)) {
-        return;
-      }
-
-      try {
-        const resp = await fetch(`/api/admin/orgs/${id}`, {
-          method: 'DELETE',
-          headers: headers(),
-        });
-
-        if (!resp.ok) {
-          const data = await resp.json().catch(() => ({}));
-          throw new Error(data.error || 'Delete failed');
+      async function verifyAuth() {
+        try {
+          const resp = await fetch('/api/admin/orgs', { headers: headers() });
+          if (resp.status === 403) {
+            showLoginError('Invalid admin key.');
+            adminKey = '';
+            localStorage.removeItem('ktc_admin_key');
+            return;
+          }
+          if (!resp.ok) throw new Error('Server error');
+          showDashboard();
+        } catch (e) {
+          showLoginError('Could not connect to server.');
         }
+      }
 
-        showGlobalStatus(`"${name}" has been deleted.`, 'success');
+      function logout() {
+        adminKey = '';
+        localStorage.removeItem('ktc_admin_key');
+        document.getElementById('dashboard').style.display = 'none';
+        document.getElementById('logoutArea').style.display = 'none';
+        document.getElementById('loginSection').style.display = '';
+        document.getElementById('adminKeyInput').value = '';
+      }
+
+      function showLoginError(msg) {
+        const el = document.getElementById('loginError');
+        el.textContent = msg;
+        el.className = 'status error';
+      }
+
+      // ── Dashboard ──
+      function showDashboard() {
+        document.getElementById('loginSection').style.display = 'none';
+        document.getElementById('dashboard').style.display = '';
+        document.getElementById('logoutArea').style.display = '';
         loadOrgs();
         loadApprovals();
-      } catch (e) {
-        showGlobalStatus(`Failed to delete: ${e.message}`, 'error');
-      }
-    }
-
-    // ── Reset Password Modal ──
-    function openResetModal(orgId, orgName) {
-      resetOrgId = orgId;
-      document.getElementById('resetOrgName').textContent = orgName;
-      document.getElementById('newAdminPw').value = '';
-      document.getElementById('newStaffPw').value = '';
-      document.getElementById('resetError').className = 'status';
-      document.getElementById('resetModal').classList.add('active');
-    }
-
-    function closeResetModal() {
-      document.getElementById('resetModal').classList.remove('active');
-      resetOrgId = null;
-    }
-
-    async function submitResetPassword() {
-      const adminPw = document.getElementById('newAdminPw').value;
-      const staffPw = document.getElementById('newStaffPw').value;
-
-      if (!adminPw && !staffPw) {
-        const el = document.getElementById('resetError');
-        el.textContent = 'Enter at least one new password.';
-        el.className = 'status error';
-        return;
       }
 
-      if ((adminPw && adminPw.length < 6) || (staffPw && staffPw.length < 6)) {
-        const el = document.getElementById('resetError');
-        el.textContent = 'Passwords must be at least 6 characters.';
-        el.className = 'status error';
-        return;
+      function showGlobalStatus(msg, type) {
+        const el = document.getElementById('globalStatus');
+        el.textContent = msg;
+        el.className = `status ${type}`;
+        setTimeout(() => { el.className = 'status'; }, 5000);
       }
 
-      const btn = document.getElementById('resetSubmitBtn');
-      btn.disabled = true;
-      btn.textContent = 'Resetting…';
+      // ── Organizations ──
+      async function loadOrgs() {
+        try {
+          const resp = await fetch('/api/admin/orgs', { headers: headers() });
+          if (!resp.ok) throw new Error('Failed to load');
+          const data = await resp.json();
+          currentOrgs = data.orgs;
+          document.getElementById('statOrgs').textContent = data.orgs.length;
+          renderOrgs(data.orgs);
+        } catch (e) {
+          document.getElementById('orgsLoading').textContent = 'Failed to load organizations.';
+        }
+      }
 
-      try {
-        const body = {};
-        if (adminPw) body.adminPassword = adminPw;
-        if (staffPw) body.staffPassword = staffPw;
+      function renderOrgs(orgs) {
+        document.getElementById('orgsLoading').style.display = 'none';
 
-        const resp = await fetch(`/api/admin/orgs/${resetOrgId}/reset-password`, {
-          method: 'POST',
-          headers: headers(),
-          body: JSON.stringify(body),
-        });
-
-        if (!resp.ok) {
-          const data = await resp.json().catch(() => ({}));
-          throw new Error(data.error || 'Reset failed');
+        if (orgs.length === 0) {
+          document.getElementById('orgsEmpty').style.display = '';
+          document.getElementById('orgsTableWrap').style.display = 'none';
+          return;
         }
 
-        closeResetModal();
-        showGlobalStatus('Passwords updated successfully.', 'success');
-      } catch (e) {
-        const el = document.getElementById('resetError');
-        el.textContent = e.message;
-        el.className = 'status error';
-      } finally {
-        btn.disabled = false;
-        btn.textContent = 'Reset Passwords';
-      }
-    }
+        document.getElementById('orgsEmpty').style.display = 'none';
+        document.getElementById('orgsTableWrap').style.display = '';
 
-    // ── Approval Requests ──
-    async function loadApprovals() {
-      try {
-        const resp = await fetch('/api/admin/approval-requests', { headers: headers() });
-        if (!resp.ok) throw new Error('Failed to load');
-        const data = await resp.json();
-        const approvals = data.requests || [];
+        const tbody = document.getElementById('orgsBody');
+        tbody.innerHTML = orgs.map(org => {
+          const connections = [];
+          if (org.has_drive) connections.push('<span class="badge drive">Drive</span>');
+          if (org.has_gmail) connections.push('<span class="badge gmail">Gmail</span>');
+          if (org.has_onedrive) connections.push('<span class="badge onedrive">OneDrive</span>');
+          if (org.has_outlook) connections.push('<span class="badge outlook">Outlook</span>');
+          if (org.has_box) connections.push('<span class="badge box">Box</span>');
+          if (connections.length === 0) connections.push('<span style="color:var(--gray-light);">None</span>');
 
-        const pending = approvals.filter(a => a.status === 'pending');
-        document.getElementById('statPending').textContent = pending.length;
+          const created = org.created_at ? new Date(org.created_at + 'Z').toLocaleDateString() : '—';
 
-        renderApprovals(approvals);
-      } catch (e) {
-        document.getElementById('approvalsLoading').textContent = 'Failed to load approval requests.';
-      }
-    }
-
-    function renderApprovals(approvals) {
-      document.getElementById('approvalsLoading').style.display = 'none';
-
-      if (approvals.length === 0) {
-        document.getElementById('approvalsEmpty').style.display = '';
-        document.getElementById('approvalsTableWrap').style.display = 'none';
-        return;
-      }
-
-      document.getElementById('approvalsEmpty').style.display = 'none';
-      document.getElementById('approvalsTableWrap').style.display = '';
-
-      const tbody = document.getElementById('approvalsBody');
-      tbody.innerHTML = approvals.map(req => {
-        const created = req.created_at ? new Date(req.created_at + 'Z').toLocaleDateString() : '—';
-        const statusBadge = `<span class="badge ${req.status}">${esc(req.status)}</span>`;
-
-        let actions = '';
-        if (req.status === 'pending') {
-          actions = `
-            <button class="sm success" onclick="handleApproval(${req.id}, 'approved')">✓ Approve</button>
-            <button class="sm danger" onclick="handleApproval(${req.id}, 'rejected')">✕ Reject</button>
+          return `
+            <tr>
+              <td><strong>${esc(org.name)}</strong></td>
+              <td><a class="slug-link" href="/${esc(org.slug)}" target="_blank">${esc(org.slug)}</a></td>
+              <td><span class="badge ${org.storage_type || 'download'}">${esc(org.storage_type || 'download')}</span></td>
+              <td>${connections.join(' ')}</td>
+              <td class="hide-mobile">${created}</td>
+              <td>
+                <div class="actions">
+                  <button class="sm" onclick="openResetModal('${esc(org.id)}', '${esc(org.name)}')">🔑 Reset PW</button>
+                  <button class="sm danger" onclick="deleteOrg('${esc(org.id)}', '${esc(org.name)}')">🗑 Delete</button>
+                </div>
+              </td>
+            </tr>
           `;
-        } else {
-          actions = '<span style="color:var(--gray-light);">—</span>';
+        }).join('');
+      }
+
+      async function deleteOrg(id, name) {
+        if (!confirm(`Are you sure you want to delete "${name}"?\n\nThis will permanently remove the organization and all its data. This cannot be undone.`)) {
+          return;
         }
 
-        return `
-          <tr>
-            <td><strong>${esc(req.org_name)}</strong> <span style="color:var(--gray-light);">(${esc(req.org_slug)})</span></td>
-            <td>${esc(req.email)}</td>
-            <td><span class="badge ${req.service}">${esc(req.service)}</span></td>
-            <td>${statusBadge}</td>
-            <td class="hide-mobile">${created}</td>
-            <td><div class="actions">${actions}</div></td>
-          </tr>
-        `;
-      }).join('');
-    }
+        try {
+          const resp = await fetch(`/api/admin/orgs/${id}`, {
+            method: 'DELETE',
+            headers: headers(),
+          });
 
-    async function handleApproval(id, status) {
-      try {
-        const resp = await fetch(`/api/admin/approval-requests/${id}`, {
-          method: 'POST',
-          headers: headers(),
-          body: JSON.stringify({ status }),
-        });
+          if (!resp.ok) {
+            const data = await resp.json().catch(() => ({}));
+            throw new Error(data.error || 'Delete failed');
+          }
 
-        if (!resp.ok) throw new Error('Update failed');
-
-        showGlobalStatus(`Request ${status}.`, 'success');
-        loadApprovals();
-      } catch (e) {
-        showGlobalStatus(`Failed to update: ${e.message}`, 'error');
+          showGlobalStatus(`"${name}" has been deleted.`, 'success');
+          loadOrgs();
+          loadApprovals();
+        } catch (e) {
+          showGlobalStatus(`Failed to delete: ${e.message}`, 'error');
+        }
       }
-    }
 
-    // ── Helpers ──
-    function esc(str) {
-      if (!str) return '';
-      const d = document.createElement('div');
-      d.textContent = str;
-      return d.innerHTML;
-    }
+      // ── Reset Password Modal ──
+      function openResetModal(orgId, orgName) {
+        resetOrgId = orgId;
+        document.getElementById('resetOrgName').textContent = orgName;
+        document.getElementById('newAdminPw').value = '';
+        document.getElementById('newStaffPw').value = '';
+        document.getElementById('resetError').className = 'status';
+        document.getElementById('resetModal').classList.add('active');
+      }
 
-    // ── Init ──
-    if (adminKey) {
-      verifyAuth();
-    }
-  </script>
-</body>
+      function closeResetModal() {
+        document.getElementById('resetModal').classList.remove('active');
+        resetOrgId = null;
+      }
+
+      async function submitResetPassword() {
+        const adminPw = document.getElementById('newAdminPw').value;
+        const staffPw = document.getElementById('newStaffPw').value;
+
+        if (!adminPw && !staffPw) {
+          const el = document.getElementById('resetError');
+          el.textContent = 'Enter at least one new password.';
+          el.className = 'status error';
+          return;
+        }
+
+        if ((adminPw && adminPw.length < 6) || (staffPw && staffPw.length < 6)) {
+          const el = document.getElementById('resetError');
+          el.textContent = 'Passwords must be at least 6 characters.';
+          el.className = 'status error';
+          return;
+        }
+
+        const btn = document.getElementById('resetSubmitBtn');
+        btn.disabled = true;
+        btn.textContent = 'Resetting…';
+
+        try {
+          const body = {};
+          if (adminPw) body.adminPassword = adminPw;
+          if (staffPw) body.staffPassword = staffPw;
+
+          const resp = await fetch(`/api/admin/orgs/${resetOrgId}/reset-password`, {
+            method: 'POST',
+            headers: headers(),
+            body: JSON.stringify(body),
+          });
+
+          if (!resp.ok) {
+            const data = await resp.json().catch(() => ({}));
+            throw new Error(data.error || 'Reset failed');
+          }
+
+          closeResetModal();
+          showGlobalStatus('Passwords updated successfully.', 'success');
+        } catch (e) {
+          const el = document.getElementById('resetError');
+          el.textContent = e.message;
+          el.className = 'status error';
+        } finally {
+          btn.disabled = false;
+          btn.textContent = 'Reset Passwords';
+        }
+      }
+
+      // ── Approval Requests ──
+      async function loadApprovals() {
+        try {
+          const resp = await fetch('/api/admin/approval-requests', { headers: headers() });
+          if (!resp.ok) throw new Error('Failed to load');
+          const data = await resp.json();
+          const approvals = data.requests || [];
+
+          const pending = approvals.filter(a => a.status === 'pending');
+          document.getElementById('statPending').textContent = pending.length;
+
+          renderApprovals(approvals);
+        } catch (e) {
+          document.getElementById('approvalsLoading').textContent = 'Failed to load approval requests.';
+        }
+      }
+
+      function renderApprovals(approvals) {
+        document.getElementById('approvalsLoading').style.display = 'none';
+
+        if (approvals.length === 0) {
+          document.getElementById('approvalsEmpty').style.display = '';
+          document.getElementById('approvalsTableWrap').style.display = 'none';
+          return;
+        }
+
+        document.getElementById('approvalsEmpty').style.display = 'none';
+        document.getElementById('approvalsTableWrap').style.display = '';
+
+        const tbody = document.getElementById('approvalsBody');
+        tbody.innerHTML = approvals.map(req => {
+          const created = req.created_at ? new Date(req.created_at + 'Z').toLocaleDateString() : '—';
+          const statusBadge = `<span class="badge ${req.status}">${esc(req.status)}</span>`;
+
+          let actions = '';
+          if (req.status === 'pending') {
+            actions = `
+              <button class="sm success" onclick="handleApproval(${req.id}, 'approved')">✓ Approve</button>
+              <button class="sm danger" onclick="handleApproval(${req.id}, 'rejected')">✕ Reject</button>
+            `;
+          } else {
+            actions = '<span style="color:var(--gray-light);">—</span>';
+          }
+
+          return `
+            <tr>
+              <td><strong>${esc(req.org_name)}</strong> <span style="color:var(--gray-light);">(${esc(req.org_slug)})</span></td>
+              <td>${esc(req.email)}</td>
+              <td><span class="badge ${req.service}">${esc(req.service)}</span></td>
+              <td>${statusBadge}</td>
+              <td class="hide-mobile">${created}</td>
+              <td><div class="actions">${actions}</div></td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      async function handleApproval(id, status) {
+        try {
+          const resp = await fetch(`/api/admin/approval-requests/${id}`, {
+            method: 'POST',
+            headers: headers(),
+            body: JSON.stringify({ status }),
+          });
+
+          if (!resp.ok) throw new Error('Update failed');
+
+          showGlobalStatus(`Request ${status}.`, 'success');
+          loadApprovals();
+        } catch (e) {
+          showGlobalStatus(`Failed to update: ${e.message}`, 'error');
+        }
+      }
+
+      // ── Helpers ──
+      function esc(str) {
+        if (!str) return '';
+        const d = document.createElement('div');
+        d.textContent = str;
+        return d.innerHTML;
+      }
+
+      // ── Init ──
+      if (adminKey) {
+        verifyAuth();
+      }
+    </script>
+  </body>
 </html>

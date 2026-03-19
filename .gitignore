@@ -1,8 +1,14 @@
 node_modules/
+dist/
 shl-output/
 config.json
 .DS_Store
-data/
+data/*.db
 *.db
 *.db-wal
 *.db-shm
+coverage/
+packages/scanner/public/js/approved-apps.js
+packages/scanner/public/js/sanitize.js
+.idea
+*.zip

@@ -1,0 +1,12 @@
+{
+  "name": "@ktc/scanner",
+  "version": "0.2.0-alpha",
+  "description": "Client-only SHL scanner — zero runtime deps, static build",
+  "type": "module",
+  "scripts": {
+    "generate:approved-apps": "node scripts/generate-approved-apps.js",
+    "generate:sanitize": "node scripts/generate-sanitize.js",
+    "build": "npm run generate:approved-apps && npm run generate:sanitize && node scripts/build-core.js",
+    "test": "vitest run --passWithNoTests --root ../../ packages/scanner"
+  }
+}

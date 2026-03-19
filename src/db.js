@@ -107,12 +107,27 @@ function migrate(db) {
   ];
 
   for (const sql of migrations) {
-    try { db.exec(sql); } catch { /* Column already exists */ }
+    try {
+      db.exec(sql);
+    } catch {
+      /* Column already exists */
+    }
   }
 
   // Encrypt any plaintext OAuth tokens at rest
   migrateTokenEncryption(db);
 }
+
+/**
+ * Token column names that should be encrypted at rest.
+ */
+const TOKEN_COLUMNS = [
+  'drive_refresh_token',
+  'onedrive_refresh_token',
+  'box_refresh_token',
+  'gmail_refresh_token',
+  'outlook_refresh_token',
+];
 
 /**
  * Migrate existing plaintext OAuth refresh tokens to encrypted form.
@@ -123,14 +138,6 @@ function migrateTokenEncryption(db) {
     // Can't encrypt without SESSION_SECRET — skip silently (warning logged by auth.js)
     return;
   }
-
-  const TOKEN_COLUMNS = [
-    'drive_refresh_token',
-    'onedrive_refresh_token',
-    'box_refresh_token',
-    'gmail_refresh_token',
-    'outlook_refresh_token',
-  ];
 
   const orgs = db.prepare('SELECT id, ' + TOKEN_COLUMNS.join(', ') + ' FROM organizations').all();
   let migrated = 0;
@@ -146,7 +153,7 @@ function migrateTokenEncryption(db) {
     }
 
     if (Object.keys(updates).length > 0) {
-      const sets = Object.keys(updates).map(k => `${k} = ?`);
+      const sets = Object.keys(updates).map((k) => `${k} = ?`);
       const vals = Object.values(updates);
       db.prepare(`UPDATE organizations SET ${sets.join(', ')} WHERE id = ?`).run(...vals, org.id);
     }
@@ -158,17 +165,6 @@ function migrateTokenEncryption(db) {
 }
 
 // ── Token Encryption Helpers ─────────────────────────────────────
-
-/**
- * Token column names that should be encrypted at rest.
- */
-const TOKEN_COLUMNS = [
-  'drive_refresh_token',
-  'onedrive_refresh_token',
-  'box_refresh_token',
-  'gmail_refresh_token',
-  'outlook_refresh_token',
-];
 
 /**
  * Get a decrypted OAuth refresh token from an org record.
@@ -234,15 +230,24 @@ export function slugExists(slug) {
  */
 export function updateOrgSettings(id, fields) {
   const allowed = [
-    'name', 'storage_type', 'save_format',
-    'drive_folder_id', 'drive_refresh_token',
-    'onedrive_refresh_token', 'onedrive_folder_path',
-    'box_refresh_token', 'box_folder_id',
-    'gmail_refresh_token', 'gmail_email',
-    'outlook_refresh_token', 'outlook_email',
-    'api_url', 'api_headers',
+    'name',
+    'storage_type',
+    'save_format',
+    'drive_folder_id',
+    'drive_refresh_token',
+    'onedrive_refresh_token',
+    'onedrive_folder_path',
+    'box_refresh_token',
+    'box_folder_id',
+    'gmail_refresh_token',
+    'gmail_email',
+    'outlook_refresh_token',
+    'outlook_email',
+    'api_url',
+    'api_headers',
     'email_to',
-    'admin_password_hash', 'staff_password_hash',
+    'admin_password_hash',
+    'staff_password_hash',
     'require_app_validation',
     'session_timeout_minutes',
   ];
@@ -262,7 +267,9 @@ export function updateOrgSettings(id, fields) {
   sets.push("updated_at = datetime('now')");
   values.push(id);
 
-  getDb().prepare(`UPDATE organizations SET ${sets.join(', ')} WHERE id = ?`).run(...values);
+  getDb()
+    .prepare(`UPDATE organizations SET ${sets.join(', ')} WHERE id = ?`)
+    .run(...values);
 }
 
 // ── Super Admin Operations ───────────────────────────────────────
@@ -271,7 +278,8 @@ export function updateOrgSettings(id, fields) {
  * List all organizations (for super admin dashboard).
  */
 export function listAllOrgs() {
-  return getDb().prepare(`
+  return getDb()
+    .prepare(`
     SELECT id, slug, name, storage_type, created_at, updated_at,
            gmail_email, outlook_email,
            CASE WHEN drive_refresh_token IS NOT NULL THEN 1 ELSE 0 END as has_drive,
@@ -280,7 +288,8 @@ export function listAllOrgs() {
            CASE WHEN gmail_refresh_token IS NOT NULL THEN 1 ELSE 0 END as has_gmail,
            CASE WHEN outlook_refresh_token IS NOT NULL THEN 1 ELSE 0 END as has_outlook
     FROM organizations ORDER BY created_at DESC
-  `).all();
+  `)
+    .all();
 }
 
 /**
@@ -308,15 +317,17 @@ export function countOrgs() {
  */
 export function createApprovalRequest({ orgSlug, orgName, email, service }) {
   // Check if a pending request already exists for this email+service
-  const existing = getDb().prepare(
-    'SELECT 1 FROM approval_requests WHERE email = ? AND service = ? AND status = ?'
-  ).get(email, service, 'pending');
+  const existing = getDb()
+    .prepare('SELECT 1 FROM approval_requests WHERE email = ? AND service = ? AND status = ?')
+    .get(email, service, 'pending');
   if (existing) return { alreadyExists: true };
 
-  getDb().prepare(`
+  getDb()
+    .prepare(`
     INSERT INTO approval_requests (org_slug, org_name, email, service)
     VALUES (?, ?, ?, ?)
-  `).run(orgSlug, orgName, email, service);
+  `)
+    .run(orgSlug, orgName, email, service);
   return { alreadyExists: false };
 }
 
@@ -325,7 +336,9 @@ export function createApprovalRequest({ orgSlug, orgName, email, service }) {
  */
 export function listApprovalRequests(status) {
   if (status) {
-    return getDb().prepare('SELECT * FROM approval_requests WHERE status = ? ORDER BY created_at DESC').all(status);
+    return getDb()
+      .prepare('SELECT * FROM approval_requests WHERE status = ? ORDER BY created_at DESC')
+      .all(status);
   }
   return getDb().prepare('SELECT * FROM approval_requests ORDER BY created_at DESC').all();
 }
@@ -334,9 +347,9 @@ export function listApprovalRequests(status) {
  * Update an approval request status.
  */
 export function updateApprovalRequest(id, status) {
-  getDb().prepare(
-    "UPDATE approval_requests SET status = ?, reviewed_at = datetime('now') WHERE id = ?"
-  ).run(status, id);
+  getDb()
+    .prepare("UPDATE approval_requests SET status = ?, reviewed_at = datetime('now') WHERE id = ?")
+    .run(status, id);
 }
 
 // ── Audit Log ─────────────────────────────────────────────
@@ -357,10 +370,22 @@ export function logAuditEvent({
   userAgent = null,
 }) {
   try {
-    getDb().prepare(`
+    getDb()
+      .prepare(`
       INSERT INTO audit_log (org_slug, event_type, storage_type, fhir_bundle_count, pdf_count, success, error_message, ip_address, user_agent)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(orgSlug, eventType, storageType, fhirBundleCount, pdfCount, success ? 1 : 0, errorMessage, ipAddress, userAgent);
+    `)
+      .run(
+        orgSlug,
+        eventType,
+        storageType,
+        fhirBundleCount,
+        pdfCount,
+        success ? 1 : 0,
+        errorMessage,
+        ipAddress,
+        userAgent,
+      );
   } catch (err) {
     // Audit logging should never break the main flow
     console.error('[Audit] Failed to log event:', err.message);
@@ -371,16 +396,14 @@ export function logAuditEvent({
  * List audit log entries for an organization (for admin dashboard).
  */
 export function listAuditLog(orgSlug, limit = 100) {
-  return getDb().prepare(
-    'SELECT * FROM audit_log WHERE org_slug = ? ORDER BY created_at DESC LIMIT ?'
-  ).all(orgSlug, limit);
+  return getDb()
+    .prepare('SELECT * FROM audit_log WHERE org_slug = ? ORDER BY created_at DESC LIMIT ?')
+    .all(orgSlug, limit);
 }
 
 /**
  * List all audit log entries (for super admin dashboard).
  */
 export function listAllAuditLog(limit = 500) {
-  return getDb().prepare(
-    'SELECT * FROM audit_log ORDER BY created_at DESC LIMIT ?'
-  ).all(limit);
+  return getDb().prepare('SELECT * FROM audit_log ORDER BY created_at DESC LIMIT ?').all(limit);
 }

@@ -13,7 +13,9 @@ function getSecret() {
     hmacSecret = process.env.SESSION_SECRET;
   } else {
     hmacSecret = randomBytes(32).toString('hex');
-    console.warn('WARNING: No SESSION_SECRET env var set. Using random secret — tokens will not survive restarts.');
+    console.warn(
+      'WARNING: No SESSION_SECRET env var set. Using random secret — tokens will not survive restarts.',
+    );
   }
   return hmacSecret;
 }

@@ -120,8 +120,7 @@ function extractPdfsFromBundle(resource) {
       if (!att) continue;
 
       if (att.contentType === 'application/pdf') {
-        const filename =
-          att.title || att.url?.split('/').pop() || `document-${Date.now()}.pdf`;
+        const filename = att.title || att.url?.split('/').pop() || `document-${Date.now()}.pdf`;
 
         if (att.data) {
           // Base64-encoded PDF inline

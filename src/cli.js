@@ -127,7 +127,9 @@ export async function run(argv) {
     log(`Writing to ${config.output.directory}...`);
     const summary = await writeToFiles(results, config.output.directory, { verbose });
     if (!opts.quiet) {
-      console.log(`Saved ${summary.fhirBundles} FHIR bundle(s) and ${summary.pdfs} PDF(s) to ${config.output.directory}`);
+      console.log(
+        `Saved ${summary.fhirBundles} FHIR bundle(s) and ${summary.pdfs} PDF(s) to ${config.output.directory}`,
+      );
     }
   }
 
@@ -139,7 +141,9 @@ export async function run(argv) {
         console.log(`Posted ${posted.fhir} FHIR bundle(s) to API`);
       }
     } else if (mode === 'api') {
-      console.error('API mode configured but no API URL set. Use --api <url> or set output.api.url in config.');
+      console.error(
+        'API mode configured but no API URL set. Use --api <url> or set output.api.url in config.',
+      );
       process.exit(3);
     }
   }
@@ -149,11 +153,15 @@ export async function run(argv) {
       log('Uploading to Google Drive...');
       const driveSummary = await uploadToDrive(results, config.output.drive, { verbose });
       if (!opts.quiet) {
-        console.log(`Uploaded ${driveSummary.fhirBundles} FHIR bundle(s) and ${driveSummary.pdfs} PDF(s) to Google Drive`);
+        console.log(
+          `Uploaded ${driveSummary.fhirBundles} FHIR bundle(s) and ${driveSummary.pdfs} PDF(s) to Google Drive`,
+        );
         if (driveSummary.driveFolder) console.log(`  ${driveSummary.driveFolder}`);
       }
     } else {
-      console.error('Drive mode configured but no folder set. Use --drive-folder <url> or set GOOGLE_DRIVE_FOLDER.');
+      console.error(
+        'Drive mode configured but no folder set. Use --drive-folder <url> or set GOOGLE_DRIVE_FOLDER.',
+      );
       process.exit(3);
     }
   }

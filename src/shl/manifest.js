@@ -45,7 +45,7 @@ export async function fetchManifest(shlPayload, config = {}) {
     const errBody = await resp.json().catch(() => ({}));
     const remaining = errBody.remainingAttempts;
     throw new Error(
-      `Invalid passcode.${remaining != null ? ` ${remaining} attempts remaining.` : ''}`
+      `Invalid passcode.${remaining != null ? ` ${remaining} attempts remaining.` : ''}`,
     );
   }
 
@@ -56,7 +56,7 @@ export async function fetchManifest(shlPayload, config = {}) {
   if (resp.status === 429) {
     const retryAfter = resp.headers.get('Retry-After');
     throw new Error(
-      `Rate limited by SHL server.${retryAfter ? ` Retry after ${retryAfter}s.` : ''}`
+      `Rate limited by SHL server.${retryAfter ? ` Retry after ${retryAfter}s.` : ''}`,
     );
   }
 
