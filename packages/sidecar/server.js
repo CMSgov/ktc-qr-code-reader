@@ -53,9 +53,19 @@ initDb();
 const config = loadConfig();
 
 const app = express();
+app.set('trust proxy', Number(process.env.TRUST_PROXY ?? 1));
 app.use(express.json({ limit: '10mb' }));
 
 const PORT = Number(process.env.PORT) || config.server?.port || 3090;
+
+// --- Security headers ---
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '0');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  next();
+});
 
 // --- Middleware ---
 app.use(
@@ -97,9 +107,48 @@ app.get('/healthz', (_req, res) => {
   }
 });
 
+// --- Input validation ---
+
+function validateRouteBody(body) {
+  const errors = [];
+  if (body == null || typeof body !== 'object') {
+    return { valid: false, errors: ['Request body must be a JSON object'] };
+  }
+  const { fhirBundles, pdfs, label } = body;
+  if (fhirBundles !== undefined && !Array.isArray(fhirBundles)) {
+    errors.push('fhirBundles must be an array');
+  }
+  if (pdfs !== undefined) {
+    if (!Array.isArray(pdfs)) {
+      errors.push('pdfs must be an array');
+    } else {
+      for (let i = 0; i < pdfs.length; i++) {
+        const pdf = pdfs[i];
+        if (!pdf || typeof pdf !== 'object') {
+          errors.push(`pdfs[${i}]: must be an object`);
+        } else if (typeof pdf.filename !== 'string' || pdf.filename.length === 0) {
+          errors.push(`pdfs[${i}]: filename is required and must be a non-empty string`);
+        }
+      }
+    }
+  }
+  if (label !== undefined && label !== null && typeof label !== 'string') {
+    errors.push('label must be a string or null');
+  }
+  return { valid: errors.length === 0, errors };
+}
+
 // --- Routes ---
 
 app.post('/api/orgs/:slug/route', authMiddleware('staff'), async (req, res) => {
+  const bodyValidation = validateRouteBody(req.body);
+  if (!bodyValidation.valid) {
+    return res.status(400).json({
+      status: 'validation_failed',
+      error: bodyValidation.errors.join('; '),
+    });
+  }
+
   const { fhirBundles = [], pdfs = [], label = null } = req.body;
   const org = getOrgBySlug(req.params.slug);
 

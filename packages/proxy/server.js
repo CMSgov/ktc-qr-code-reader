@@ -11,11 +11,17 @@ import { isPrivateUrl, resolvesToPrivateAddress } from './ssrf.js';
 import { logger } from './lib/logger.js';
 
 const app = express();
+app.set('trust proxy', Number(process.env.TRUST_PROXY ?? 1));
 app.use(express.json({ limit: '1mb' }));
 
 const PORT = Number(process.env.PORT) || 3080;
 const SHL_PROXY_TIMEOUT_MS = 30_000; // 30s
 const MAX_REDIRECTS = 3;
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',')
+      .map((o) => o.trim())
+      .filter(Boolean)
+  : null;
 
 // --- Crash handlers (set up early to catch startup errors) ---
 process.on('uncaughtException', (err) => {
@@ -25,6 +31,15 @@ process.on('uncaughtException', (err) => {
 process.on('unhandledRejection', (reason) => {
   logger.fatal({ error: String(reason) }, 'unhandled rejection');
   process.exit(1);
+});
+
+// --- Security headers ---
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '0');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  next();
 });
 
 // --- Middleware ---
@@ -51,10 +66,16 @@ const proxyLimiter = rateLimit({
   message: { error: 'Too many requests. Please slow down.' },
 });
 
-// CORS: allow browser clients from any origin to POST and read response
 function corsMiddleware(req, res, next) {
   const origin = req.headers.origin;
-  res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  if (ALLOWED_ORIGINS) {
+    if (origin && ALLOWED_ORIGINS.includes(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Vary', 'Origin');
+    }
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  }
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') {
