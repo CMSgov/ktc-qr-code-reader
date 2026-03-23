@@ -357,9 +357,20 @@ app.use((err, req, res, _next) => {
 });
 
 // --- Start server ---
-const server = app.listen(PORT, () => {
-  logger.info({ port: PORT }, 'sidecar started');
-});
+let server = null;
+export function startServer(port = PORT) {
+  if (server) return server;
+  server = app.listen(port, () => {
+    logger.info({ port }, 'sidecar started');
+  });
+  return server;
+}
+
+export async function stopServer() {
+  if (!server) return;
+  await new Promise((resolve) => server.close(resolve));
+  server = null;
+}
 
 // --- Graceful shutdown ---
 let shuttingDown = false;
@@ -367,6 +378,9 @@ function shutdown(signal) {
   if (shuttingDown) return;
   shuttingDown = true;
   logger.info({ signal }, 'shutdown signal received');
+  if (!server) {
+    process.exit(0);
+  }
   server.close(() => {
     try {
       getDb().close();
@@ -384,3 +398,9 @@ function shutdown(signal) {
 }
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT', () => shutdown('SIGINT'));
+
+if (process.env.NODE_ENV !== 'test') {
+  startServer();
+}
+
+export { app, validateRouteBody };

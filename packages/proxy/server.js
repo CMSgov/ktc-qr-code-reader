@@ -85,7 +85,7 @@ function corsMiddleware(req, res, next) {
 }
 app.use(corsMiddleware);
 
-async function handleShlProxyRequest(req, res) {
+export async function handleShlProxyRequest(req, res) {
   const { url, method = 'GET', body = null, headers = {} } = req.body;
 
   if (!url) {
@@ -184,9 +184,20 @@ app.use((err, req, res, _next) => {
 });
 
 // --- Start server ---
-const server = app.listen(PORT, () => {
-  logger.info({ port: PORT }, 'SHL CORS proxy started');
-});
+let server = null;
+export function startServer(port = PORT) {
+  if (server) return server;
+  server = app.listen(port, () => {
+    logger.info({ port }, 'SHL CORS proxy started');
+  });
+  return server;
+}
+
+export async function stopServer() {
+  if (!server) return;
+  await new Promise((resolve) => server.close(resolve));
+  server = null;
+}
 
 // --- Graceful shutdown ---
 let shuttingDown = false;
@@ -194,6 +205,9 @@ function shutdown(signal) {
   if (shuttingDown) return;
   shuttingDown = true;
   logger.info({ signal }, 'shutdown signal received');
+  if (!server) {
+    process.exit(0);
+  }
   server.close(() => {
     logger.info('HTTP server closed');
     process.exit(0);
@@ -205,3 +219,9 @@ function shutdown(signal) {
 }
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT', () => shutdown('SIGINT'));
+
+if (process.env.NODE_ENV !== 'test') {
+  startServer();
+}
+
+export { app };
