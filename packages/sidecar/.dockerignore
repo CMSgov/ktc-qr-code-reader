@@ -1,6 +1,11 @@
 node_modules
 npm-debug.log
 .DS_Store
+__tests__
+*.test.js
+coverage
+docs
+README.md
 *.db
 *.db-wal
 *.db-shm
