@@ -6,10 +6,13 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "dev": "node server.js | pino-pretty",
     "test": "vitest run --passWithNoTests --root ../../ packages/proxy"
   },
   "dependencies": {
     "express": "^5.2.1",
-    "express-rate-limit": "^8.2.1"
+    "express-rate-limit": "^8.2.1",
+    "pino": "^10.3.1",
+    "pino-http": "^11.0.0"
   }
 }

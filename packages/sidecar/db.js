@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { encryptToken, decryptToken, isEncrypted, ensureEncrypted } from './crypto.js';
+import { logger } from './lib/logger.js';
 
 let db;
 
@@ -212,6 +213,6 @@ export function logAuditEvent({
         userAgent,
       );
   } catch (err) {
-    console.error('[Audit] Failed to log event:', err.message);
+    logger.error({ err }, 'failed to log audit event');
   }
 }
