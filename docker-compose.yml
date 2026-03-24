@@ -1,0 +1,36 @@
+services:
+  scanner:
+    build:
+      context: packages/scanner
+    ports:
+      - '3000:80'
+    depends_on:
+      - proxy
+
+  proxy:
+    build:
+      context: packages/proxy
+    ports:
+      - '3080:3080'
+    environment:
+      PORT: 3080
+      LOG_LEVEL: info
+
+  sidecar:
+    build:
+      context: packages/sidecar
+    ports:
+      - '3090:3090'
+    volumes:
+      - sidecar-data:/app/data
+    environment:
+      PORT: 3090
+      SESSION_SECRET: ${SESSION_SECRET:?Set SESSION_SECRET in .env (at least 32 characters)}
+      DATABASE_PATH: /app/data/ktc.db
+      LOG_LEVEL: info
+    env_file:
+      - path: packages/sidecar/.env
+        required: false
+
+volumes:
+  sidecar-data:

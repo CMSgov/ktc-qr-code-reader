@@ -4,8 +4,11 @@
  * SSRF protection blocks private/internal URLs.
  */
 import express from 'express';
+import { randomUUID } from 'node:crypto';
 import rateLimit from 'express-rate-limit';
+import pinoHttp from 'pino-http';
 import { isPrivateUrl, resolvesToPrivateAddress } from './ssrf.js';
+import { logger } from './lib/logger.js';
 
 const app = express();
 app.use(express.json({ limit: '1mb' }));
@@ -13,6 +16,32 @@ app.use(express.json({ limit: '1mb' }));
 const PORT = Number(process.env.PORT) || 3080;
 const SHL_PROXY_TIMEOUT_MS = 30_000; // 30s
 const MAX_REDIRECTS = 3;
+
+// --- Crash handlers (set up early to catch startup errors) ---
+process.on('uncaughtException', (err) => {
+  logger.fatal({ err }, 'uncaught exception');
+  process.exit(1);
+});
+process.on('unhandledRejection', (reason) => {
+  logger.fatal({ error: String(reason) }, 'unhandled rejection');
+  process.exit(1);
+});
+
+// --- Middleware ---
+app.use(
+  pinoHttp({
+    logger,
+    genReqId: (req, res) => {
+      const id = req.headers['x-request-id'] || randomUUID();
+      res.setHeader('X-Request-Id', id);
+      return id;
+    },
+    serializers: {
+      req: (req) => ({ id: req.id, method: req.method, url: req.url }),
+      res: (res) => ({ statusCode: res.statusCode }),
+    },
+  }),
+);
 
 const proxyLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
@@ -116,14 +145,42 @@ async function handleShlProxyRequest(req, res) {
       parsedBody,
     });
   } catch (err) {
-    console.error('SHL proxy error:', err.message);
+    req.log.error({ err }, 'SHL proxy error');
     res.status(502).json({ error: `Failed to reach SHL server: ${err.message}` });
   }
 }
 
+// --- Routes ---
 app.get('/healthz', (_req, res) => res.json({ status: 'ok' }));
 app.post('/api/shl-proxy', proxyLimiter, handleShlProxyRequest);
 
-app.listen(PORT, () => {
-  console.log(`SHL CORS proxy listening on port ${PORT}`);
+// --- Global error handler ---
+app.use((err, req, res, _next) => {
+  req.log?.error({ err }, 'unhandled error');
+  if (!res.headersSent) {
+    res.status(500).json({ error: 'Internal server error', requestId: req.id });
+  }
 });
+
+// --- Start server ---
+const server = app.listen(PORT, () => {
+  logger.info({ port: PORT }, 'SHL CORS proxy started');
+});
+
+// --- Graceful shutdown ---
+let shuttingDown = false;
+function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  logger.info({ signal }, 'shutdown signal received');
+  server.close(() => {
+    logger.info('HTTP server closed');
+    process.exit(0);
+  });
+  setTimeout(() => {
+    logger.error('graceful shutdown timed out, forcing exit');
+    process.exit(1);
+  }, 10_000).unref();
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
