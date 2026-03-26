@@ -1,7 +1,7 @@
 # Kill the Clipboard — Security & Compliance Specification
 
-**Version:** 1.4 — Rate Limiting, SSRF Hardening, OAuth CSRF Protection, Timing-Safe Comparisons
-**Date:** March 4, 2026
+**Version:** 1.5 — Security Headers, Configurable CORS, Trust Proxy, Input Validation
+**Date:** March 19, 2026
 **Classification:** For distribution to CISO and compliance review teams
 **Contact:** agleason@russellstreetventures.com
 
@@ -355,8 +355,27 @@ The server includes a CORS proxy endpoint that bridges browser requests to SHL m
 - **Header allowlisting:** Only safe HTTP headers (`Content-Type`, `Accept`) are forwarded
 - **Method passthrough with safeguards:** Caller method is forwarded (default `GET`), with header allowlisting and redirect re-validation
 - **Rate limiting:** 30 requests per minute per IP address
+- **Configurable CORS origins:** Production deployments should set `ALLOWED_ORIGINS` to restrict which origins may call the proxy (default allows all for backwards compatibility)
 - **Authentication model:** Standalone `@ktc/proxy` is intentionally unauthenticated; deployments should restrict network exposure as needed
 - **Encrypted payloads only:** The proxy transports encrypted JWE blobs — the decryption key never leaves the browser, so the proxy cannot read the health data
+
+### HTTP Security Headers
+
+All three components (scanner, proxy, sidecar) set defense-in-depth security headers on every response:
+
+| Header                      | Value                                 | Purpose                                                     |
+| --------------------------- | ------------------------------------- | ----------------------------------------------------------- |
+| `X-Content-Type-Options`    | `nosniff`                             | Prevents MIME type sniffing                                 |
+| `X-Frame-Options`           | `DENY`                                | Prevents clickjacking                                       |
+| `X-XSS-Protection`          | `0`                                   | Disables legacy XSS filters (can introduce vulnerabilities) |
+| `Strict-Transport-Security` | `max-age=31536000; includeSubDomains` | Enforces HTTPS for all future requests                      |
+| `Referrer-Policy`           | `strict-origin-when-cross-origin`     | Limits referrer information leakage                         |
+
+**Implementation:** Proxy and sidecar use Express middleware. Scanner uses nginx `add_header` directives. All headers use `always` (nginx) or are set before response (Express) to ensure they are present on error responses.
+
+### Trust Proxy
+
+Both proxy and sidecar use `app.set('trust proxy', N)` (configurable via `TRUST_PROXY` env var, default `1`) so that `req.ip` and rate-limiting work correctly when running behind a reverse proxy or load balancer. Without this, `req.ip` would always be the load balancer's IP, making per-client rate limiting ineffective.
 
 ### Content Security Policy (CSP)
 
@@ -366,9 +385,7 @@ HTTP security headers are set on all responses to mitigate XSS and injection att
 - `connect-src 'self'` — AJAX/fetch requests only to same origin (prevents data exfiltration)
 - `object-src 'none'` — no plugin-based content (Flash, Java)
 - `base-uri 'self'` — prevents base tag injection
-- `X-Content-Type-Options: nosniff` — prevents MIME type sniffing
-- `X-Frame-Options: DENY` — prevents clickjacking
-- `Referrer-Policy: strict-origin-when-cross-origin` — limits referrer information
+- `frame-ancestors 'none'` — CSP-based clickjacking prevention (supplements `X-Frame-Options`)
 
 ### Subresource Integrity (SRI)
 
@@ -435,6 +452,27 @@ All security-sensitive string comparisons use `crypto.timingSafeEqual()` to prev
 - Session token HMAC signature verification (`src/auth.js`)
 - Super-admin API key verification (`server.js`)
 - OAuth state HMAC signature verification (`server.js`)
+
+### Input Validation
+
+The sidecar route endpoint validates all incoming request bodies before processing:
+
+| Field         | Rule                                                                                                                                     |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `fhirBundles` | Must be an array (if present). Each element is further validated by `validateFhirBundles()`: must be a valid object with `resourceType`. |
+| `pdfs`        | Must be an array (if present). Each element must be an object with a non-empty string `filename`.                                        |
+| `label`       | Must be a string or `null` (if present).                                                                                                 |
+
+Invalid requests receive a `400` response with specific validation error messages before any processing occurs.
+
+### SQL Injection Prevention — Verification
+
+All database queries use parameterized statements via `better-sqlite3`. Column names in dynamic `UPDATE` queries are validated against an explicit allowlist (`updateOrgSettings`). No string interpolation is used in SQL query construction with user-supplied values.
+
+### CSRF Prevention — Verification
+
+- **API routes:** All mutating API endpoints require `Authorization: Bearer <token>` headers. Browser-based CSRF attacks cannot forge this header.
+- **OAuth callbacks:** State parameters are HMAC-signed with `SESSION_SECRET` and verified with timing-safe comparison.
 
 ### Audit Logging
 

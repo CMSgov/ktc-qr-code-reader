@@ -4,9 +4,13 @@
  * Org settings and OAuth tokens are stored in SQLite; config from config.json / env.
  */
 import express from 'express';
+import { randomUUID } from 'node:crypto';
+import pinoHttp from 'pino-http';
+import { logger } from './lib/logger.js';
 import { loadConfig } from './config.js';
 import {
   initDb,
+  getDb,
   getOrgBySlug,
   getDecryptedToken,
   prepareTokenForStorage,
@@ -23,17 +27,128 @@ import { sendViaGmail } from './connectors/gmail.js';
 import { sendViaOutlook } from './connectors/outlook.js';
 import { postToApi } from './connectors/api-poster.js';
 
+// --- Crash handlers (set up early to catch startup errors) ---
+process.on('uncaughtException', (err) => {
+  logger.fatal({ err }, 'uncaught exception');
+  process.exit(1);
+});
+process.on('unhandledRejection', (reason) => {
+  logger.fatal({ error: String(reason) }, 'unhandled rejection');
+  process.exit(1);
+});
+
+// --- Startup validation ---
+if (!process.env.SESSION_SECRET) {
+  logger.fatal(
+    'SESSION_SECRET environment variable is required — set it to a random string of at least 32 characters',
+  );
+  process.exit(1);
+}
+if (process.env.SESSION_SECRET.length < 32) {
+  logger.fatal('SESSION_SECRET must be at least 32 characters long');
+  process.exit(1);
+}
+
 initDb();
 const config = loadConfig();
 
 const app = express();
+app.set('trust proxy', Number(process.env.TRUST_PROXY ?? 1));
 app.use(express.json({ limit: '10mb' }));
 
 const PORT = Number(process.env.PORT) || config.server?.port || 3090;
 
-app.get('/healthz', (_req, res) => res.json({ status: 'ok' }));
+// --- Security headers ---
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '0');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  next();
+});
+
+// --- Middleware ---
+app.use(
+  pinoHttp({
+    logger,
+    genReqId: (req, res) => {
+      const id = req.headers['x-request-id'] || randomUUID();
+      res.setHeader('X-Request-Id', id);
+      return id;
+    },
+    serializers: {
+      req: (req) => ({ id: req.id, method: req.method, url: req.url }),
+      res: (res) => ({ statusCode: res.statusCode }),
+    },
+  }),
+);
+
+// --- Health checks ---
+
+app.get('/livez', (_req, res) => res.json({ status: 'ok' }));
+
+app.get('/readyz', (_req, res) => {
+  try {
+    getDb().prepare('SELECT 1').get();
+    res.json({ status: 'ok', checks: { database: 'ok' } });
+  } catch (err) {
+    logger.error({ err }, 'readiness check failed');
+    res.status(503).json({ status: 'not_ready', checks: { database: err.message } });
+  }
+});
+
+app.get('/healthz', (_req, res) => {
+  try {
+    getDb().prepare('SELECT 1').get();
+    res.json({ status: 'ok', checks: { database: 'ok' } });
+  } catch (err) {
+    logger.error({ err }, 'health check failed');
+    res.status(503).json({ status: 'degraded', checks: { database: err.message } });
+  }
+});
+
+// --- Input validation ---
+
+function validateRouteBody(body) {
+  const errors = [];
+  if (body == null || typeof body !== 'object') {
+    return { valid: false, errors: ['Request body must be a JSON object'] };
+  }
+  const { fhirBundles, pdfs, label } = body;
+  if (fhirBundles !== undefined && !Array.isArray(fhirBundles)) {
+    errors.push('fhirBundles must be an array');
+  }
+  if (pdfs !== undefined) {
+    if (!Array.isArray(pdfs)) {
+      errors.push('pdfs must be an array');
+    } else {
+      for (let i = 0; i < pdfs.length; i++) {
+        const pdf = pdfs[i];
+        if (!pdf || typeof pdf !== 'object') {
+          errors.push(`pdfs[${i}]: must be an object`);
+        } else if (typeof pdf.filename !== 'string' || pdf.filename.length === 0) {
+          errors.push(`pdfs[${i}]: filename is required and must be a non-empty string`);
+        }
+      }
+    }
+  }
+  if (label !== undefined && label !== null && typeof label !== 'string') {
+    errors.push('label must be a string or null');
+  }
+  return { valid: errors.length === 0, errors };
+}
+
+// --- Routes ---
 
 app.post('/api/orgs/:slug/route', authMiddleware('staff'), async (req, res) => {
+  const bodyValidation = validateRouteBody(req.body);
+  if (!bodyValidation.valid) {
+    return res.status(400).json({
+      status: 'validation_failed',
+      error: bodyValidation.errors.join('; '),
+    });
+  }
+
   const { fhirBundles = [], pdfs = [], label = null } = req.body;
   const org = getOrgBySlug(req.params.slug);
 
@@ -86,7 +201,7 @@ app.post('/api/orgs/:slug/route', authMiddleware('staff'), async (req, res) => {
       driveLink = driveSummary.driveFolder;
     } catch (err) {
       driveError = err.message;
-      console.error(`[${org.slug}] Drive upload failed: ${err.message}`);
+      req.log.error({ org: org.slug, err }, 'Drive upload failed');
     }
   }
 
@@ -100,7 +215,7 @@ app.post('/api/orgs/:slug/route', authMiddleware('staff'), async (req, res) => {
       apiPosted = true;
     } catch (err) {
       apiError = err.message;
-      console.error(`[${org.slug}] API post failed: ${err.message}`);
+      req.log.error({ org: org.slug, err }, 'API post failed');
     }
   }
 
@@ -120,7 +235,7 @@ app.post('/api/orgs/:slug/route', authMiddleware('staff'), async (req, res) => {
       emailSent = true;
     } catch (err) {
       emailError = err.message;
-      console.error(`[${org.slug}] Email send failed: ${err.message}`);
+      req.log.error({ org: org.slug, err }, 'Email send failed');
     }
   }
 
@@ -137,7 +252,7 @@ app.post('/api/orgs/:slug/route', authMiddleware('staff'), async (req, res) => {
       emailSent = true;
     } catch (err) {
       emailError = err.message;
-      console.error(`[${org.slug}] Gmail send failed: ${err.message}`);
+      req.log.error({ org: org.slug, err }, 'Gmail send failed');
     }
   }
 
@@ -154,7 +269,7 @@ app.post('/api/orgs/:slug/route', authMiddleware('staff'), async (req, res) => {
       emailSent = true;
     } catch (err) {
       emailError = err.message;
-      console.error(`[${org.slug}] Outlook send failed: ${err.message}`);
+      req.log.error({ org: org.slug, err }, 'Outlook send failed');
     }
   }
 
@@ -168,7 +283,7 @@ app.post('/api/orgs/:slug/route', authMiddleware('staff'), async (req, res) => {
       onedriveLink = odSummary.folderLink;
     } catch (err) {
       onedriveError = err.message;
-      console.error(`[${org.slug}] OneDrive upload failed: ${err.message}`);
+      req.log.error({ org: org.slug, err }, 'OneDrive upload failed');
     }
   }
 
@@ -187,7 +302,7 @@ app.post('/api/orgs/:slug/route', authMiddleware('staff'), async (req, res) => {
       }
     } catch (err) {
       boxError = err.message;
-      console.error(`[${org.slug}] Box upload failed: ${err.message}`);
+      req.log.error({ org: org.slug, err }, 'Box upload failed');
     }
   }
 
@@ -233,6 +348,59 @@ app.post('/api/orgs/:slug/route', authMiddleware('staff'), async (req, res) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`Sidecar listening on port ${PORT}`);
+// --- Global error handler ---
+app.use((err, req, res, _next) => {
+  req.log?.error({ err }, 'unhandled error');
+  if (!res.headersSent) {
+    res.status(500).json({ error: 'Internal server error', requestId: req.id });
+  }
 });
+
+// --- Start server ---
+let server = null;
+export function startServer(port = PORT) {
+  if (server) return server;
+  server = app.listen(port, () => {
+    logger.info({ port }, 'sidecar started');
+  });
+  return server;
+}
+
+export async function stopServer() {
+  if (!server) return;
+  await new Promise((resolve) => server.close(resolve));
+  server = null;
+}
+
+// --- Graceful shutdown ---
+let shuttingDown = false;
+function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  logger.info({ signal }, 'shutdown signal received');
+  if (!server) {
+    process.exit(0);
+  }
+  server.close(() => {
+    try {
+      getDb().close();
+      logger.info('database connection closed');
+    } catch {
+      /* already closed */
+    }
+    logger.info('HTTP server closed');
+    process.exit(0);
+  });
+  setTimeout(() => {
+    logger.error('graceful shutdown timed out, forcing exit');
+    process.exit(1);
+  }, 10_000).unref();
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+
+if (process.env.NODE_ENV !== 'test') {
+  startServer();
+}
+
+export { app, validateRouteBody };

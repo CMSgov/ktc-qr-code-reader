@@ -12,7 +12,13 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
-      include: ['src/**/*.js', 'data/**/*.js'],
+      include: [
+        'src/**/*.js',
+        'data/**/*.js',
+        'packages/proxy/**/*.js',
+        'packages/sidecar/**/*.js',
+        'packages/scanner/public/js/shl-client.js',
+      ],
       exclude: [
         '**/*.test.js',
         '**/node_modules/**',
@@ -24,12 +30,54 @@ export default defineConfig({
         'src/shl/manifest.js',
         'src/shl/decryptor.js',
         'src/shl/fhir-extractor.js', // extraction paths need decrypt/fetch mocks
+        // Sidecar connector modules require live third-party OAuth/API integration.
+        'packages/sidecar/connectors/**/*.js',
+        // Config and token/database internals are covered in targeted package tests.
+        'packages/proxy/lib/**/*.js',
+        'packages/sidecar/lib/**/*.js',
+        'packages/sidecar/config.js',
+        'packages/sidecar/crypto.js',
+        'packages/sidecar/db.js',
       ],
       thresholds: {
-        lines: 96,
-        functions: 96,
-        statements: 96,
-        branches: 88,
+        // Global threshold now covers scanner + server packages together.
+        lines: 70,
+        functions: 70,
+        statements: 70,
+        branches: 70,
+        // Keep strict thresholds for core scanner and data paths.
+        'src/**/*.js': {
+          lines: 96,
+          functions: 96,
+          statements: 96,
+          branches: 88,
+        },
+        'data/**/*.js': {
+          lines: 96,
+          functions: 96,
+          statements: 96,
+          branches: 88,
+        },
+        // Server packages are expanding coverage incrementally in PR6.
+        'packages/proxy/**/*.js': {
+          lines: 55,
+          functions: 50,
+          statements: 55,
+          branches: 45,
+        },
+        'packages/sidecar/**/*.js': {
+          lines: 40,
+          functions: 10,
+          statements: 40,
+          branches: 40,
+        },
+        // Track core scanner runtime coverage explicitly.
+        'packages/scanner/public/js/shl-client.js': {
+          lines: 20,
+          functions: 20,
+          statements: 20,
+          branches: 15,
+        },
       },
     },
   },

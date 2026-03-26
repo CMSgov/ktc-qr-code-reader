@@ -94,6 +94,27 @@ HTTPS is required in production (for camera access). See **docs/core-deployment.
 
 ---
 
+## Local Development with Docker Compose
+
+Run all three services locally with a single command:
+
+```bash
+# Generate a session secret (required by sidecar)
+export SESSION_SECRET=$(node -e "console.log(require('crypto').randomBytes(48).toString('hex'))")
+
+docker compose up --build
+```
+
+| Service     | URL                   |
+| ----------- | --------------------- |
+| **Scanner** | http://localhost:3000 |
+| **Proxy**   | http://localhost:3080 |
+| **Sidecar** | http://localhost:3090 |
+
+The sidecar stores its SQLite database in a named volume (`sidecar-data`) so data persists across restarts. To configure SMTP, Drive, or other connectors, copy `packages/sidecar/.env.example` to `packages/sidecar/.env` and fill in the values.
+
+---
+
 ## Deploying Proxy and Sidecar
 
 Both have standalone Dockerfiles:
@@ -106,12 +127,13 @@ docker run -p 3080:3080 ktc-proxy
 # Sidecar
 docker build -t ktc-sidecar packages/sidecar
 docker run -p 3090:3090 \
+  -e SESSION_SECRET="$(node -e "console.log(require('crypto').randomBytes(48).toString('hex'))")" \
   -e DATABASE_PATH=/data/ktc.db \
   -v ktc-data:/data \
   ktc-sidecar
 ```
 
-See **docs/sidecar-deployment.md** for environment variables and connector setup (Drive, OneDrive, Box, Gmail, Outlook, API).
+See `.env.example` files in each package for available configuration. See **docs/sidecar-deployment.md** for connector setup (Drive, OneDrive, Box, Gmail, Outlook, API).
 
 ---
 
