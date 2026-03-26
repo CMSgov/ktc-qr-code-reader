@@ -92,4 +92,34 @@ describe('core scanner runtime', () => {
     expect(fetchMock.mock.calls[1][0]).toBe('https://proxy.example/api/shl-proxy');
     expect(fetchMock.mock.calls[1][1].method).toBe('POST');
   });
+
+  it('uses direct fetch first in managed scanner mode', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        status: 200,
+        ok: true,
+        text: async () => 'ciphertext',
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          status: 'success',
+          summary: { fhirBundles: 1, pdfs: 0, rawEntries: 0 },
+          fhirBundles: [{ resourceType: 'Bundle', entry: [] }],
+          pdfs: [],
+        }),
+      });
+    const runtime = await loadScannerRuntime(fetchMock);
+
+    const result = await runtime.processScanClientSide(makeShlQr(), 'demo-org', 'test-token', {
+      orgName: 'Demo Clinic',
+    });
+
+    expect(result.status).toBe('success');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0][0]).toContain('https://shl.example/manifest');
+    expect(fetchMock.mock.calls[0][0]).toContain('recipient=Demo+Clinic');
+    expect(fetchMock.mock.calls[1][0]).toBe('/api/orgs/demo-org/route');
+  });
 });

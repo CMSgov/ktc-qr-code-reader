@@ -164,6 +164,7 @@ async function fetchManifestClient(shlPayload, fetchOptions, config = {}) {
   const isDirect = shlPayload.flag.includes('U');
   const proxyBaseUrl = fetchOptions.proxyBaseUrl ?? null;
   const token = fetchOptions.token ?? null;
+  const proxyMode = fetchOptions.proxyMode ?? 'fallback';
 
   if (hasPasscode && !passcode) {
     throw new Error('This SHL requires a passcode.');
@@ -239,6 +240,16 @@ async function fetchManifestClient(shlPayload, fetchOptions, config = {}) {
     return result.parsedBody || JSON.parse(result.body);
   };
 
+  if (proxyBaseUrl && proxyMode === 'only') {
+    return await useProxy();
+  }
+  if (proxyBaseUrl && proxyMode === 'prefer') {
+    try {
+      return await useProxy();
+    } catch {
+      return await tryDirect();
+    }
+  }
   if (proxyBaseUrl) {
     try {
       return await tryDirect();
@@ -513,6 +524,8 @@ async function processScanClientSide(qrText, slug, token, options = {}) {
   const fetchOptions = {
     proxyBaseUrl: `/api/orgs/${slug}/shl-proxy`,
     token,
+    // Managed scanner defaults to direct fetch with proxy fallback for resilience.
+    proxyMode: 'fallback',
   };
 
   // Step 2: Fetch encrypted manifest (direct or via CORS proxy)
