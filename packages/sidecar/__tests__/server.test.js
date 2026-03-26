@@ -57,6 +57,8 @@ vi.mock('../connectors/api-poster.js', () => ({ postToApi: connectorMocks.postTo
 let app;
 let testServer;
 let baseUrl;
+let startServer;
+let stopServer;
 
 async function requestJson(path, init = {}) {
   const response = await fetch(`${baseUrl}${path}`, init);
@@ -73,7 +75,7 @@ async function requestJson(path, init = {}) {
 beforeAll(async () => {
   process.env.NODE_ENV = 'test';
   process.env.SESSION_SECRET = '12345678901234567890123456789012';
-  ({ app } = await import('../server.js'));
+  ({ app, startServer, stopServer } = await import('../server.js'));
   testServer = app.listen(0);
   await new Promise((resolve) => testServer.once('listening', resolve));
   const addr = testServer.address();
@@ -120,6 +122,16 @@ describe('sidecar server routes', () => {
     expect(json.error).toContain('pdfs must be an array');
   });
 
+  it('reports readiness failure when database check throws', async () => {
+    dbMocks.getDb.mockImplementationOnce(() => {
+      throw new Error('db unavailable');
+    });
+    const { response, json } = await requestJson('/readyz');
+    expect(response.status).toBe(503);
+    expect(json.status).toBe('not_ready');
+    expect(json.checks.database).toContain('db unavailable');
+  });
+
   it('returns not found when organization slug does not exist', async () => {
     dbMocks.getOrgBySlug.mockReturnValueOnce(null);
     const { response, json } = await requestJson('/api/orgs/missing/route', {
@@ -156,5 +168,87 @@ describe('sidecar server routes', () => {
         success: true,
       }),
     );
+  });
+
+  it('returns validation_failed when FHIR bundle validation fails', async () => {
+    validatorMocks.validateFhirBundles.mockReturnValueOnce({
+      valid: false,
+      errors: ['Bundle 1 is malformed'],
+    });
+
+    const { response, json } = await requestJson('/api/orgs/acme/route', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: 'Bearer test-token' },
+      body: JSON.stringify({
+        fhirBundles: [{ resourceType: 'Bundle', entry: [{ resource: {} }] }],
+        pdfs: [],
+      }),
+    });
+
+    expect(response.status).toBe(400);
+    expect(json.status).toBe('validation_failed');
+    expect(json.error).toContain('Invalid FHIR data: Bundle 1 is malformed');
+    expect(connectorMocks.postToApi).not.toHaveBeenCalled();
+  });
+
+  it('returns success with apiError when API posting fails', async () => {
+    connectorMocks.postToApi.mockRejectedValueOnce(new Error('api unavailable'));
+
+    const { response, json } = await requestJson('/api/orgs/acme/route', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: 'Bearer test-token' },
+      body: JSON.stringify({
+        fhirBundles: [{ resourceType: 'Bundle', entry: [] }],
+        pdfs: [],
+      }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(json.status).toBe('success');
+    expect(json.apiPosted).toBe(false);
+    expect(json.apiError).toBe('api unavailable');
+    expect(dbMocks.logAuditEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        errorMessage: 'api unavailable',
+      }),
+    );
+  });
+
+  it('filters payload outputs for save_format=fhir', async () => {
+    dbMocks.getOrgBySlug.mockReturnValueOnce({
+      id: 'org-2',
+      slug: 'acme',
+      storage_type: 'api',
+      save_format: 'fhir',
+      api_url: 'https://api.example.com/intake',
+      api_headers: '{}',
+      email_to: null,
+    });
+
+    const { response, json } = await requestJson('/api/orgs/acme/route', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: 'Bearer test-token' },
+      body: JSON.stringify({
+        fhirBundles: [{ resourceType: 'Bundle', entry: [] }],
+        pdfs: [{ filename: 'record.pdf', dataBase64: Buffer.from('pdf').toString('base64') }],
+      }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(json.saveFormat).toBe('fhir');
+    expect(json.summary).toEqual({ fhirBundles: 1, pdfs: 0, rawEntries: 0 });
+  });
+});
+
+describe('sidecar server lifecycle', () => {
+  it('startServer is idempotent and stopServer closes it', async () => {
+    const started = startServer(0);
+    await new Promise((resolve) => started.once('listening', resolve));
+    const startedAgain = startServer(0);
+    expect(startedAgain).toBe(started);
+
+    await stopServer();
+    await stopServer();
   });
 });

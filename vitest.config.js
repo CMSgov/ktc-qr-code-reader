@@ -17,6 +17,7 @@ export default defineConfig({
         'data/**/*.js',
         'packages/proxy/**/*.js',
         'packages/sidecar/**/*.js',
+        'packages/scanner/public/js/shl-client.js',
       ],
       exclude: [
         '**/*.test.js',
@@ -69,6 +70,13 @@ export default defineConfig({
           functions: 10,
           statements: 40,
           branches: 40,
+        },
+        // Track core scanner runtime coverage explicitly.
+        'packages/scanner/public/js/shl-client.js': {
+          lines: 20,
+          functions: 20,
+          statements: 20,
+          branches: 15,
         },
       },
     },

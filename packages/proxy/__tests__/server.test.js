@@ -20,6 +20,8 @@ vi.mock('../lib/logger.js', () => ({
 let app;
 let testServer;
 let baseUrl;
+let startServer;
+let stopServer;
 
 async function requestJson(path, init = {}) {
   const url = new URL(`${baseUrl}${path}`);
@@ -73,7 +75,7 @@ async function requestJson(path, init = {}) {
 
 beforeAll(async () => {
   process.env.NODE_ENV = 'test';
-  ({ app } = await import('../server.js'));
+  ({ app, startServer, stopServer } = await import('../server.js'));
   testServer = app.listen(0);
   await new Promise((resolve) => testServer.once('listening', resolve));
   const addr = testServer.address();
@@ -134,5 +136,115 @@ describe('proxy server routes', () => {
       body: upstreamBody,
       parsedBody: { manifest: 'ok' },
     });
+  });
+
+  it('returns CORS preflight response for OPTIONS requests', async () => {
+    const { response, text } = await requestJson('/api/shl-proxy', {
+      method: 'OPTIONS',
+      headers: { origin: 'https://example.org' },
+    });
+    expect(response.status).toBe(204);
+    expect(text).toBe('');
+    expect(response.headers.get('access-control-allow-methods')).toBe('POST, OPTIONS');
+  });
+
+  it('blocks requests to private URLs', async () => {
+    ssrfMocks.isPrivateUrl.mockReturnValue(true);
+    const { response, json } = await requestJson('/api/shl-proxy', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        url: 'http://127.0.0.1/private',
+        method: 'GET',
+      }),
+    });
+
+    expect(response.status).toBe(403);
+    expect(json).toEqual({ error: 'Requests to private/internal addresses are not allowed' });
+  });
+
+  it('blocks requests when hostname resolves to private address', async () => {
+    ssrfMocks.resolvesToPrivateAddress.mockResolvedValue(true);
+    const { response, json } = await requestJson('/api/shl-proxy', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        url: 'https://example.org/shl',
+        method: 'GET',
+      }),
+    });
+
+    expect(response.status).toBe(403);
+    expect(json).toEqual({ error: 'Target hostname resolves to private/internal address' });
+  });
+
+  it('blocks redirects to private/internal addresses', async () => {
+    ssrfMocks.isPrivateUrl.mockImplementation((url) => String(url).includes('127.0.0.1'));
+    global.fetch = vi.fn().mockResolvedValue({
+      status: 302,
+      headers: new Headers({ location: 'http://127.0.0.1/secret' }),
+      text: async () => '',
+    });
+
+    const { response, json } = await requestJson('/api/shl-proxy', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        url: 'https://example.org/shl',
+        method: 'GET',
+      }),
+    });
+
+    expect(response.status).toBe(403);
+    expect(json).toEqual({ error: 'Redirect to private/internal address blocked' });
+  });
+
+  it('returns 502 when upstream redirects too many times', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      status: 302,
+      headers: new Headers({ location: '/next' }),
+      text: async () => '',
+    });
+
+    const { response, json } = await requestJson('/api/shl-proxy', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        url: 'https://example.org/shl',
+        method: 'GET',
+      }),
+    });
+
+    expect(response.status).toBe(502);
+    expect(json).toEqual({ error: 'Too many redirects from SHL server' });
+    expect(global.fetch).toHaveBeenCalledTimes(4);
+  });
+
+  it('returns 502 when upstream fetch throws', async () => {
+    global.fetch = vi.fn().mockRejectedValue(new Error('network down'));
+
+    const { response, json } = await requestJson('/api/shl-proxy', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        url: 'https://example.org/shl',
+        method: 'GET',
+      }),
+    });
+
+    expect(response.status).toBe(502);
+    expect(json.error).toContain('Failed to reach SHL server: network down');
+  });
+});
+
+describe('proxy server lifecycle', () => {
+  it('startServer is idempotent and stopServer closes it', async () => {
+    const started = startServer(0);
+    await new Promise((resolve) => started.once('listening', resolve));
+    const startedAgain = startServer(0);
+    expect(startedAgain).toBe(started);
+
+    await stopServer();
+    await stopServer();
   });
 });
